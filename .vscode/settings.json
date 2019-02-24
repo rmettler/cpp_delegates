@@ -1,0 +1,34 @@
+{
+    "psi-header.config": {
+        "forceToTop": true,
+        "blankLinesAfter": 1,
+        "license": "BSD-2-Clause"
+    },
+    "psi-header.changes-tracking": {
+        "isActive": true,
+        "autoHeader": "manualSave",
+        "exclude": [
+            "markdown",
+            "json"
+        ],
+        "excludeGlob": [
+            ""
+        ]
+    },
+    "psi-header.templates": [
+        {
+            "language": "cpp",
+            "template": [
+                "Project: <<projectname>>",
+                "Created: <<filecreated('YYYY-MM-DD')>>",
+                "Author: <<author>> (<<authoremail>>)",
+                "-----",
+                "Last Modified: <<dateformat('YYYY-MM-DD HH:mm:ss')>>",
+                "Modified By: <<author>>",
+                "-----",
+                "<<licensetext>>",
+                "-----"
+            ]
+        }
+    ]
+}
