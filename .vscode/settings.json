@@ -19,7 +19,6 @@
         {
             "language": "cpp",
             "template": [
-                "Project: <<projectname>>",
                 "Created: <<filecreated('YYYY-MM-DD')>>",
                 "Author: <<author>> (<<authoremail>>)",
                 "-----",
@@ -27,7 +26,6 @@
                 "Modified By: <<author>>",
                 "-----",
                 "<<licensetext>>",
-                "-----"
             ]
         }
     ]

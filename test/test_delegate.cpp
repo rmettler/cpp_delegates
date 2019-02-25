@@ -2,7 +2,7 @@
  * Created: 2019-02-24
  * Author: Roger Mettler (roger@roger-mettler.ch)
  * -----
- * Last Modified: 2019-02-25 01:26:04
+ * Last Modified: 2019-02-25 00:53:44
  * Modified By: Roger Mettler
  * -----
  * Copyright (c) 2019 Roger Mettler All rights reserved.
@@ -30,31 +30,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "rome/delegates/delegate.hpp"
+
 namespace rome {
-namespace delegates {
-// TODO add a proper .clang-format!!!
-// TODO check whether is function, member, static or non-static
-//      std::is_function -> all functions
-template <typename T> struct delegate;
 
-template <typename Ret, typename... Args> struct delegate<Ret(Args...)> {
-    // TODO enhance by passing the stub as template argument (or defaulting to a dynamic one?)
-    /* data */
-};
-
-template <typename T, T t> struct delegate_creator;
-
-template <typename Ret, typename... Args, typename C, Ret (C::*pMem)(Args...)>
-struct delegate_creator<Ret (C::*)(Args...), pMem> {
-    static constexpr auto create(C *)
-    {
-        // TODO create the specific type
-        return delegate<Ret(Args...)>{};
-    }
-};
-
-template <typename T, T t>
-constexpr auto make_delegate = delegate_creator<T, t>::create;
-
-} // namespace delegates
 } // namespace rome
+
+int main()
+{
+    using rome::delegates::delegate;
+    delegate<void(int)> d = {};
+}
