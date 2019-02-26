@@ -6,7 +6,7 @@
 // 
 
 
-namespace rome {
+namespace me {
 namespace delegates {
 // TODO add a proper .clang-format!!!
 // TODO check whether is function, member, static or non-static
@@ -34,4 +34,4 @@ template <typename T, T t>
 constexpr auto make_delegate = delegate_creator<T, t>::create;
 
 } // namespace delegates
-} // namespace rome
+} // namespace me

@@ -5,9 +5,9 @@
 // https://www.boost.org/LICENSE_1_0.txt)
 // 
 
-#include "rome/delegates/delegate.hpp"
+#include "me/delegates/delegate.hpp"
 
-namespace rome {
+namespace me {
 
 struct Functor {
     bool operator()(int) { return false; }
@@ -34,6 +34,6 @@ void runTests()
         delegates::make_delegate<decltype(A::foo), A::foo>(&a);
 }
 
-} // namespace rome
+} // namespace me
 
-int main() { rome::runTests(); }
+int main() { me::runTests(); }
