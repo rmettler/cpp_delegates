@@ -128,6 +128,9 @@ static_assert(false == !factory, "");
 } // namespace test_constexpr_function
 
 void fooo(int i = 1) { assert(i == 11); }
+struct B {
+    void foo(int) { }
+};
 
 // TODO: test class members which are callable but no functions (functor,
 // references of functions)
@@ -145,7 +148,12 @@ void runTests()
     auto d = delegates::make_delegate<decltype(&fooo), &fooo>();
     d(11);
     auto ed = delegates::make_event_delegate<decltype(&fooo), &fooo>();
-    ed(10);
+    ed(11);
+    auto ed2 = delegates::event_delegate<void(int)>{};
+    B b;
+    ed2 = delegates::make_event_delegate<decltype(&B::foo), &B::foo>(&b);
+    ed2 = delegates::event_delegate<void(
+        int)>::create_from_non_static_member<B, &B::foo>(&b);
     // TODO: test dynamic usage of all the above delegates
     // TODO: extend test for setting and unsetting of all the delegates
     // (set one, set another or set one, unset, then set another)

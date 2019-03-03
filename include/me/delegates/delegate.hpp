@@ -2,11 +2,11 @@
 // Project: delegates
 // File content:
 //   - delegate<Ret (Args...)>
-//   - make_delegate<..>(..)
-// TODO: file description
+//   - delegate<void (Args...)>
+// See the documentation for more information.
 //
-// Based on the article of Sergey Ryazanov:
-// "The Impossibly Fast C++ Delegates", 18 Jul 2005
+// The delegates::delegate implementation is based on the article of Sergey
+// Ryazanov: "The Impossibly Fast C++ Delegates", 18 Jul 2005
 // https://www.codeproject.com/articles/11015/the-impossibly-fast-c-delegates
 //
 // Copyright Roger Mettler 2019.
@@ -122,10 +122,7 @@ template <typename... Args> class delegate<void(Args...)> {
         caller_ = null_call;
     }
 
-    constexpr void operator()(Args... args) const
-    {
-        caller_(obj_, args...);
-    }
+    constexpr void operator()(Args... args) const { caller_(obj_, args...); }
 
     constexpr bool isSet() const { return caller_ != nullptr; }
     constexpr bool operator!() const { return !isSet(); }
@@ -145,7 +142,8 @@ template <typename... Args> class delegate<void(Args...)> {
     {
         delegate d;
         d.obj_ = const_cast<C *>(obj);
-        d.caller_ = (obj != nullptr) ? &const_method_call<C, pMethod> : null_call;
+        d.caller_ =
+            (obj != nullptr) ? &const_method_call<C, pMethod> : null_call;
         return d;
     }
 
@@ -177,50 +175,12 @@ template <typename... Args> class delegate<void(Args...)> {
         (*pFunction)(args...);
     }
 
-    constexpr static void null_call(void *, Args...)
-    {
-    }
+    constexpr static void null_call(void *, Args...) {}
 
     using caller_type = void (*)(void *, Args...);
     void *obj_ = nullptr;
     caller_type caller_ = null_call;
 };
-
-namespace detail
-{
-template <typename T, T t> struct delegate_factory;
-
-template <typename C, typename Ret, typename... Args, Ret (C::*pMem)(Args...)>
-struct delegate_factory<Ret (C::*)(Args...), pMem> {
-    constexpr static auto create(C *obj)
-    {
-        return delegate<Ret(
-            Args...)>::template create_from_non_static_member<C, pMem>(obj);
-    }
-};
-
-template <typename C, typename Ret, typename... Args,
-          Ret (C::*pMem)(Args...) const>
-struct delegate_factory<Ret (C::*)(Args...) const, pMem> {
-    constexpr static auto create(C const *obj)
-    {
-        return delegate<Ret(Args...)>::
-            template create_from_non_static_const_member<C, pMem>(obj);
-    }
-};
-
-template <typename Ret, typename... Args, Ret (*pMem)(Args...)>
-struct delegate_factory<Ret (*)(Args...), pMem> {
-    constexpr static auto create()
-    {
-        return delegate<Ret(Args...)>::template create_from_function<pMem>();
-    }
-};
-} // detail
-
-
-template <typename T, T t>
-constexpr auto make_delegate = detail::delegate_factory<T, t>::create;
 
 } // namespace delegates
 } // namespace me
