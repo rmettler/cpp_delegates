@@ -1,5 +1,8 @@
 //
 // Project: delegates
+// File content:
+//   - delegate<Ret (Args...)>
+//   - make_delegate<..>(..)
 // TODO: file description
 //
 // Based on the article of Sergey Ryazanov:
@@ -24,9 +27,6 @@ namespace delegates {
 //      std::is_member_pointer, is_member_object_pointer,
 //      is_member_function_pointer
 // TODO: compare with other implementations
-// TODO: split implementations and create a delegates.h file including all of
-// them
-// TODO: enhance the delegate factory
 // TODO: is "non static member" the correct name? or are they only non static
 // methods?
 
@@ -34,15 +34,12 @@ template <typename T> class delegate;
 
 template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
   public:
-    using signature_type = Ret(Args...);
-    using caller_type = Ret (*)(void *, Args...);
-
     constexpr delegate() = default;
-    constexpr delegate(const delegate &orig) = default;
+    constexpr delegate(const delegate &) = default;
     constexpr delegate(delegate &&) = default;
     constexpr delegate(const std::nullptr_t &) : delegate() {}
 
-    constexpr delegate &operator=(const delegate &orig) = default;
+    constexpr delegate &operator=(const delegate &) = default;
     constexpr delegate &operator=(delegate &&) = default;
     constexpr delegate &operator=(const std::nullptr_t &)
     {
@@ -56,8 +53,8 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
     }
 
     constexpr bool isSet() const { return caller_ != nullptr; }
-    constexpr bool operator!() const { return !isSet(); }
     constexpr operator bool() const { return isSet(); }
+    constexpr bool operator!() const { return !isSet(); }
 
     template <typename C, Ret (C::*pMethod)(Args...)>
     constexpr static delegate create_from_non_static_member(C *obj)
@@ -105,11 +102,93 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
         return (*pFunction)(args...);
     }
 
+    using caller_type = Ret (*)(void *, Args...);
     void *obj_ = nullptr;
     caller_type caller_ = nullptr;
 };
 
-template <typename T, T t, typename Enable = void> struct delegate_factory;
+template <typename... Args> class delegate<void(Args...)> {
+  public:
+    constexpr delegate() = default;
+    constexpr delegate(const delegate &orig) = default;
+    constexpr delegate(delegate &&) = default;
+    constexpr delegate(const std::nullptr_t &) : delegate() {}
+
+    constexpr delegate &operator=(const delegate &orig) = default;
+    constexpr delegate &operator=(delegate &&) = default;
+    constexpr delegate &operator=(const std::nullptr_t &)
+    {
+        obj_ = nullptr;
+        caller_ = null_call;
+    }
+
+    constexpr void operator()(Args... args) const
+    {
+        caller_(obj_, args...);
+    }
+
+    constexpr bool isSet() const { return caller_ != nullptr; }
+    constexpr bool operator!() const { return !isSet(); }
+    constexpr operator bool() const { return isSet(); }
+
+    template <typename C, void (C::*pMethod)(Args...)>
+    constexpr static delegate create_from_non_static_member(C *obj)
+    {
+        delegate d;
+        d.obj_ = obj;
+        d.caller_ = (obj != nullptr) ? &method_call<C, pMethod> : null_call;
+        return d;
+    }
+
+    template <typename C, void (C::*pMethod)(Args...) const>
+    constexpr static delegate create_from_non_static_const_member(C const *obj)
+    {
+        delegate d;
+        d.obj_ = const_cast<C *>(obj);
+        d.caller_ = (obj != nullptr) ? &const_method_call<C, pMethod> : null_call;
+        return d;
+    }
+
+    template <void (*pFunction)(Args...)>
+    constexpr static delegate create_from_function()
+    {
+        delegate d;
+        d.obj_ = nullptr;
+        d.caller_ = &function_call<pFunction>;
+        return d;
+    }
+
+  private:
+    template <typename C, void (C::*pMethod)(Args...)>
+    constexpr static void method_call(void *obj, Args... args)
+    {
+        (static_cast<C *>(obj)->*pMethod)(args...);
+    }
+
+    template <typename C, void (C::*pMethod)(Args...) const>
+    constexpr static void const_method_call(void *obj, Args... args)
+    {
+        (static_cast<C const *>(obj)->*pMethod)(args...);
+    }
+
+    template <void (*pFunction)(Args...)>
+    constexpr static void function_call(void *, Args... args)
+    {
+        (*pFunction)(args...);
+    }
+
+    constexpr static void null_call(void *, Args...)
+    {
+    }
+
+    using caller_type = void (*)(void *, Args...);
+    void *obj_ = nullptr;
+    caller_type caller_ = null_call;
+};
+
+namespace detail
+{
+template <typename T, T t> struct delegate_factory;
 
 template <typename C, typename Ret, typename... Args, Ret (C::*pMem)(Args...)>
 struct delegate_factory<Ret (C::*)(Args...), pMem> {
@@ -137,9 +216,11 @@ struct delegate_factory<Ret (*)(Args...), pMem> {
         return delegate<Ret(Args...)>::template create_from_function<pMem>();
     }
 };
+} // detail
+
 
 template <typename T, T t>
-constexpr auto make_delegate = delegate_factory<T, t>::create;
+constexpr auto make_delegate = detail::delegate_factory<T, t>::create;
 
 } // namespace delegates
 } // namespace me

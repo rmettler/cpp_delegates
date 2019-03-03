@@ -5,7 +5,7 @@
 // https://www.boost.org/LICENSE_1_0.txt)
 //
 
-#include "me/delegates/delegate.hpp"
+#include "me/delegates.hpp"
 #include <cassert>
 
 namespace me {
@@ -127,6 +127,8 @@ static_assert(true == factory, "");
 static_assert(false == !factory, "");
 } // namespace test_constexpr_function
 
+void fooo(int i = 1) { assert(i == 11); }
+
 // TODO: test class members which are callable but no functions (functor,
 // references of functions)
 // TODO: test namespace variables which are callable but no functions (functor,
@@ -140,6 +142,10 @@ static_assert(false == !factory, "");
 
 void runTests()
 {
+    auto d = delegates::make_delegate<decltype(&fooo), &fooo>();
+    d(11);
+    auto ed = delegates::make_event_delegate<decltype(&fooo), &fooo>();
+    ed(10);
     // TODO: test dynamic usage of all the above delegates
     // TODO: extend test for setting and unsetting of all the delegates
     // (set one, set another or set one, unset, then set another)
