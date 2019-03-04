@@ -1,13 +1,43 @@
 # C++ delegates
 
-An enhanced solution for C++ delegates, based on C++14.
+An extended solution for C++ delegates with better usability and full constexpr support, built from scratch using C++14 features.
 
-It is inspired by the approach Sergey Ryazanov describes in the article [_The Impossibly Fast C++ Delegates_][impossDelegates] but is completly rewritten for better usability and makes use of modern C++14 features.
+It is inspired by the approach Sergey Ryazanov describes in the article [_The Impossibly Fast C++ Delegates_][impossDelegates]. He explains how you can use the fact that the address of any function or any member method of a class can be passed as non-type template argument and how this improves compile-time optimizations.
 
 ## Features
-- **delegate**: The original one.
-- **event_delegate**: Only ´void´ is allowed as return type with the advantage that calls to unlinked delegates are simply ignored and don't lead to undefined behavior.
-- **static_delegate**: An even faster solution, but the functions or methods need to be linked at compile time. Only the objects to call methods are still resolved during runtime.
+
+- Can store the address of a function or object and address of a member method of a given signature.
+- Visibly documents this signature.
+- Delegates calls to operator() to the stored function or member method.
+    - Does a zero overhead call to an empty function, if the return type is void and the delegate was not set.  
+      (Has undefined behavior if the return type is not void and the delegate was not set.)
+- Provides factory functions for easy creation of such delegates.
+- Goes without heap allocations and has full constexpr support. Hence, depending on your application, it can be fully compile time optimized and is a lot more performant than std::function, function-pointers or solutions based on virtual functions.
+
+## Contents
+
+Defined in [include/me/delegates.hpp](include/me/delegates.hpp):
+
+- **delegate**: The original delegate.
+  - If the return type is void, uses a safe implementation which calls an empty function if nothing or nullptr was assigned.
+- **make_delegate**: A factory function which supports creating and assigning delegates.
+- **event_delegate**: A restricted version of *delegate* which follows an event-driven forward only approach.
+  - Restricts the return type to void.
+  - Forbids function signatures with write access to the arguments.
+- **make_event_delegate**: A factory function which supports creating and assigning event delegates.
+
+## Examples
+
+*TODO*
+
+## Requirements
+
+- A C++14 compatible compiler.
+
+
+## Other solutions for C++ delegates
+
+*TODO*
 
 ## References
 
