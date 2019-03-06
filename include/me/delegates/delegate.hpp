@@ -5,13 +5,13 @@
 //   - delegate<void (Args...)>
 // See the documentation for more information.
 //
-// The delegates::delegate implementation is based on the article of Sergey
-// Ryazanov: "The Impossibly Fast C++ Delegates", 18 Jul 2005
+// The delegates::delegate implementation is based on the article of
+// Sergey Ryazanov: "The Impossibly Fast C++ Delegates", 18 Jul 2005
 // https://www.codeproject.com/articles/11015/the-impossibly-fast-c-delegates
 //
 // Copyright Roger Mettler 2019.
 // Distributed under the Boost Software License, Version 1.0.
-// (See accompanying file LICENSE_1_0.txt or copy at
+// (See accompanying file LICENSE or copy at
 // https://www.boost.org/LICENSE_1_0.txt)
 //
 
