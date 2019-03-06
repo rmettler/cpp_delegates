@@ -12,14 +12,14 @@
 //
 
 // TODO: for event_delegates: only allow values, const ref or move as arguments
+// std::is_lvalue_reference<>::value && the referenced value is const
+// std::is_pointer && the pointed value is const
 
 #pragma once
 
 #include "delegate.hpp"
 #include <type_traits>
 
-std::is_lvalue_reference<>::value && std::is_const
-std::is_pointer && std::is_const
 
 namespace me {
 namespace delegates {
