@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "detail/asserts.hpp"
 #include <cstddef>
 
 namespace me {
@@ -30,21 +31,23 @@ namespace delegates {
 // TODO: is "non static member" the correct name? or are they only non static
 // methods?
 
-template <typename T> class delegate;
+template <typename T> class delegate : detail::invalid_delegate_signature<T> {
+};
 
 template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
   public:
-    constexpr delegate() = default;
+    constexpr delegate() : delegate(nullptr) {}
     constexpr delegate(const delegate &) = default;
     constexpr delegate(delegate &&) = default;
-    constexpr delegate(const std::nullptr_t &) : delegate() {}
+    constexpr delegate(std::nullptr_t) : obj_(nullptr), caller_(nullptr) {}
 
     constexpr delegate &operator=(const delegate &) = default;
     constexpr delegate &operator=(delegate &&) = default;
-    constexpr delegate &operator=(const std::nullptr_t &)
+    constexpr delegate &operator=(std::nullptr_t)
     {
         obj_ = nullptr;
         caller_ = nullptr;
+        return *this;
     }
 
     constexpr Ret operator()(Args... args) const
@@ -57,7 +60,7 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
     constexpr bool operator!() const { return !isSet(); }
 
     template <typename C, Ret (C::*pMethod)(Args...)>
-    constexpr static delegate create_from_non_static_member(C *obj)
+    constexpr static delegate createFromNonStaticMemberFunction(C *obj)
     {
         delegate d;
         d.obj_ = obj;
@@ -66,7 +69,7 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
     }
 
     template <typename C, Ret (C::*pMethod)(Args...) const>
-    constexpr static delegate create_from_non_static_const_member(C const *obj)
+    constexpr static delegate createFromNonStaticConstMemberFunction(C const *obj)
     {
         delegate d;
         d.obj_ = const_cast<C *>(obj);
@@ -75,7 +78,7 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
     }
 
     template <Ret (*pFunction)(Args...)>
-    constexpr static delegate create_from_function()
+    constexpr static delegate createFromFunction()
     {
         delegate d;
         d.obj_ = nullptr;
@@ -112,11 +115,11 @@ template <typename... Args> class delegate<void(Args...)> {
     constexpr delegate() = default;
     constexpr delegate(const delegate &orig) = default;
     constexpr delegate(delegate &&) = default;
-    constexpr delegate(const std::nullptr_t &) : delegate() {}
+    constexpr delegate(std::nullptr_t) : delegate() {}
 
     constexpr delegate &operator=(const delegate &orig) = default;
     constexpr delegate &operator=(delegate &&) = default;
-    constexpr delegate &operator=(const std::nullptr_t &)
+    constexpr delegate &operator=(std::nullptr_t)
     {
         obj_ = nullptr;
         caller_ = null_call;
@@ -129,7 +132,7 @@ template <typename... Args> class delegate<void(Args...)> {
     constexpr operator bool() const { return isSet(); }
 
     template <typename C, void (C::*pMethod)(Args...)>
-    constexpr static delegate create_from_non_static_member(C *obj)
+    constexpr static delegate createFromNonStaticMemberFunction(C *obj)
     {
         delegate d;
         d.obj_ = obj;
@@ -138,7 +141,7 @@ template <typename... Args> class delegate<void(Args...)> {
     }
 
     template <typename C, void (C::*pMethod)(Args...) const>
-    constexpr static delegate create_from_non_static_const_member(C const *obj)
+    constexpr static delegate createFromNonStaticConstMemberFunction(C const *obj)
     {
         delegate d;
         d.obj_ = const_cast<C *>(obj);
@@ -148,7 +151,7 @@ template <typename... Args> class delegate<void(Args...)> {
     }
 
     template <void (*pFunction)(Args...)>
-    constexpr static delegate create_from_function()
+    constexpr static delegate createFromFunction()
     {
         delegate d;
         d.obj_ = nullptr;

@@ -7,6 +7,7 @@
 
 #include "me/delegates.hpp"
 #include <cassert>
+#include <iostream>
 
 namespace me {
 
@@ -47,7 +48,7 @@ static_assert(true == !explicitlyNotSet, "");
 
 namespace test_constexpr_method {
 static constexpr auto direct =
-    delegates::delegate<int(bool)>::create_from_non_static_member<A, &A::cefoo>(
+    delegates::delegate<int(bool)>::createFromNonStaticMemberFunction<A, &A::cefoo>(
         const_cast<A *>(&a));
 static_assert(12 == direct(true), "");
 static_assert(true == direct.isSet(), "");
@@ -63,7 +64,7 @@ static_assert(true == factory, "");
 static_assert(false == !factory, "");
 
 static constexpr auto directNullObj =
-    delegates::delegate<int(bool)>::create_from_non_static_member<A, &A::cefoo>(
+    delegates::delegate<int(bool)>::createFromNonStaticMemberFunction<A, &A::cefoo>(
         nullptr);
 static_assert(false == directNullObj.isSet(), "");
 static_assert(false == directNullObj, "");
@@ -78,7 +79,7 @@ static_assert(true == !factoryNullObj, "");
 
 namespace test_constexpr_const_method {
 static constexpr auto direct = delegates::delegate<int(
-    bool)>::create_from_non_static_const_member<A, &A::cecfoo>(&a);
+    bool)>::createFromNonStaticConstMemberFunction<A, &A::cecfoo>(&a);
 static_assert(13 == direct(true), "");
 static_assert(true == direct.isSet(), "");
 static_assert(true == direct, "");
@@ -97,7 +98,7 @@ static_assert(false == !factory, "");
 
 namespace test_constexpr_static_method {
 static constexpr auto direct =
-    delegates::delegate<int(bool)>::create_from_function<&A::cesfoo>();
+    delegates::delegate<int(bool)>::createFromFunction<&A::cesfoo>();
 static_assert(14 == direct(true), "");
 static_assert(true == direct.isSet(), "");
 static_assert(true == direct, "");
@@ -113,7 +114,7 @@ static_assert(false == !factory, "");
 
 namespace test_constexpr_function {
 static constexpr auto direct =
-    delegates::delegate<int(bool)>::create_from_function<&cefoo>();
+    delegates::delegate<int(bool)>::createFromFunction<&cefoo>();
 static_assert(15 == direct(true), "");
 static_assert(true == direct.isSet(), "");
 static_assert(true == direct, "");
@@ -153,7 +154,9 @@ void runTests()
     B b;
     ed2 = delegates::make_event_delegate<decltype(&B::foo), &B::foo>(&b);
     ed2 = delegates::event_delegate<void(
-        int)>::create_from_non_static_member<B, &B::foo>(&b);
+        int)>::createFromNonStaticMemberFunction<B, &B::foo>(&b);
+    using Bla = delegates::event_delegate<void(int&, int*)>;
+    Bla bla = {};
     // TODO: test dynamic usage of all the above delegates
     // TODO: extend test for setting and unsetting of all the delegates
     // (set one, set another or set one, unset, then set another)
@@ -161,4 +164,8 @@ void runTests()
 
 } // namespace me
 
-int main() { me::runTests(); }
+int main() {
+    std::cout << "Running tests" << std::endl;
+    me::runTests();
+    std::cout << "Tests finished" << std::endl;
+}

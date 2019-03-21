@@ -18,19 +18,23 @@
 #pragma once
 
 #include "delegate.hpp"
-#include <type_traits>
-
+#include "detail/asserts.hpp"
+#include "detail/event_delegate_argument_check.hpp"
 
 namespace me {
 namespace delegates {
 
-template <typename T> class event_delegate;
+template <typename Signature>
+class event_delegate : private detail::invalid_event_delegate_signature<Signature> {
+};
 
 template <typename... Args>
-class event_delegate<void(Args...)> : private delegate<void(Args...)> {
-    // TODO add static assert to check the Args...
+class event_delegate<void(Args...)>
+    : private delegate<void(Args...)>,
+      private detail::check_event_delegate_arguments<Args...> {
   private:
     using base_type = delegate<void(Args...)>;
+
   public:
     using base_type::delegate;
     using base_type::operator=;
@@ -38,9 +42,9 @@ class event_delegate<void(Args...)> : private delegate<void(Args...)> {
     using base_type::isSet;
     using base_type::operator bool;
     using base_type::operator!;
-    using base_type::create_from_function;
-    using base_type::create_from_non_static_const_member;
-    using base_type::create_from_non_static_member;
+    using base_type::createFromFunction;
+    using base_type::createFromNonStaticConstMemberFunction;
+    using base_type::createFromNonStaticMemberFunction;
 };
 
 } // namespace delegates

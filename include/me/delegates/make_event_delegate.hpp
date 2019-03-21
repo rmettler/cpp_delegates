@@ -27,7 +27,7 @@ struct event_delegate_factory<void (C::*)(Args...), pMem> {
     constexpr static auto create(C *obj)
     {
         return event_delegate<void(
-            Args...)>::template create_from_non_static_member<C, pMem>(obj);
+            Args...)>::template createFromNonStaticMemberFunction<C, pMem>(obj);
     }
 };
 
@@ -37,7 +37,7 @@ struct event_delegate_factory<void (C::*)(Args...) const, pMem> {
     constexpr static auto create(C const *obj)
     {
         return event_delegate<void(Args...)>::
-            template create_from_non_static_const_member<C, pMem>(obj);
+            template createFromNonStaticConstMemberFunction<C, pMem>(obj);
     }
 };
 
@@ -47,7 +47,7 @@ struct event_delegate_factory<void (*)(Args...), pMem> {
     constexpr static auto create()
     {
         return event_delegate<void(
-            Args...)>::template create_from_function<pMem>();
+            Args...)>::template createFromFunction<pMem>();
     }
 };
 } // namespace detail
