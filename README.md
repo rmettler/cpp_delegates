@@ -28,12 +28,43 @@ Defined in [include/rome/delegates.hpp](include/rome/delegates.hpp):
 
 ## Examples
 
-*TODO*
+### Event delegates
+
+Describe an interface with an `event_delegate`:
+
+```c++
+using delegates = rome::delegates;
+delegates::event_delegate<void(int)> valueChanged;
+```
+
+When the delegate is called, nothing happens, since the delegate is not set.
+
+```c++
+valueChanged(42);
+// nothing happens
+```
+
+Link a function with a matching signature to the delegate:
+
+```c++
+void print(int value) {
+    std::cout << "value = " << value << std::endl;
+}
+
+valueChanged = delegates::make_event_delegate<
+        decltype(&print), &print>();
+```
+
+The delegate now calls the linked function.
+
+```c++
+valueChanged(42);
+// Output: value = 42
+```
 
 ## Requirements
 
 - A C++14 compatible compiler.
-
 
 ## Other solutions for C++ delegates
 
@@ -41,6 +72,6 @@ Defined in [include/rome/delegates.hpp](include/rome/delegates.hpp):
 
 ## References
 
-1. Ryazanov, Sergey. “The Impossibly Fast C++ Delegates.” [_The Impossibly Fast C++ Delegates_][impossDelegates], CodeProject, 18 July 2005, www.codeproject.com/Articles/11015/The-Impossibly-Fast-C-Delegates. 
+1. Ryazanov, Sergey. “The Impossibly Fast C++ Delegates.” [_The Impossibly Fast C++ Delegates_][impossDelegates], CodeProject, 18 July 2005, www.codeproject.com/Articles/11015/The-Impossibly-Fast-C-Delegates.
 
 [impossDelegates]: https://www.codeproject.com/Articles/11015/The-Impossibly-Fast-C-Delegates
