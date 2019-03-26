@@ -1,5 +1,5 @@
 //
-// Project: delegates
+// Project: C++ delegates
 // File content:
 //   - make_event_delegate<..>(..)
 // See the documentation for more information.
@@ -14,7 +14,7 @@
 
 #include "event_delegate.hpp"
 
-namespace me {
+namespace rome {
 namespace delegates {
 
 namespace detail {
@@ -57,4 +57,4 @@ constexpr auto make_event_delegate =
     detail::event_delegate_factory<T, t>::create;
 
 } // namespace delegates
-} // namespace me
+} // namespace rome

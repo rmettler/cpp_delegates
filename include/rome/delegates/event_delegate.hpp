@@ -1,5 +1,5 @@
 //
-// Project: delegates
+// Project: C++ delegates
 // File content:
 //   - event_delegate<void (Args...)>
 //   - make_event_delegate<..>(..)
@@ -21,11 +21,12 @@
 #include "detail/asserts.hpp"
 #include "detail/event_delegate_argument_check.hpp"
 
-namespace me {
+namespace rome {
 namespace delegates {
 
 template <typename Signature>
-class event_delegate : private detail::invalid_event_delegate_signature<Signature> {
+class event_delegate
+    : private detail::invalid_event_delegate_signature<Signature> {
 };
 
 template <typename... Args>
@@ -48,4 +49,4 @@ class event_delegate<void(Args...)>
 };
 
 } // namespace delegates
-} // namespace me
+} // namespace rome

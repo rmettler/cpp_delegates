@@ -1,5 +1,5 @@
 //
-// Project: delegates
+// Project: C++ delegates
 // File content:
 //   - delegate<Ret (Args...)>
 //   - make_delegate<..>(..)

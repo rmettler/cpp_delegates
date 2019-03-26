@@ -1,5 +1,5 @@
 //
-// Project: delegates
+// Project: C++ delegates
 // File content:
 //   - make_delegate<..>(..)
 // See the documentation for more information.
@@ -14,7 +14,7 @@
 
 #include "delegate.hpp"
 
-namespace me {
+namespace rome {
 namespace delegates {
 
 namespace detail {
@@ -52,4 +52,4 @@ template <typename T, T t>
 constexpr auto make_delegate = detail::delegate_factory<T, t>::create;
 
 } // namespace delegates
-} // namespace me
+} // namespace rome

@@ -1,5 +1,5 @@
 //
-// Project: delegates
+// Project: C++ delegates
 // File content:
 //   - delegate<Ret (Args...)>
 //   - delegate<void (Args...)>
@@ -20,7 +20,7 @@
 #include "detail/asserts.hpp"
 #include <cstddef>
 
-namespace me {
+namespace rome {
 namespace delegates {
 // TODO: add a proper .clang-format!!!
 // TODO: check whether is function, member, static or non-static
@@ -28,8 +28,7 @@ namespace delegates {
 //      std::is_member_pointer, is_member_object_pointer,
 //      is_member_function_pointer
 // TODO: compare with other implementations
-// TODO: is "non static member" the correct name? or are they only non static
-// methods?
+// TODO: extract some of the functionality to be reusable in both the delegate and its void specialization
 
 template <typename T> class delegate : detail::invalid_delegate_signature<T> {
 };
@@ -50,14 +49,23 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
         return *this;
     }
 
+    constexpr bool isSet() const { return caller_ != nullptr; }
+    constexpr operator bool() const { return isSet(); }
+    constexpr bool operator!() const { return !isSet(); }
+
+    // TODO: check, does comparision really work?
+    //       can it be, that the same *_call function is generated twice and therefore has separat adresses?
+    constexpr bool operator==(const delegate& rhs) const {
+        return (obj_ == rhs.obj_) && (caller_ == rhs.caller_);
+    }
+    constexpr bool operator!=(const delegate &rhs) const {
+        return !operator==(rhs);
+    }
+
     constexpr Ret operator()(Args... args) const
     {
         return caller_(obj_, args...);
     }
-
-    constexpr bool isSet() const { return caller_ != nullptr; }
-    constexpr operator bool() const { return isSet(); }
-    constexpr bool operator!() const { return !isSet(); }
 
     template <typename C, Ret (C::*pMethod)(Args...)>
     constexpr static delegate createFromNonStaticMemberFunction(C *obj)
@@ -69,7 +77,8 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
     }
 
     template <typename C, Ret (C::*pMethod)(Args...) const>
-    constexpr static delegate createFromNonStaticConstMemberFunction(C const *obj)
+    constexpr static delegate
+    createFromNonStaticConstMemberFunction(C const *obj)
     {
         delegate d;
         d.obj_ = const_cast<C *>(obj);
@@ -88,13 +97,13 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
 
   private:
     template <typename C, Ret (C::*pMethod)(Args...)>
-    constexpr static Ret method_call(void *obj, Args... args)
+    static Ret method_call(void *obj, Args... args)
     {
         return (static_cast<C *>(obj)->*pMethod)(args...);
     }
 
     template <typename C, Ret (C::*pMethod)(Args...) const>
-    constexpr static Ret const_method_call(void *obj, Args... args)
+    static Ret const_method_call(void *obj, Args... args)
     {
         return (static_cast<C const *>(obj)->*pMethod)(args...);
     }
@@ -123,9 +132,8 @@ template <typename... Args> class delegate<void(Args...)> {
     {
         obj_ = nullptr;
         caller_ = null_call;
+        return *this;
     }
-
-    constexpr void operator()(Args... args) const { caller_(obj_, args...); }
 
     constexpr bool isSet() const { return caller_ != nullptr; }
     constexpr bool operator!() const { return !isSet(); }
@@ -140,8 +148,11 @@ template <typename... Args> class delegate<void(Args...)> {
         return d;
     }
 
+    void operator()(Args... args) const { caller_(obj_, args...); }
+
     template <typename C, void (C::*pMethod)(Args...) const>
-    constexpr static delegate createFromNonStaticConstMemberFunction(C const *obj)
+    constexpr static delegate
+    createFromNonStaticConstMemberFunction(C const *obj)
     {
         delegate d;
         d.obj_ = const_cast<C *>(obj);
@@ -161,13 +172,13 @@ template <typename... Args> class delegate<void(Args...)> {
 
   private:
     template <typename C, void (C::*pMethod)(Args...)>
-    constexpr static void method_call(void *obj, Args... args)
+    static void method_call(void *obj, Args... args)
     {
         (static_cast<C *>(obj)->*pMethod)(args...);
     }
 
     template <typename C, void (C::*pMethod)(Args...) const>
-    constexpr static void const_method_call(void *obj, Args... args)
+    static void const_method_call(void *obj, Args... args)
     {
         (static_cast<C const *>(obj)->*pMethod)(args...);
     }
@@ -186,4 +197,4 @@ template <typename... Args> class delegate<void(Args...)> {
 };
 
 } // namespace delegates
-} // namespace me
+} // namespace rome

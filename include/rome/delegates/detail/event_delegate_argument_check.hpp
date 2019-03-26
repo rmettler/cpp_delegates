@@ -1,5 +1,5 @@
 //
-// Project: delegates
+// Project: C++ delegates
 //
 // Copyright Roger Mettler 2019.
 // Distributed under the Boost Software License, Version 1.0.
@@ -13,7 +13,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace me {
+namespace rome {
 namespace delegates {
 namespace detail {
 
@@ -56,8 +56,7 @@ template <typename... Args>
 using check_event_delegate_arguments = std::conditional_t<
     std::is_same<
         std::integer_sequence<
-            bool, true,
-            is_copied_moved_or_const_referenced_value<Args>()...>,
+            bool, true, is_copied_moved_or_const_referenced_value<Args>()...>,
         std::integer_sequence<
             bool, is_copied_moved_or_const_referenced_value<Args>()...,
             true>>::value,
@@ -65,4 +64,4 @@ using check_event_delegate_arguments = std::conditional_t<
 
 } // namespace detail
 } // namespace delegates
-} // namespace me
+} // namespace rome
