@@ -9,14 +9,14 @@ It is inspired by the approach Sergey Ryazanov describes in the article [_The Im
 - Can store the address of a function or object and address of a member method of a given signature.
 - Visibly documents this signature.
 - Delegates calls to operator() to the stored function or member method.
-    - Does a zero overhead call to an empty function, if the return type is void and the delegate was not set.  
-      (Has undefined behavior if the return type is not void and the delegate was not set.)
+  - Does a zero overhead call to an empty function, if the return type is void and the delegate was not set.  
+    (Has undefined behavior if the return type is not void and the delegate was not set.)
 - Provides factory functions for easy creation of such delegates.
 - Goes without heap allocations and has full constexpr support. Hence, depending on your application, it can be fully compile time optimized and is a lot more performant than std::function, function-pointers or solutions based on virtual functions.
 
 ## Contents
 
-Defined in [include/me/delegates.hpp](include/me/delegates.hpp):
+Defined in [include/rome/delegates.hpp](include/rome/delegates.hpp):
 
 - **delegate**: The original delegate.
   - If the return type is void, uses a safe implementation which calls an empty function if nothing or nullptr was assigned.

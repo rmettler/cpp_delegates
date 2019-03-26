@@ -26,8 +26,7 @@ struct event_delegate_factory<void (C::*)(Args...), pMem> {
     // TODO add static assert to check the Args...
     constexpr static auto create(C *obj)
     {
-        return event_delegate<void(
-            Args...)>::template createFromNonStaticMemberFunction<C, pMem>(obj);
+        return event_delegate<void(Args...)>::template create<C, pMem>(obj);
     }
 };
 
@@ -36,8 +35,7 @@ struct event_delegate_factory<void (C::*)(Args...) const, pMem> {
     // TODO add static assert to check the Args...
     constexpr static auto create(C const *obj)
     {
-        return event_delegate<void(Args...)>::
-            template createFromNonStaticConstMemberFunction<C, pMem>(obj);
+        return event_delegate<void(Args...)>::template create<C, pMem>(obj);
     }
 };
 
@@ -46,8 +44,7 @@ struct event_delegate_factory<void (*)(Args...), pMem> {
     // TODO add static assert to check the Args...
     constexpr static auto create()
     {
-        return event_delegate<void(
-            Args...)>::template createFromFunction<pMem>();
+        return event_delegate<void(Args...)>::template create<pMem>();
     }
 };
 } // namespace detail

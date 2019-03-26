@@ -1,15 +1,17 @@
 //
+// Project: C++ delegates
+//
 // Copyright Roger Mettler 2019.
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE or copy at
 // https://www.boost.org/LICENSE_1_0.txt)
 //
 
-#include "me/delegates.hpp"
+#include "rome/delegates.hpp"
 #include <cassert>
 #include <iostream>
 
-namespace me {
+namespace rome {
 
 struct Functor {
     int operator()(bool) { return 1; }
@@ -34,6 +36,7 @@ constexpr int cefoo(bool) { return 15; }
 
 static constexpr A a;
 
+#if 0
 namespace test_not_set {
 static constexpr delegates::delegate<int(bool)> implcitlyNotSet{};
 static_assert(false == implcitlyNotSet.isSet(), "");
@@ -161,11 +164,42 @@ void runTests()
     // TODO: extend test for setting and unsetting of all the delegates
     // (set one, set another or set one, unset, then set another)
 }
+#endif
 
-} // namespace me
+constexpr auto create()
+{
+    delegates::delegate<int(bool)> indirect;
+    indirect =
+        delegates::delegate<int(bool)>::create<A, &A::cfoo>(const_cast<A &>(a));
+    return indirect;
+}
 
-int main() {
+void fooo(const int &) {}
+
+void runTests()
+{
+    // TODO: constexpr für alle member funktionen testen ausser operator()
+    //       operator() nur für constexpr function testen
+    constexpr auto d = create();
+    assert(3 == d(true));
+    static_assert(true == d.isSet(), "");
+    static_assert(true == d, "");
+    static_assert(false == !d, "");
+
+    constexpr auto dd = delegates::delegate<int(bool)>::create<&cefoo>();
+    constexpr int ret = dd(true);
+
+    auto ddd = delegates::make_event_delegate<decltype(&fooo), &fooo>();
+    ddd = nullptr;
+    int x;
+    ddd(x);
+}
+
+} // namespace rome
+
+int main()
+{
     std::cout << "Running tests" << std::endl;
-    me::runTests();
+    rome::runTests();
     std::cout << "Tests finished" << std::endl;
 }

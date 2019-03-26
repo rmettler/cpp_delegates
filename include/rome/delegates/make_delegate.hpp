@@ -24,8 +24,7 @@ template <typename C, typename Ret, typename... Args, Ret (C::*pMem)(Args...)>
 struct delegate_factory<Ret (C::*)(Args...), pMem> {
     constexpr static auto create(C *obj)
     {
-        return delegate<Ret(
-            Args...)>::template createFromNonStaticMemberFunction<C, pMem>(obj);
+        return delegate<Ret(Args...)>::template create<C, pMem>(obj);
     }
 };
 
@@ -34,8 +33,7 @@ template <typename C, typename Ret, typename... Args,
 struct delegate_factory<Ret (C::*)(Args...) const, pMem> {
     constexpr static auto create(C const *obj)
     {
-        return delegate<Ret(Args...)>::
-            template createFromNonStaticConstMemberFunction<C, pMem>(obj);
+        return delegate<Ret(Args...)>::template create<C, pMem>(obj);
     }
 };
 
@@ -43,7 +41,7 @@ template <typename Ret, typename... Args, Ret (*pMem)(Args...)>
 struct delegate_factory<Ret (*)(Args...), pMem> {
     constexpr static auto create()
     {
-        return delegate<Ret(Args...)>::template createFromFunction<pMem>();
+        return delegate<Ret(Args...)>::template create<pMem>();
     }
 };
 } // namespace detail

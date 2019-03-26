@@ -19,79 +19,72 @@
 
 #include "detail/asserts.hpp"
 #include <cstddef>
+#include <type_traits>
 
 namespace rome {
 namespace delegates {
 // TODO: add a proper .clang-format!!!
-// TODO: check whether is function, member, static or non-static
-//      std::is_function -> all functions
-//      std::is_member_pointer, is_member_object_pointer,
-//      is_member_function_pointer
 // TODO: compare with other implementations
-// TODO: extract some of the functionality to be reusable in both the delegate and its void specialization
 
 template <typename T> class delegate : detail::invalid_delegate_signature<T> {
 };
 
 template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
   public:
-    constexpr delegate() : delegate(nullptr) {}
+    constexpr delegate() = default;
     constexpr delegate(const delegate &) = default;
     constexpr delegate(delegate &&) = default;
-    constexpr delegate(std::nullptr_t) : obj_(nullptr), caller_(nullptr) {}
+    constexpr delegate(std::nullptr_t) : delegate() {}
 
     constexpr delegate &operator=(const delegate &) = default;
     constexpr delegate &operator=(delegate &&) = default;
     constexpr delegate &operator=(std::nullptr_t)
     {
-        obj_ = nullptr;
-        caller_ = nullptr;
+        *this = {};
         return *this;
     }
 
-    constexpr bool isSet() const { return caller_ != nullptr; }
+    constexpr bool isSet() const { return callee_ != null_callee; }
     constexpr operator bool() const { return isSet(); }
     constexpr bool operator!() const { return !isSet(); }
 
-    // TODO: check, does comparision really work?
-    //       can it be, that the same *_call function is generated twice and therefore has separat adresses?
-    constexpr bool operator==(const delegate& rhs) const {
-        return (obj_ == rhs.obj_) && (caller_ == rhs.caller_);
+    constexpr bool operator==(const delegate &rhs) const
+    {
+        return (obj_ == rhs.obj_) && (callee_ == rhs.callee_);
     }
-    constexpr bool operator!=(const delegate &rhs) const {
-        return !operator==(rhs);
+    constexpr bool operator!=(const delegate &rhs) const
+    {
+        return !(*this == rhs);
     }
 
     constexpr Ret operator()(Args... args) const
     {
-        return caller_(obj_, args...);
+        return callee_(obj_, args...);
+    }
+
+    template <Ret (*pFunction)(Args...)> constexpr static delegate create()
+    {
+        delegate d;
+        d.obj_ = nullptr;
+        d.callee_ = &function_call<pFunction>;
+        return d;
     }
 
     template <typename C, Ret (C::*pMethod)(Args...)>
-    constexpr static delegate createFromNonStaticMemberFunction(C *obj)
+    constexpr static delegate create(C &obj)
     {
         delegate d;
-        d.obj_ = obj;
-        d.caller_ = (obj != nullptr) ? &method_call<C, pMethod> : nullptr;
+        d.obj_ = &obj;
+        d.callee_ = &method_call<C, pMethod>;
         return d;
     }
 
     template <typename C, Ret (C::*pMethod)(Args...) const>
-    constexpr static delegate
-    createFromNonStaticConstMemberFunction(C const *obj)
+    constexpr static delegate create(C const &obj)
     {
         delegate d;
-        d.obj_ = const_cast<C *>(obj);
-        d.caller_ = (obj != nullptr) ? &const_method_call<C, pMethod> : nullptr;
-        return d;
-    }
-
-    template <Ret (*pFunction)(Args...)>
-    constexpr static delegate createFromFunction()
-    {
-        delegate d;
-        d.obj_ = nullptr;
-        d.caller_ = &function_call<pFunction>;
+        d.obj_ = const_cast<C *>(&obj);
+        d.callee_ = &const_method_call<C, pMethod>;
         return d;
     }
 
@@ -109,91 +102,33 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
     }
 
     template <Ret (*pFunction)(Args...)>
-    constexpr static Ret function_call(void *, Args... args)
+    static constexpr Ret function_call(void *, Args... args)
     {
         return (*pFunction)(args...);
     }
 
+    static constexpr void null_call(void *, Args...) {}
+
+    template <typename T,
+              typename std::enable_if_t<!std::is_same<T, void>::value, int> = 0>
+    static constexpr auto get_null_callee()
+    {
+        return nullptr;
+    }
+
+    template <typename T,
+              typename std::enable_if_t<std::is_same<T, void>::value, int> = 0>
+    static constexpr auto get_null_callee()
+    {
+        return null_call;
+    }
+
+    static constexpr auto null_callee = get_null_callee<Ret>();
+
     using caller_type = Ret (*)(void *, Args...);
+
     void *obj_ = nullptr;
-    caller_type caller_ = nullptr;
-};
-
-template <typename... Args> class delegate<void(Args...)> {
-  public:
-    constexpr delegate() = default;
-    constexpr delegate(const delegate &orig) = default;
-    constexpr delegate(delegate &&) = default;
-    constexpr delegate(std::nullptr_t) : delegate() {}
-
-    constexpr delegate &operator=(const delegate &orig) = default;
-    constexpr delegate &operator=(delegate &&) = default;
-    constexpr delegate &operator=(std::nullptr_t)
-    {
-        obj_ = nullptr;
-        caller_ = null_call;
-        return *this;
-    }
-
-    constexpr bool isSet() const { return caller_ != nullptr; }
-    constexpr bool operator!() const { return !isSet(); }
-    constexpr operator bool() const { return isSet(); }
-
-    template <typename C, void (C::*pMethod)(Args...)>
-    constexpr static delegate createFromNonStaticMemberFunction(C *obj)
-    {
-        delegate d;
-        d.obj_ = obj;
-        d.caller_ = (obj != nullptr) ? &method_call<C, pMethod> : null_call;
-        return d;
-    }
-
-    void operator()(Args... args) const { caller_(obj_, args...); }
-
-    template <typename C, void (C::*pMethod)(Args...) const>
-    constexpr static delegate
-    createFromNonStaticConstMemberFunction(C const *obj)
-    {
-        delegate d;
-        d.obj_ = const_cast<C *>(obj);
-        d.caller_ =
-            (obj != nullptr) ? &const_method_call<C, pMethod> : null_call;
-        return d;
-    }
-
-    template <void (*pFunction)(Args...)>
-    constexpr static delegate createFromFunction()
-    {
-        delegate d;
-        d.obj_ = nullptr;
-        d.caller_ = &function_call<pFunction>;
-        return d;
-    }
-
-  private:
-    template <typename C, void (C::*pMethod)(Args...)>
-    static void method_call(void *obj, Args... args)
-    {
-        (static_cast<C *>(obj)->*pMethod)(args...);
-    }
-
-    template <typename C, void (C::*pMethod)(Args...) const>
-    static void const_method_call(void *obj, Args... args)
-    {
-        (static_cast<C const *>(obj)->*pMethod)(args...);
-    }
-
-    template <void (*pFunction)(Args...)>
-    constexpr static void function_call(void *, Args... args)
-    {
-        (*pFunction)(args...);
-    }
-
-    constexpr static void null_call(void *, Args...) {}
-
-    using caller_type = void (*)(void *, Args...);
-    void *obj_ = nullptr;
-    caller_type caller_ = null_call;
+    caller_type callee_ = null_callee;
 };
 
 } // namespace delegates
