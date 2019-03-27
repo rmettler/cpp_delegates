@@ -1,6 +1,6 @@
 # C++ delegates
 
-A lightweight function level runtime interface. Provides higher flexibility with less effort than function objects or OOP interfaces. Is similar to use, but more performant than `std::function`.
+A lightweight function interface providing higher flexibility with less effort than function pointers, function objects or OOP interfaces. Is similar to use, but more performant than `std::function`.
 
 **UNDER CONSTRUCTION: The whole readme needs a lot more work.**
 
@@ -23,7 +23,7 @@ A lightweight function level runtime interface. Provides higher flexibility with
 
 ## Goals
 
-There are a lot of articles, examples and libraries out there regarding differnt kinds of C++ delegates. So why yet another one? None of those implementations
+There are a lot of articles, examples and libraries out there regarding differnt kinds of C++ delegates. So why yet another one?
 
 - **Function level interfaces**. TODO: should add abstraction, caller should not have to care about the callee, as long as the callees functions argument and return types match. changed during runtime.
 - **Performance**. (TODO) as less overhead as somehow possible, in speed and code size. Usable for the embedded environment. can compete with any other runtime solution. uses only two pointers and no dynamic memory allocations.
@@ -33,7 +33,7 @@ There are a lot of articles, examples and libraries out there regarding differnt
 ### When to use
 
 - Performance and/or memory constrained environment.
-- You want to just link good old functions.
+- Function objects or other static interfaces are infeasible.
 
 ### When not to use
 
@@ -99,16 +99,18 @@ valueChanged(42);
 
 ## System requirements
 
-- A C++14 compatible compiler.
+- A C++14 compatible compiler and standard library.
+- Has no other dependencies.
 
 ## Other solutions and other implementations of C++ delegates
 
 *TODO*
 
-- std::function
-- functor/function object
-- signal/slot
 - function pointer
+- std::function
+- functor/function object (static interface)
+- signal/slot
+- OOP interfaces
 
 ## Thanks
 

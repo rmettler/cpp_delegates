@@ -9,8 +9,10 @@
 
 #include "rome/delegates.hpp"
 #include <cassert>
-#include <iostream>
+#define CATCH_CONFIG_MAIN
+#include <catch.hpp>
 
+#if 0
 namespace rome {
 
 struct Functor {
@@ -197,9 +199,87 @@ void runTests()
 
 } // namespace rome
 
-int main()
+#endif
+
+struct Functor {
+    int val = 0;
+    void operator()(int count, const bool &plus)
+    {
+        if (plus) {
+            val += count;
+        }
+        else {
+            val -= count;
+        }
+    }
+};
+
+struct A {
+    int foo(bool) { return 2; }
+    constexpr int cefoo(bool) { return 12; }
+    int cfoo(bool) const { return 3; }
+    constexpr int cecfoo(bool) const { return 13; }
+    static int sfoo(bool) { return 4; }
+    constexpr static int cesfoo(bool) { return 14; }
+    Functor functor;
+    int (A::*pFoo)(bool) = foo;
+    int (A::*pCFoo)(bool) const = cfoo;
+    int (*pSFoo)(bool) = sfoo;
+    int (&rSFoo)(bool) = sfoo;
+};
+
+struct TestVal {
+    int val = 0;
+    void reset() { val = 0; }
+    void count(int count, bool plus){
+        if (plus) {
+            val += count;
+        }
+        else {
+            val -= count;
+        }
+    }
+};
+
+TestVal testVal;
+
+void foo(int count, const bool &plus) { testVal.count(count, plus); }
+constexpr int cefoo(bool) { return 15; }
+
+static constexpr A a;
+
+using namespace rome::delegates;
+
+template class ::rome::delegates::event_delegate<void(int, const bool &)>;
+
+TEST_CASE("null initialized event_delegate")
 {
-    std::cout << "Running tests" << std::endl;
-    rome::runTests();
-    std::cout << "Tests finished" << std::endl;
+    event_delegate<void(int, const bool &)> ed;
+
+    REQUIRE(ed.isSet() == false);
+    REQUIRE(ed == false);
+    REQUIRE(!ed == true);
+
+    testVal.reset();
+
+    SECTION("link function") {
+        const auto tmp = make_event_delegate<decltype(&foo), &foo>();
+
+        REQUIRE(ed != tmp);
+
+        ed = tmp;
+
+        REQUIRE(ed.isSet() == true);
+        REQUIRE(ed == true);
+        REQUIRE(!ed == false);
+        REQUIRE(ed == tmp);
+
+        ed(5, true);
+
+        REQUIRE(testVal.val == 5);
+
+        ed(-1, false);
+
+        REQUIRE(testVal.val == 6);
+    }
 }
