@@ -1,8 +1,45 @@
 # C++ delegates
 
-An extended solution for C++ delegates with better usability and full constexpr support, built from scratch using C++14 features.
+A lightweight function level runtime interface. Provides higher flexibility with less effort than function objects or OOP interfaces. Is similar to use, but more performant than `std::function`.
 
-It is inspired by the approach Sergey Ryazanov describes in the article [_The Impossibly Fast C++ Delegates_][impossDelegates]. He explains how you can use the fact that the address of any function or any member method of a class can be passed as non-type template argument and how this improves compile-time optimizations.
+**UNDER CONSTRUCTION: The whole readme needs a lot more work.**
+
+***
+
+## Table of contents
+
+- [C++ delegates](#c-delegates)
+  - [Table of contents](#table-of-contents)
+  - [Goals](#goals)
+    - [When to use](#when-to-use)
+    - [When not to use](#when-not-to-use)
+  - [Features](#features)
+  - [Examples](#examples)
+    - [Event delegates](#event-delegates)
+  - [System requirements](#system-requirements)
+  - [Other solutions and other implementations of C++ delegates](#other-solutions-and-other-implementations-of-c-delegates)
+  - [Thanks](#thanks)
+  - [References](#references)
+
+## Goals
+
+There are a lot of articles, examples and libraries out there regarding differnt kinds of C++ delegates. So why yet another one? None of those implementations
+
+- **Function level interfaces**. TODO: should add abstraction, caller should not have to care about the callee, as long as the callees functions argument and return types match. changed during runtime.
+- **Performance**. (TODO) as less overhead as somehow possible, in speed and code size. Usable for the embedded environment. can compete with any other runtime solution. uses only two pointers and no dynamic memory allocations.
+- **Safe**. (TODO) No undefined behavior when using `void` as return type no callee is set. Omitting runtime checks and thus retaining maximal performance.
+- **Easy to use**. (TODO) supply helpful error messages during compile time. can be copied and compared.
+
+### When to use
+
+- Performance and/or memory constrained environment.
+- You want to just link good old functions.
+
+### When not to use
+
+If performance is no issue then std::function may be a better fit. (TODO cite std::function)
+
+If callers and callees are known during compile time and you are comfortable using templates, e.g. functors are safer and more performant, but in some occasions may produce more code. (TODO cite functors)
 
 ## Features
 
@@ -13,8 +50,6 @@ It is inspired by the approach Sergey Ryazanov describes in the article [_The Im
     (Has undefined behavior if the return type is not void and the delegate was not set.)
 - Provides factory functions for easy creation of such delegates.
 - Goes without heap allocations and has full constexpr support. Hence, depending on your application, it can be fully compile time optimized and is a lot more performant than std::function, function-pointers or solutions based on virtual functions.
-
-## Contents
 
 Defined in [include/rome/delegates.hpp](include/rome/delegates.hpp):
 
@@ -32,21 +67,21 @@ Defined in [include/rome/delegates.hpp](include/rome/delegates.hpp):
 
 Describe an interface with an `event_delegate`:
 
-```c++
+```cpp
 using delegates = rome::delegates;
 delegates::event_delegate<void(int)> valueChanged;
 ```
 
 When the delegate is called, nothing happens, since the delegate is not set.
 
-```c++
+```cpp
 valueChanged(42);
 // nothing happens
 ```
 
 Link a function with a matching signature to the delegate:
 
-```c++
+```cpp
 void print(int value) {
     std::cout << "value = " << value << std::endl;
 }
@@ -57,18 +92,27 @@ valueChanged = delegates::make_event_delegate<
 
 The delegate now calls the linked function.
 
-```c++
+```cpp
 valueChanged(42);
 // Output: value = 42
 ```
 
-## Requirements
+## System requirements
 
 - A C++14 compatible compiler.
 
-## Other solutions for C++ delegates
+## Other solutions and other implementations of C++ delegates
 
 *TODO*
+
+- std::function
+- functor/function object
+- signal/slot
+- function pointer
+
+## Thanks
+
+The basic delegate inspired by the approach Sergey Ryazanov describes in the article [_The Impossibly Fast C++ Delegates_][impossDelegates]. He explains how you can use the fact that the address of any function can be passed as non-type template argument to create highly optimizable function delegates.
 
 ## References
 
