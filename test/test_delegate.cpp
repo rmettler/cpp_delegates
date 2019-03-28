@@ -9,8 +9,7 @@
 
 #include "rome/delegates.hpp"
 #include <cassert>
-#define CATCH_CONFIG_MAIN
-#include <catch.hpp>
+#include <doctest.h>
 
 #if 0
 namespace rome {
@@ -257,7 +256,7 @@ TEST_CASE("null initialized event_delegate")
     REQUIRE(ed == false);
     REQUIRE(!ed == true);
 
-    SECTION("unlinked call")
+    SUBCASE("unlinked call")
     {
         ed(1, true);
         REQUIRE(ed.isSet() == false);
@@ -265,7 +264,7 @@ TEST_CASE("null initialized event_delegate")
         REQUIRE(!ed == true);
     }
 
-    SECTION("calls function")
+    SUBCASE("calls function")
     {
         const auto tmp = make_event_delegate<decltype(&foo), &foo>();
 
@@ -286,7 +285,7 @@ TEST_CASE("null initialized event_delegate")
 
         REQUIRE(testVal.val == 6);
     }
-    SECTION("calls functor")
+    SUBCASE("calls functor")
     {
         Functor functor;
         ed = event_delegate<void(int, const bool &)>::create(
