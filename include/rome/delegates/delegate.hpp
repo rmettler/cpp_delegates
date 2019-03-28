@@ -88,6 +88,15 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
         return d;
     }
 
+    template <typename T>
+    constexpr static delegate create(T &functor)
+    {
+        delegate d;
+        d.obj_ = &functor;
+        d.callee_ = &functor_call<T>;
+        return d;
+    }
+
   private:
     template <typename C, Ret (C::*pMethod)(Args...)>
     static Ret method_call(void *obj, Args... args)
@@ -105,6 +114,12 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
     static constexpr Ret function_call(void *, Args... args)
     {
         return (*pFunction)(args...);
+    }
+
+    template <typename T>
+    static constexpr Ret functor_call(void *obj, Args... args)
+    {
+        return static_cast<T *>(obj)->operator()(args...);
     }
 
     static constexpr void null_call(void *, Args...) {}

@@ -201,9 +201,10 @@ void runTests()
 
 #endif
 
-struct Functor {
+struct TestVal {
     int val = 0;
-    void operator()(int count, const bool &plus)
+    void reset() { val = 0; }
+    void count(int count, bool plus)
     {
         if (plus) {
             val += count;
@@ -211,6 +212,13 @@ struct Functor {
         else {
             val -= count;
         }
+    }
+};
+
+struct Functor : TestVal {
+    void operator()(int count, const bool &plus)
+    {
+        TestVal::count(count, plus);
     }
 };
 
@@ -228,19 +236,6 @@ struct A {
     int (&rSFoo)(bool) = sfoo;
 };
 
-struct TestVal {
-    int val = 0;
-    void reset() { val = 0; }
-    void count(int count, bool plus){
-        if (plus) {
-            val += count;
-        }
-        else {
-            val -= count;
-        }
-    }
-};
-
 TestVal testVal;
 
 void foo(int count, const bool &plus) { testVal.count(count, plus); }
@@ -254,15 +249,24 @@ template class ::rome::delegates::event_delegate<void(int, const bool &)>;
 
 TEST_CASE("null initialized event_delegate")
 {
+    testVal.reset();
+
     event_delegate<void(int, const bool &)> ed;
 
     REQUIRE(ed.isSet() == false);
     REQUIRE(ed == false);
     REQUIRE(!ed == true);
 
-    testVal.reset();
+    SECTION("unlinked call")
+    {
+        ed(1, true);
+        REQUIRE(ed.isSet() == false);
+        REQUIRE(ed == false);
+        REQUIRE(!ed == true);
+    }
 
-    SECTION("link function") {
+    SECTION("calls function")
+    {
         const auto tmp = make_event_delegate<decltype(&foo), &foo>();
 
         REQUIRE(ed != tmp);
@@ -281,5 +285,23 @@ TEST_CASE("null initialized event_delegate")
         ed(-1, false);
 
         REQUIRE(testVal.val == 6);
+    }
+    SECTION("calls functor")
+    {
+        Functor functor;
+        ed = event_delegate<void(int, const bool &)>::create(
+            functor); // TODO: add make_event_delegate for functors!
+
+        REQUIRE(ed.isSet() == true);
+        REQUIRE(ed == true);
+        REQUIRE(!ed == false);
+
+        ed(5, true);
+
+        REQUIRE(functor.val == 5);
+
+        ed(-1, false);
+
+        REQUIRE(functor.val == 6);
     }
 }
