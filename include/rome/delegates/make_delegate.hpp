@@ -22,7 +22,7 @@ template <typename T, T t> struct delegate_factory;
 
 template <typename C, typename Ret, typename... Args, Ret (C::*pMem)(Args...)>
 struct delegate_factory<Ret (C::*)(Args...), pMem> {
-    constexpr static auto create(C *obj)
+    constexpr static auto create(C &obj)
     {
         return delegate<Ret(Args...)>::template create<C, pMem>(obj);
     }
@@ -31,7 +31,7 @@ struct delegate_factory<Ret (C::*)(Args...), pMem> {
 template <typename C, typename Ret, typename... Args,
           Ret (C::*pMem)(Args...) const>
 struct delegate_factory<Ret (C::*)(Args...) const, pMem> {
-    constexpr static auto create(C const *obj)
+    constexpr static auto create(C const &obj)
     {
         return delegate<Ret(Args...)>::template create<C, pMem>(obj);
     }

@@ -23,8 +23,9 @@ template <typename T, T t> struct event_delegate_factory;
 
 template <typename C, typename... Args, void (C::*pMem)(Args...)>
 struct event_delegate_factory<void (C::*)(Args...), pMem> {
+    // TODO add static assert to check return type! (make return type generic too)
     // TODO add static assert to check the Args...
-    constexpr static auto create(C *obj)
+    constexpr static auto create(C &obj)
     {
         return event_delegate<void(Args...)>::template create<C, pMem>(obj);
     }
@@ -32,8 +33,10 @@ struct event_delegate_factory<void (C::*)(Args...), pMem> {
 
 template <typename C, typename... Args, void (C::*pMem)(Args...) const>
 struct event_delegate_factory<void (C::*)(Args...) const, pMem> {
+    // TODO add static assert to check return type! (make return type generic
+    // too)
     // TODO add static assert to check the Args...
-    constexpr static auto create(C const *obj)
+    constexpr static auto create(C const &obj)
     {
         return event_delegate<void(Args...)>::template create<C, pMem>(obj);
     }
@@ -41,6 +44,8 @@ struct event_delegate_factory<void (C::*)(Args...) const, pMem> {
 
 template <typename... Args, void (*pMem)(Args...)>
 struct event_delegate_factory<void (*)(Args...), pMem> {
+    // TODO add static assert to check return type! (make return type generic
+    // too)
     // TODO add static assert to check the Args...
     constexpr static auto create()
     {
