@@ -10,6 +10,8 @@
 #include "rome/delegates.hpp"
 #include <cassert>
 #include <doctest.h>
+#include <tuple>
+#include <type_traits>
 
 #if 0
 namespace rome {
@@ -108,8 +110,8 @@ static_assert(true == direct.isSet(), "");
 static_assert(true == direct, "");
 static_assert(false == !direct, "");
 
-static constexpr auto factory =
-    delegates::make_delegate<decltype(&A::cesfoo), &A::cesfoo>();
+static constexpr auto factory =make
+    delegates::_delegate<decltype(&A::cesfoo), &A::cesfoo>();
 static_assert(14 == factory(true), "");
 static_assert(true == factory.isSet(), "");
 static_assert(true == factory, "");
@@ -245,6 +247,116 @@ static constexpr A a;
 using namespace rome::delegates;
 
 template class ::rome::delegates::event_delegate<void(int, const bool &)>;
+
+TEST_SUITE("delegate")
+{
+    using rome::delegates::delegate;
+
+    // helper to check whether the delegate with given signature has a base
+    // class which would static_assert on creation
+    template <typename TDelegate>
+    constexpr auto asserts_signature =
+        std::is_base_of<rome::delegates::detail::assert_invalid_signature,
+                        TDelegate>::value;
+
+    // helpers to create a whole lot of function argument combinations of
+    // values, pointers, references and cv-modifiers
+    template <typename... T>
+    using add_ref = delegate<int(T..., T & ..., T && ...)>;
+
+    template <typename... T>
+    using add_cv =
+        add_ref<T..., T const..., T volatile..., T const volatile...>;
+
+    template <typename... T>
+    using add_ptr = add_cv<T..., T *..., T const *..., T volatile *...,
+                           T const volatile *...>;
+
+    template <typename... T>
+    using add_ptr_ptr = add_ptr<T..., T *..., T const *..., T volatile *...,
+                                T const volatile *...>;
+
+    template <typename... T>
+    using add_ptr_ptr_ptr = add_ptr_ptr<T..., T *..., T const *...,
+                                        T volatile *..., T const volatile *...>;
+
+    TEST_CASE("When a delegate is declared, exactly one template argument of "
+              "type 'Ret(Args...)' must be given.")
+    {
+        class A {
+        };
+        CHECK(asserts_signature<delegate<void>>);
+        CHECK(asserts_signature<delegate<int(*)[10]>>);
+        CHECK(asserts_signature<delegate<int(&)[10]>>);
+        CHECK(asserts_signature<delegate<void (*)()>>);
+        CHECK(asserts_signature<delegate<void (&)()>>);
+        CHECK(asserts_signature<delegate<void (A::*)()>>);
+        CHECK(!asserts_signature<delegate<void()>>);
+        CHECK(!asserts_signature<delegate<void(void)>>);
+        CHECK(!asserts_signature<delegate<void(std::nullptr_t)>>);
+        CHECK(!asserts_signature<delegate<void(int)>>);
+        CHECK(!asserts_signature<delegate<int(void)>>);
+        CHECK(!asserts_signature<delegate<int(int)>>);
+        CHECK(!asserts_signature<delegate<int(int, int, int, int, int)>>);
+    }
+
+    // TODO: add full tests for all of the following, once for args, once for
+    // return:
+    // void
+    // std::nullptr_t
+    // int, bool, char, usigned int, double
+    // int&,
+    // int&&,
+    // int*
+    // class
+    // enum
+    // enum class
+    // union
+    // pointer to array, reference to array: int (*)[10], int (&)[10]
+    // pointer to function, reference to function: int (*)(bool), int (&)(bool)
+    // pointer to member object: int A::*
+    // pointer to member function: int (A::*)(bool)
+
+    TEST_CASE("The arguments of the delegate signature consist any possible "
+              "types also allowed for functions.")
+    {
+        SUBCASE(
+            "Any combination of values, pointers, lvalue references, rvalue "
+            "references or const and volatile modifiers also allowed for "
+            "functions are allowed as arguments for the delegate signature.")
+        {
+            class A {
+            };
+            add_ptr_ptr_ptr<A> many_args_delegate{};
+            CHECK(many_args_delegate.isSet() == false);
+            CHECK(many_args_delegate == false);
+            CHECK(!many_args_delegate == true);
+        }
+        // TODO: SUBCASE("TODO: fully test void(int)") {}
+        // TODO: SUBCASE("TODO: fully test int(void)") {}
+        // TODO: SUBCASE("TODO: add full test for any other argument type kind
+        // (see above)") {}
+        // TODO: SUBCASE("TODO: add full test for any other return type kind
+        // (see above)") {}
+    }
+    // TODO: add test case for make_delegate
+}
+
+// TODO adapt delegate test suite for a event_delegate test suite
+
+TEST_CASE("tst")
+{
+    struct B {
+        int foo(float f)
+        {
+            CHECK(f == 1.1f);
+            return 2;
+        }
+    };
+    B b;
+    auto d = make_delegate<decltype(&B::foo), &B::foo>(b);
+    CHECK(d(1.1f) == 2);
+}
 
 TEST_CASE("null initialized event_delegate")
 {
