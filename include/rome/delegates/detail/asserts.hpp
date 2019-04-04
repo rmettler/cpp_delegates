@@ -21,12 +21,15 @@ template <typename...> struct wrong : std::false_type {
 struct ok {
 };
 
-struct invalid_signature {
+struct assert_invalid_signature {
+};
+
+struct assert_invalid_argument {
 };
 
 template <typename Signature>
-struct invalid_delegate_signature : invalid_signature {
-    constexpr invalid_delegate_signature()
+struct assert_invalid_delegate_signature : assert_invalid_signature {
+    constexpr assert_invalid_delegate_signature()
     {
         static_assert(
             wrong<Signature>::value,
@@ -37,8 +40,8 @@ struct invalid_delegate_signature : invalid_signature {
 };
 
 template <typename Signature>
-struct invalid_event_delegate_signature : invalid_signature {
-    constexpr invalid_event_delegate_signature()
+struct assert_invalid_event_delegate_signature : assert_invalid_signature {
+    constexpr assert_invalid_event_delegate_signature()
     {
         static_assert(
             wrong<Signature>::value,
@@ -50,12 +53,9 @@ struct invalid_event_delegate_signature : invalid_signature {
     }
 };
 
-struct invalid_argument {
-};
-
 template <typename... Args>
-struct invalid_event_delegate_argument : invalid_argument {
-    constexpr invalid_event_delegate_argument()
+struct assert_invalid_event_delegate_argument : assert_invalid_argument {
+    constexpr assert_invalid_event_delegate_argument()
     {
         static_assert(
             wrong<Args...>::value,

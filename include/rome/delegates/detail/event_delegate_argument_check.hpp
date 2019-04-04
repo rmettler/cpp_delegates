@@ -60,7 +60,7 @@ using check_event_delegate_arguments = std::conditional_t<
         std::integer_sequence<
             bool, is_copied_moved_or_const_referenced_value<Args>()...,
             true>>::value,
-    ok, invalid_event_delegate_argument<Args...>>;
+    ok, assert_invalid_event_delegate_argument<Args...>>;
 
 } // namespace detail
 } // namespace delegates

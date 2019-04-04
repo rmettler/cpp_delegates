@@ -22,7 +22,7 @@ namespace delegates {
 
 template <typename Signature>
 class event_delegate
-    : private detail::invalid_event_delegate_signature<Signature> {
+    : private detail::assert_invalid_event_delegate_signature<Signature> {
 };
 
 template <typename... Args>

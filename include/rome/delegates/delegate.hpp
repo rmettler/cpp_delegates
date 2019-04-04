@@ -26,7 +26,7 @@ namespace delegates {
 // TODO: add a proper .clang-format!!!
 // TODO: compare with other implementations
 
-template <typename T> class delegate : detail::invalid_delegate_signature<T> {
+template <typename T> class delegate : detail::assert_invalid_delegate_signature<T> {
 };
 
 template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
