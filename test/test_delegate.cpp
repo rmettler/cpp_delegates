@@ -202,27 +202,7 @@ void runTests()
 
 #endif
 
-struct TestVal {
-    int val = 0;
-    void reset() { val = 0; }
-    void count(int count, bool plus)
-    {
-        if (plus) {
-            val += count;
-        }
-        else {
-            val -= count;
-        }
-    }
-};
-
-struct Functor : TestVal {
-    void operator()(int count, const bool &plus)
-    {
-        TestVal::count(count, plus);
-    }
-};
-
+/*
 struct A {
     int foo(bool) { return 2; }
     constexpr int cefoo(bool) { return 12; }
@@ -237,20 +217,44 @@ struct A {
     int (&rSFoo)(bool) = sfoo;
 };
 
-TestVal testVal;
-
-void foo(int count, const bool &plus) { testVal.count(count, plus); }
 constexpr int cefoo(bool) { return 15; }
 
 static constexpr A a;
 
 template class ::rome::delegates::event_delegate<void(int, const bool &)>;
+*/
 
+// TODO: move everything above to a proper test case
+
+// =============================================================================
+// Explicit template instanciations
+// =============================================================================
 template class ::rome::delegates::delegate<void(void)>;
 template class ::rome::delegates::delegate<void(int)>;
 template class ::rome::delegates::delegate<int(void)>;
 template class ::rome::delegates::delegate<int(int)>;
-struct C;
+
+enum E : int { e_zero, e_one };
+template class ::rome::delegates::delegate<void(E)>;
+template class ::rome::delegates::delegate<E(E)>;
+
+enum class EC : int { zero, one };
+template class ::rome::delegates::delegate<void(EC)>;
+template class ::rome::delegates::delegate<EC(EC)>;
+
+union U {
+    int i;
+};
+template class ::rome::delegates::delegate<void(U)>;
+template class ::rome::delegates::delegate<U(U)>;
+
+struct C {
+    int i;
+    int memberFunction(int) { return i; }
+    int constMemberFunction(int) const { return i; }
+};
+template class ::rome::delegates::delegate<void(C)>;
+template class ::rome::delegates::delegate<C(C)>;
 template class ::rome::delegates::delegate<void(C &)>;
 template class ::rome::delegates::delegate<C &(C &)>;
 template class ::rome::delegates::delegate<void(const C &)>;
@@ -258,121 +262,195 @@ template class ::rome::delegates::delegate<const C &(const C &)>;
 template class ::rome::delegates::delegate<void(volatile C &)>;
 template class ::rome::delegates::delegate<volatile C &(volatile C &)>;
 template class ::rome::delegates::delegate<void(C &&)>;
-template class ::rome::delegates::delegate<C &&(C &&)>;
+template class ::rome::delegates::delegate<C && (C &&)>;
 template class ::rome::delegates::delegate<void(C *)>;
 template class ::rome::delegates::delegate<C *(C *)>;
 template class ::rome::delegates::delegate<void(const C *)>;
 template class ::rome::delegates::delegate<const C *(const C *)>;
-// TODO: continue
 
-TEST_SUITE("delegate")
+using TMemberObject = int C::*;
+template class ::rome::delegates::delegate<void(TMemberObject)>;
+template class ::rome::delegates::delegate<TMemberObject(TMemberObject)>;
+
+using TMemberFunction = int (C::*)(int);
+template class ::rome::delegates::delegate<void(TMemberFunction)>;
+template class ::rome::delegates::delegate<TMemberFunction(TMemberFunction)>;
+
+using TConstMemberFunction = int (C::*)(int) const;
+template class ::rome::delegates::delegate<void(TConstMemberFunction)>;
+template class ::rome::delegates::delegate<TConstMemberFunction(
+    TConstMemberFunction)>;
+
+using TArray = int[10];
+template class ::rome::delegates::delegate<void(TArray)>;
+
+using TArrayRef = int (&)[10];
+template class ::rome::delegates::delegate<void(TArrayRef)>;
+template class ::rome::delegates::delegate<TArrayRef(TArrayRef)>;
+
+using TArrayPtr = int (*)[10];
+template class ::rome::delegates::delegate<void(TArrayPtr)>;
+template class ::rome::delegates::delegate<TArrayPtr(TArrayPtr)>;
+
+using TFunctionRef = int (&)(int);
+template class ::rome::delegates::delegate<void(TFunctionRef)>;
+template class ::rome::delegates::delegate<TFunctionRef(TFunctionRef)>;
+
+using TFunctionPtr = int (*)(int);
+template class ::rome::delegates::delegate<void(TFunctionPtr)>;
+template class ::rome::delegates::delegate<TFunctionPtr(TFunctionPtr)>;
+
+// =============================================================================
+// Test cases
+// =============================================================================
+
+TEST_SUITE_BEGIN("delegate and make_delegate");
+
+// helper to check whether the delegate with given signature has a base
+// class which would static_assert on creation
+template <typename TDelegate>
+constexpr auto asserts_signature =
+    std::is_base_of<rome::delegates::detail::assert_invalid_signature,
+                    TDelegate>::value;
+
+// helpers to create a whole lot of function argument combinations of
+// values, pointers, references and cv-modifiers
+template <typename... T>
+using add_ref = rome::delegates::delegate<int(T..., T &..., T &&...)>;
+
+template <typename... T>
+using add_cv = add_ref<T..., T const..., T volatile..., T const volatile...>;
+
+template <typename... T>
+using add_ptr =
+    add_cv<T..., T *..., T const *..., T volatile *..., T const volatile *...>;
+
+template <typename... T>
+using add_ptr_ptr =
+    add_ptr<T..., T *..., T const *..., T volatile *..., T const volatile *...>;
+
+template <typename... T>
+using add_ptr_ptr_ptr = add_ptr_ptr<T..., T *..., T const *..., T volatile *...,
+                                    T const volatile *...>;
+
+TEST_CASE("When a delegate is declared, exactly one template argument of "
+          "type 'Ret(Args...)' must be given.")
 {
-    // helper to check whether the delegate with given signature has a base
-    // class which would static_assert on creation
-    template <typename TDelegate>
-    constexpr auto asserts_signature =
-        std::is_base_of<rome::delegates::detail::assert_invalid_signature,
-                        TDelegate>::value;
+    using rome::delegates::delegate;
 
-    // helpers to create a whole lot of function argument combinations of
-    // values, pointers, references and cv-modifiers
-    template <typename... T>
-    using add_ref = rome::delegates::delegate<int(T..., T & ..., T && ...)>;
+    class A {
+    };
+    CHECK(asserts_signature<delegate<void>>);
+    CHECK(asserts_signature<delegate<int(*)[10]>>);
+    CHECK(asserts_signature<delegate<int(&)[10]>>);
+    CHECK(asserts_signature<delegate<void (*)()>>);
+    CHECK(asserts_signature<delegate<void (&)()>>);
+    CHECK(asserts_signature<delegate<void (A::*)()>>);
+    CHECK(!asserts_signature<delegate<void()>>);
+    CHECK(!asserts_signature<delegate<void(void)>>);
+    CHECK(!asserts_signature<delegate<void(std::nullptr_t)>>);
+    CHECK(!asserts_signature<delegate<void(int)>>);
+    CHECK(!asserts_signature<delegate<int(void)>>);
+    CHECK(!asserts_signature<delegate<int(int)>>);
+    CHECK(!asserts_signature<delegate<int(int, int, int, int, int)>>);
+}
 
-    template <typename... T>
-    using add_cv =
-        add_ref<T..., T const..., T volatile..., T const volatile...>;
+// TODO: add full tests for all of the following, once for all of the
+// explicitly instanciated templates (see above)
 
-    template <typename... T>
-    using add_ptr = add_cv<T..., T *..., T const *..., T volatile *...,
-                           T const volatile *...>;
+TEST_CASE("The arguments of the delegate signature can contain any "
+          "possible types also allowed for functions.")
+{
+    using rome::delegates::delegate;
 
-    template <typename... T>
-    using add_ptr_ptr = add_ptr<T..., T *..., T const *..., T volatile *...,
-                                T const volatile *...>;
-
-    template <typename... T>
-    using add_ptr_ptr_ptr = add_ptr_ptr<T..., T *..., T const *...,
-                                        T volatile *..., T const volatile *...>;
-
-    TEST_CASE("When a delegate is declared, exactly one template argument of "
-              "type 'Ret(Args...)' must be given.")
-    {
-        using rome::delegates::delegate;
-
-        class A {
-        };
-        CHECK(asserts_signature<delegate<void>>);
-        CHECK(asserts_signature<delegate<int(*)[10]>>);
-        CHECK(asserts_signature<delegate<int(&)[10]>>);
-        CHECK(asserts_signature<delegate<void (*)()>>);
-        CHECK(asserts_signature<delegate<void (&)()>>);
-        CHECK(asserts_signature<delegate<void (A::*)()>>);
-        CHECK(!asserts_signature<delegate<void()>>);
-        CHECK(!asserts_signature<delegate<void(void)>>);
-        CHECK(!asserts_signature<delegate<void(std::nullptr_t)>>);
-        CHECK(!asserts_signature<delegate<void(int)>>);
-        CHECK(!asserts_signature<delegate<int(void)>>);
-        CHECK(!asserts_signature<delegate<int(int)>>);
-        CHECK(!asserts_signature<delegate<int(int, int, int, int, int)>>);
-    }
-
-    // TODO: add full tests for all of the following, once for args, once for
-    // return:
-    // void
-    // std::nullptr_t
-    // int, bool, char, usigned int, double
-    // int&,
-    // int&&,
-    // int*
-    // class
-    // enum
-    // enum class
-    // union
-    // pointer to array, reference to array: int (*)[10], int (&)[10]
-    // pointer to function, reference to function: int (*)(bool), int (&)(bool)
-    // pointer to member object: int A::*
-    // pointer to member function: int (A::*)(bool)
-
-    TEST_CASE("The arguments of the delegate signature can contain any "
-              "possible types also allowed for functions.")
-    {
-        using rome::delegates::delegate;
-
-        SUBCASE(
-            "Any combination of values, pointers, lvalue references, rvalue "
+    SUBCASE("Any combination of values, pointers, lvalue references, rvalue "
             "references or const and volatile modifiers also allowed for "
             "functions are allowed as arguments for the delegate signature.")
-        {
-            class A {
-            };
-            add_ptr_ptr_ptr<A> many_args_delegate{};
-            CHECK(many_args_delegate.isSet() == false);
-            CHECK(many_args_delegate == false);
-            CHECK(!many_args_delegate == true);
-        }
-        // TODO: SUBCASE("TODO: fully test void(int)") {}
-        // TODO: SUBCASE("TODO: fully test int(void)") {}
-        // TODO: SUBCASE("TODO: add full test for any other argument type kind
-        // (see above)") {}
-        // TODO: SUBCASE("TODO: add full test for any other return type kind
-        // (see above)") {}
-    }
-
-    TEST_CASE("Testing delegate<void(int)>")
     {
-        using rome::delegates::delegate;
-
-        delegate<void(int)> d;
-        CHECK(d.isSet() == false);
-        CHECK(d == false);
-        CHECK(!d == true);
+        class A {
+        };
+        add_ptr_ptr_ptr<A> many_args_delegate{};
+        CHECK(many_args_delegate.isSet() == false);
+        CHECK(many_args_delegate == false);
+        CHECK(!many_args_delegate == true);
     }
-    // TODO: add test case for make_delegate
-} // TEST_SUITE("delegate")
+    // TODO: SUBCASE("TODO: fully test void(int)") {}
+    // TODO: SUBCASE("TODO: fully test int(void)") {}
+    // TODO: SUBCASE("TODO: add full test for any other argument type kind
+    // (see above)") {}
+    // TODO: SUBCASE("TODO: add full test for any other return type kind
+    // (see above)") {}
+}
+
+namespace test_void_void {
+
+int calls = 0;
+struct Class {
+    void memberFunction() {}
+    void constMemberFunction() const {}
+};
+void function() {}
+
+TEST_CASE("Testing delegate<void(void)>")
+{
+    using rome::delegates::delegate;
+    using rome::delegates::make_delegate;
+
+    using TDelegate = delegate<void(void)>;
+    SUBCASE("The delegate has a valid signature.")
+    {
+        CHECK(!asserts_signature<TDelegate>);
+    }
+
+    GIVEN("a default constructed delegate")
+    {
+        delegate<void(void)> d;
+
+        THEN("no callee shall be set")
+        {
+            CHECK(d.isSet() == false);
+            CHECK(d == false);
+            CHECK(!d == true);
+        }
+        WHEN("it is compared with another default constructed delegate")
+        {
+            delegate<void(void)> other;
+            THEN("it shall compare equal")
+            {
+                CHECK(d == other);
+                CHECK(!(d != other));
+            }
+        }
+        WHEN("it is compared with a nullptr initialized delegate")
+        {
+            delegate<void(void)> dNull(nullptr);
+            THEN("it shall compare equal")
+            {
+                CHECK(d == dNull);
+                CHECK(!(d != dNull));
+            }
+        }
+        //TODO: do everything from here
+        WHEN("it is compared with a delegate with a set callee")
+        {
+            THEN("it shall compare unequal") {}
+        }
+        WHEN("operator() is called") {}
+        WHEN("nullptr is assigned") {}
+        WHEN("another delegate is copy-assigned") {}
+        WHEN("another delegate is move-assigned") {}
+    }
+    GIVEN("a nullptr initialized delegate") {}
+    GIVEN("a copy-constructed delegate") {}
+    GIVEN("a move-constructed delegate") {}
+}
+} // namespace test_void_void
+
+TEST_SUITE_END(); // delegate and make_delegate
 
 // TODO adapt delegate test suite for a event_delegate test suite
 
+namespace move_to_event_delegate {
 TEST_CASE("tst")
 {
     using rome::delegates::delegate;
@@ -389,6 +467,31 @@ TEST_CASE("tst")
     auto d = make_delegate<decltype(&B::foo), &B::foo>(b);
     CHECK(d(1.1f) == 2);
 }
+
+struct TestVal {
+    int val = 0;
+    void reset() { val = 0; }
+    void count(int count, bool plus)
+    {
+        if (plus) {
+            val += count;
+        }
+        else {
+            val -= count;
+        }
+    }
+};
+
+TestVal testVal;
+
+struct Functor : TestVal {
+    void operator()(int count, const bool &plus)
+    {
+        TestVal::count(count, plus);
+    }
+};
+
+void foo(int count, const bool &plus) { testVal.count(count, plus); }
 
 TEST_CASE("null initialized event_delegate")
 {
@@ -451,3 +554,4 @@ TEST_CASE("null initialized event_delegate")
         REQUIRE(functor.val == 6);
     }
 }
+} // namespace move_to_event_delegate
