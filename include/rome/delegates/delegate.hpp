@@ -20,6 +20,7 @@
 #include "detail/asserts.hpp"
 #include <cstddef>
 #include <type_traits>
+#include <utility>
 
 namespace rome {
 namespace delegates {
@@ -59,7 +60,7 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
 
     constexpr Ret operator()(Args... args) const
     {
-        return callee_(obj_, args...);
+        return callee_(obj_, std::forward<Args>(args)...);
     }
 
     template <Ret (*pFunction)(Args...)> constexpr static delegate create()
