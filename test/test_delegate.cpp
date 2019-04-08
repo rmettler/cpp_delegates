@@ -229,9 +229,9 @@ template class ::rome::delegates::event_delegate<void(int, const bool &)>;
 // =============================================================================
 // Explicit template instanciations
 // =============================================================================
-template class ::rome::delegates::delegate<void(void)>;
+template class ::rome::delegates::delegate<void()>;
 template class ::rome::delegates::delegate<void(int)>;
-template class ::rome::delegates::delegate<int(void)>;
+template class ::rome::delegates::delegate<int()>;
 template class ::rome::delegates::delegate<int(int)>;
 
 enum E : int { e_zero, e_one };
@@ -406,19 +406,37 @@ TEST_CASE("The arguments of the delegate signature can contain any "
 
 namespace test_void_void {
 
-int calls = 0;
-struct Class {
-    void memberFunction() {}
-    void constMemberFunction() const {}
-};
-void function() {}
+int callCounter = 0;
 
-TEST_CASE("Testing delegate<void(void)>")
+struct Class {
+    void memberFunction() { ++callCounter; }
+    void memberFunction2();
+    void constMemberFunction() const { ++callCounter; }
+    void constMemberFunction2() const;
+};
+
+void function() { ++callCounter; }
+void function2();
+
+struct Functor {
+    void operator()() { ++callCounter; }
+};
+struct Functor2 {
+    void operator()();
+};
+struct ConstFunctor {
+    void operator()() const { ++callCounter; }
+};
+struct ConstFunctor2 {
+    void operator()() const;
+};
+
+TEST_CASE("Testing delegate<void()>")
 {
     using rome::delegates::delegate;
     using rome::delegates::make_delegate;
 
-    using TDelegate = delegate<void(void)>;
+    using TDelegate = delegate<void()>;
 
     SUBCASE("The delegate has a valid signature.")
     {
@@ -427,45 +445,70 @@ TEST_CASE("Testing delegate<void(void)>")
 
     GIVEN("a default constructed delegate")
     {
-        delegate<void(void)> d;
+        delegate<void()> dgt;
 
-        THEN("no callee shall be linked and a comparision to nullptr shall "
-             "return true")
+        THEN("no callee shall be linked and a comparision with nullptr shall "
+             "return equal")
         {
-            checkUnlinked(d);
+            checkUnlinked(dgt);
         }
         WHEN("it is compared with another default constructed delegate")
         {
-            delegate<void(void)> other;
+            delegate<void()> other;
             THEN("it shall compare equal")
             {
-                CHECK(d == other);
-                CHECK(!(d != other));
+                CHECK((dgt == other) == true);
+                CHECK((dgt != other) == false);
             }
         }
         WHEN("it is compared with a nullptr initialized delegate")
         {
-            delegate<void(void)> dNull(nullptr);
+            delegate<void()> dNull(nullptr);
             THEN("it shall compare equal")
             {
-                CHECK(d == dNull);
-                CHECK(!(d != dNull));
+                CHECK((dgt == dNull) == true);
+                CHECK((dgt != dNull) == false);
             }
         }
-        // TODO: do everything from here
-        WHEN("it is compared with a delegate with a set callee")
+        WHEN("it is compared with a delegate with a linked callee")
         {
-            THEN("it shall compare unequal") {}
+            delegate<void()> dLinked =
+                make_delegate<decltype(&function), &function>();
+            THEN("it shall compare unequal")
+            {
+                CHECK((dgt == dLinked) == false);
+                CHECK((dgt != dLinked) == true);
+            }
         }
-        WHEN("operator() is called") {}
-        WHEN("nullptr is assigned") {}
-        WHEN("another delegate is copy-assigned") {}
-        WHEN("another delegate is move-assigned") {}
+        WHEN("operator() is called")
+        {
+            callCounter = 0;
+            dgt();
+            THEN("nothing happened") { CHECK(callCounter == 0); }
+        }
+        WHEN("nullptr is assigned")
+        {
+            dgt = nullptr;
+            THEN("it is still unlinked") { checkUnlinked(dgt); }
+        }
+        // TODO: do everything from here
+        WHEN("another delegate is copy-assigned")
+        {
+            // and compared with other delegates (changes in function and
+            // object) and compared with default constructed delegate and
+            // operator() is called nullptr is assigned again and compared with
+            // default constructed delegate operator() is called
+        }
+        WHEN("another delegate is move-assigned")
+        {
+            // and operator() is called
+            // nullptr is assigned again
+            // operator() is called}
+        }
+        GIVEN("a nullptr initialized delegate") {}
+        GIVEN("a copy-constructed delegate") {}
+        GIVEN("a move-constructed delegate") {}
     }
-    GIVEN("a nullptr initialized delegate") {}
-    GIVEN("a copy-constructed delegate") {}
-    GIVEN("a move-constructed delegate") {}
-}
 } // namespace test_void_void
 
 TEST_SUITE_END(); // delegate and make_delegate
