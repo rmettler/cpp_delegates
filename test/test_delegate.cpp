@@ -508,7 +508,9 @@ TEST_CASE("Testing delegate<void()>")
         GIVEN("a nullptr initialized delegate") {}
         GIVEN("a copy-constructed delegate") {}
         GIVEN("a move-constructed delegate") {}
+        GIVEN("a factory created delegate") {}
     }
+}
 } // namespace test_void_void
 
 TEST_SUITE_END(); // delegate and make_delegate

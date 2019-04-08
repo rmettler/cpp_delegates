@@ -36,13 +36,13 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
     constexpr delegate() = default;
     constexpr delegate(const delegate &) = default;
     constexpr delegate(delegate &&) = default;
-    constexpr delegate(std::nullptr_t) : delegate() {}
+    constexpr delegate(std::nullptr_t) : delegate{} {}
 
     constexpr delegate &operator=(const delegate &) = default;
     constexpr delegate &operator=(delegate &&) = default;
     constexpr delegate &operator=(std::nullptr_t)
     {
-        *this = {};
+        *this = std::move(delegate{});
         return *this;
     }
 
@@ -102,7 +102,7 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
     template <typename T> static constexpr delegate create(const T &functor)
     {
         delegate d;
-        d.obj_ = const_cast<C *>(&functor);
+        d.obj_ = const_cast<T *>(&functor);
         d.callee_ = &const_functor_call<T>;
         return d;
     }
