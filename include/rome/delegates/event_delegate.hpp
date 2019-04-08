@@ -35,7 +35,7 @@ class event_delegate<void(Args...)>
   public:
     using base_type::delegate;
     using base_type::operator=;
-    using base_type::isSet;
+    using base_type::isLinked;
     using base_type::operator bool;
     using base_type::operator!;
     using base_type::operator==;
@@ -43,6 +43,30 @@ class event_delegate<void(Args...)>
     using base_type::operator();
     using base_type::create;
 };
+
+template <typename T>
+constexpr bool operator==(const event_delegate<T> &lhs, std::nullptr_t)
+{
+    return !lhs;
+}
+
+template <typename T>
+constexpr bool operator==(std::nullptr_t, const event_delegate<T> &rhs)
+{
+    return !rhs;
+}
+
+template <typename T>
+constexpr bool operator!=(const event_delegate<T> &lhs, std::nullptr_t)
+{
+    return !(lhs == nullptr);
+}
+
+template <typename T>
+constexpr bool operator!=(std::nullptr_t, const event_delegate<T> &rhs)
+{
+    return !(rhs == nullptr);
+}
 
 } // namespace delegates
 } // namespace rome

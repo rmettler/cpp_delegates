@@ -20,6 +20,8 @@ namespace delegates {
 namespace detail {
 template <typename T, T t> struct delegate_factory;
 
+// TODO: add delegate factory for functors
+
 template <typename C, typename Ret, typename... Args, Ret (C::*pMem)(Args...)>
 struct delegate_factory<Ret (C::*)(Args...), pMem> {
     constexpr static auto create(C &obj)
@@ -31,7 +33,7 @@ struct delegate_factory<Ret (C::*)(Args...), pMem> {
 template <typename C, typename Ret, typename... Args,
           Ret (C::*pMem)(Args...) const>
 struct delegate_factory<Ret (C::*)(Args...) const, pMem> {
-    constexpr static auto create(C const &obj)
+    constexpr static auto create(const C &obj)
     {
         return delegate<Ret(Args...)>::template create<C, pMem>(obj);
     }
@@ -48,6 +50,25 @@ struct delegate_factory<Ret (*)(Args...), pMem> {
 
 template <typename T, T t>
 constexpr auto make_delegate = detail::delegate_factory<T, t>::create;
+
+template <typename Function> struct function_ptr;
+
+template <typename Ret, typename... Args> struct function_ptr<Ret(Args...)> {
+    using type = Ret (*)(Args...);
+};
+
+template <typename Function>
+using function_ptr_t = typename function_ptr<Function>::type;
+
+template <typename C, typename Function> struct member_function_ptr;
+
+template <typename C, typename Ret, typename... Args>
+struct member_function_ptr<C, Ret(Args...)> {
+    using type = Ret (C::*)(Args...);
+};
+
+template <typename C, typename Function>
+using member_function_ptr_t = typename member_function_ptr<C, Function>::type;
 
 } // namespace delegates
 } // namespace rome

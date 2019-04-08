@@ -27,7 +27,8 @@ namespace delegates {
 // TODO: add a proper .clang-format!!!
 // TODO: compare with other implementations
 
-template <typename T> class delegate : detail::assert_invalid_delegate_signature<T> {
+template <typename T>
+class delegate : detail::assert_invalid_delegate_signature<T> {
 };
 
 template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
@@ -45,15 +46,16 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
         return *this;
     }
 
-    constexpr bool isSet() const { return callee_ != null_callee; }
-    constexpr operator bool() const { return isSet(); }
-    constexpr bool operator!() const { return !isSet(); }
+    constexpr bool isLinked() const { return callee_ != null_callee; }
+    constexpr operator bool() const { return isLinked(); }
+    constexpr bool operator!() const { return !isLinked(); }
 
-    constexpr bool operator==(const delegate &rhs) const
+    constexpr bool operator==(const delegate &rhs)
     {
         return (obj_ == rhs.obj_) && (callee_ == rhs.callee_);
     }
-    constexpr bool operator!=(const delegate &rhs) const
+
+    constexpr bool operator!=(const delegate &rhs)
     {
         return !(*this == rhs);
     }
@@ -63,7 +65,7 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
         return callee_(obj_, std::forward<Args>(args)...);
     }
 
-    template <Ret (*pFunction)(Args...)> constexpr static delegate create()
+    template <Ret (*pFunction)(Args...)> static constexpr delegate create()
     {
         delegate d;
         d.obj_ = nullptr;
@@ -72,7 +74,7 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
     }
 
     template <typename C, Ret (C::*pMethod)(Args...)>
-    constexpr static delegate create(C &obj)
+    static constexpr delegate create(C &obj)
     {
         delegate d;
         d.obj_ = &obj;
@@ -81,7 +83,7 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
     }
 
     template <typename C, Ret (C::*pMethod)(Args...) const>
-    constexpr static delegate create(C const &obj)
+    static constexpr delegate create(const C &obj)
     {
         delegate d;
         d.obj_ = const_cast<C *>(&obj);
@@ -89,8 +91,7 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
         return d;
     }
 
-    template <typename T>
-    constexpr static delegate create(T &functor)
+    template <typename T> static constexpr delegate create(T &functor)
     {
         delegate d;
         d.obj_ = &functor;
@@ -108,7 +109,7 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
     template <typename C, Ret (C::*pMethod)(Args...) const>
     static Ret const_method_call(void *obj, Args... args)
     {
-        return (static_cast<C const *>(obj)->*pMethod)(args...);
+        return (static_cast<const C *>(obj)->*pMethod)(args...);
     }
 
     template <Ret (*pFunction)(Args...)>
@@ -146,6 +147,30 @@ template <typename Ret, typename... Args> class delegate<Ret(Args...)> {
     void *obj_ = nullptr;
     caller_type callee_ = null_callee;
 };
+
+template <typename T>
+constexpr bool operator==(const delegate<T> &lhs, std::nullptr_t)
+{
+    return !lhs;
+}
+
+template <typename T>
+constexpr bool operator==(std::nullptr_t, const delegate<T> &rhs)
+{
+    return !rhs;
+}
+
+template <typename T>
+constexpr bool operator!=(const delegate<T> &lhs, std::nullptr_t)
+{
+    return !(lhs == nullptr);
+}
+
+template <typename T>
+constexpr bool operator!=(std::nullptr_t, const delegate<T> &rhs)
+{
+    return !(rhs == nullptr);
+}
 
 } // namespace delegates
 } // namespace rome

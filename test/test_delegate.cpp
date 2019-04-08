@@ -313,6 +313,28 @@ constexpr auto asserts_signature =
     std::is_base_of<rome::delegates::detail::assert_invalid_signature,
                     TDelegate>::value;
 
+template <typename TDelegate> void checkLinked(const TDelegate &dgt)
+{
+    CHECK(dgt.isLinked() == true);
+    CHECK(dgt == true);
+    CHECK(!dgt == false);
+    CHECK((dgt == nullptr) == false);
+    CHECK((nullptr == dgt) == false);
+    CHECK((dgt != nullptr) == true);
+    CHECK((nullptr != dgt) == true);
+}
+
+template <typename TDelegate> void checkUnlinked(const TDelegate &dgt)
+{
+    CHECK(dgt.isLinked() == false);
+    CHECK(dgt == false);
+    CHECK(!dgt == true);
+    CHECK((dgt == nullptr) == true);
+    CHECK((nullptr == dgt) == true);
+    CHECK((dgt != nullptr) == false);
+    CHECK((nullptr != dgt) == false);
+}
+
 // helpers to create a whole lot of function argument combinations of
 // values, pointers, references and cv-modifiers
 template <typename... T>
@@ -370,9 +392,7 @@ TEST_CASE("The arguments of the delegate signature can contain any "
         class A {
         };
         add_ptr_ptr_ptr<A> many_args_delegate{};
-        CHECK(many_args_delegate.isSet() == false);
-        CHECK(many_args_delegate == false);
-        CHECK(!many_args_delegate == true);
+        checkUnlinked(many_args_delegate);
     }
     // TODO: SUBCASE("TODO: fully test void(int)") {}
     // TODO: SUBCASE("TODO: fully test int(void)") {}
@@ -380,6 +400,8 @@ TEST_CASE("The arguments of the delegate signature can contain any "
     // (see above)") {}
     // TODO: SUBCASE("TODO: add full test for any other return type kind
     // (see above)") {}
+    // TODO: test make_delegate with decltype of overloaded function
+    // (function_ptr_t and member_function_ptr_t)
 }
 
 namespace test_void_void {
@@ -397,6 +419,7 @@ TEST_CASE("Testing delegate<void(void)>")
     using rome::delegates::make_delegate;
 
     using TDelegate = delegate<void(void)>;
+
     SUBCASE("The delegate has a valid signature.")
     {
         CHECK(!asserts_signature<TDelegate>);
@@ -406,11 +429,10 @@ TEST_CASE("Testing delegate<void(void)>")
     {
         delegate<void(void)> d;
 
-        THEN("no callee shall be set")
+        THEN("no callee shall be linked and a comparision to nullptr shall "
+             "return true")
         {
-            CHECK(d.isSet() == false);
-            CHECK(d == false);
-            CHECK(!d == true);
+            checkUnlinked(d);
         }
         WHEN("it is compared with another default constructed delegate")
         {
@@ -430,7 +452,7 @@ TEST_CASE("Testing delegate<void(void)>")
                 CHECK(!(d != dNull));
             }
         }
-        //TODO: do everything from here
+        // TODO: do everything from here
         WHEN("it is compared with a delegate with a set callee")
         {
             THEN("it shall compare unequal") {}
@@ -451,6 +473,29 @@ TEST_SUITE_END(); // delegate and make_delegate
 // TODO adapt delegate test suite for a event_delegate test suite
 
 namespace move_to_event_delegate {
+
+template <typename TDelegate> void checkLinked(const TDelegate &dgt)
+{
+    CHECK(dgt.isLinked() == true);
+    CHECK(dgt == true);
+    CHECK(!dgt == false);
+    CHECK((dgt == nullptr) == false);
+    CHECK((nullptr == dgt) == false);
+    CHECK((dgt != nullptr) == true);
+    CHECK((nullptr != dgt) == true);
+}
+
+template <typename TDelegate> void checkUnlinked(const TDelegate &dgt)
+{
+    CHECK(dgt.isLinked() == false);
+    CHECK(dgt == false);
+    CHECK(!dgt == true);
+    CHECK((dgt == nullptr) == true);
+    CHECK((nullptr == dgt) == true);
+    CHECK((dgt != nullptr) == false);
+    CHECK((nullptr != dgt) == false);
+}
+
 TEST_CASE("tst")
 {
     using rome::delegates::delegate;
@@ -502,16 +547,12 @@ TEST_CASE("null initialized event_delegate")
 
     event_delegate<void(int, const bool &)> ed;
 
-    REQUIRE(ed.isSet() == false);
-    REQUIRE(ed == false);
-    REQUIRE(!ed == true);
+    checkUnlinked(ed);
 
     SUBCASE("unlinked call")
     {
         ed(1, true);
-        REQUIRE(ed.isSet() == false);
-        REQUIRE(ed == false);
-        REQUIRE(!ed == true);
+        checkUnlinked(ed);
     }
 
     SUBCASE("calls function")
@@ -522,9 +563,7 @@ TEST_CASE("null initialized event_delegate")
 
         ed = tmp;
 
-        REQUIRE(ed.isSet() == true);
-        REQUIRE(ed == true);
-        REQUIRE(!ed == false);
+        checkLinked(ed);
         REQUIRE(ed == tmp);
 
         ed(5, true);
@@ -541,9 +580,7 @@ TEST_CASE("null initialized event_delegate")
         ed = event_delegate<void(int, const bool &)>::create(
             functor); // TODO: add make_event_delegate for functors!
 
-        REQUIRE(ed.isSet() == true);
-        REQUIRE(ed == true);
-        REQUIRE(!ed == false);
+        checkLinked(ed);
 
         ed(5, true);
 
