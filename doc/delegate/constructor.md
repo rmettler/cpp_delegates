@@ -1,26 +1,21 @@
 # _rome::delegate<Ret(Args...)>::_ **delegate**
 
 ```cpp
-constexpr delegate() noexcept;                // (1)
-constexpr delegate(std::nullptr_t) noexcept;  // (2)
-constexpr delegate(const delegate& other);    // (3)
-constexpr delegate(delegate&& other);         // (4)
+constexpr delegate() noexcept;                 // (1)
+constexpr delegate(std::nullptr_t) noexcept;   // (2)
+constexpr delegate(delegate&& other) noexcept; // (3)
 ```
 
 Constructs a `rome::delegate`.
 
-- **1, 2** -- Creates an empty delegate.
-- **3** -- Copies the _target_ of other to the _target_ of `*this`. If other is empty, `*this` will be empty after the call too.
-- **4** -- Moves the _target_ of other to the _target_ of `*this`. If other is empty, `*this` will be empty after the call too.
+- **1, 2** -- Creates an _empty_ delegate.
+- **3** -- Moves the _target_ and the ownership of _target_ of other to `*this`. If other is _empty_, `*this` will be _empty_ after the call too. Leaves other in _empty_ state after the move.
+
+Use [`rome::make_delegate`](../delegate/make_delegate.md) to assign a new _target_.
 
 ## Parameters
 
 **other** -- Another `rome::delegate` object used to initialize `*this`.
-
-## Exceptions
-
-> TODO: check under what circumstances (3) and (4) may throw exceptions!  
-> E.g. when the constructor throws that is used to copy or move a stored function object.
 
 ## Notes
 

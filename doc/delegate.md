@@ -68,13 +68,13 @@ _As soon as `rome::delegate` is owning, the size will be incresed to  3 * `sizeo
 - [desctructor](delegate/destructor.md)  
   destroys a `rome::delegate` instance
 - [operator=](delegate/operator_assignment.md)  
-  assigns the _target_ of another `rome::delegate` or drops it
+  assigns the _target_ of another `rome::delegate` or drops current _target_
 - [swap](delegate/swap.md)  
   swaps the contents
 - [operator bool](delegate/operator_bool.md)  
   checks if a valid _target_ is contained
 - [operator==, operator!=](delegate/operator_cmp_delegate.md)  
-  shallow comparision with another `rome::delegate`
+  shallow comparision with another `rome::delegate` instance
   > TODO
 - [operator()](delegate/operator_function_call.md)  
   invokes the _target_
