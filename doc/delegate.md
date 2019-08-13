@@ -3,29 +3,36 @@
 Defined in header [`<rome/delegate.hpp>`](../include/rome/delegate.hpp).
 
 ```cpp
-template<typename, typename=throw_exception>
+template<typename, bool TargetRequired=true>
 class delegate; // undefined
 
-template<typename Ret, typename... Args, typename EmptyCallBehavior>
-class delegate<Ret(Args...), EmptyCallBehavior>;
+template<typename Ret, typename... Args, bool TargetRequired>
+class delegate<Ret(Args...), TargetRequired>;
 ```
 
-> TODO: change "EmptyCallBehavior" depending types to types like "required" and "optional" to show in the declaration whether the assignment of a _target_ is required by the interface or not. "optional" would then work for if the return type is `void` but would lead to undefined behavior otherwise! Thus default would be "required". Optional would still be allowd with non-void return types for areas where exceptions can't be used.
-
-Class template `rome::delegate` wraps a call and hides the implementation of the _target_ being called. The main purpose for `rome::delegate` can be used to declare a call interface by only defining the required return and argument types.
+Class template `rome::delegate` wraps a call and hides the implementation of the _target_ being called.
 
 Instances of `rome::delegate` can reference and invoke any callable _target_ -- functions, lambda expressions, other function objects, std::function, as well as static and non-static member functions.
 
-The stored callable object is called the _target_ of `rome::delegate`. If a `rome::delegate` contains no _target_, it is called _empty_. Invoking the _target_ of an _empty_ `rome::delegate` by default results in a `rome::bad_delegate_call` exception being thrown. Other specifiable behaviors are ignoring the call or undefined behavior.
+The stored callable object is called the **_target_** of `rome::delegate`. If a `rome::delegate` contains no _target_, it is called **_empty_**. Invoking the _target_ of an _empty_ `rome::delegate` by default results in a `rome::bad_delegate_call` exception being thrown (see below).
+
+Currently the `rome::delegate` is non-owning. E.g. if lambda expression is set as a _target_, the user has to make sure, that it is not destroyed as long as it is assigned to a `rome::delegate`.  
+_In future `rome::delegate` will take the ownership of function objects and destroy them at the end of lifetime or if unassigned!_  
+> TODO: add this to the specification of operator= and destructor
+
+The size of a `rome::delegate` is 2 * `sizeof(void*)`.  
+_As soon as `rome::delegate` is owning, the size will be incresed to  3 * `sizeof(void*)`._
+
+> TODO: specify the possible heap allocation in make_delegate and the small buffer optimization for the capture of one pointer in lambda expression to prevent heap allocations here.
 
 **Comparision to `std::function`**
 
 - Similar declaration and usage as `std::function`.
 - More efficient implementation than `std::function`.  
-  > (TODO: reference a benchmark that shows this (when std::function uses SBO and when not)!)
-- Doesn't take ownership of the _target_. Thus might reference a _target_ that doesn't live anymore, if not manually unassigned (may change in future).
-- Already binds the object pointer for non-static member functions, so no `std::bind` is needed.
-- Definable behavior when calling an _empty_ `rome::delegate`.
+  > (TODO: reference a benchmark that shows this for both the libstdc++ and libc++ (when std::function uses SBO and when not)!)
+- Already saves the object pointer for non-static member functions, so no `std::bind` or additional lambda is needed.
+- `rome::delegate` can be configured to ignore a call to an _empty_ `rome::delegate`, where `std::function` always throws an exception.
+- Size of `rome::delegate` is specified.
 
 > **Note**
 >
@@ -41,19 +48,18 @@ The stored callable object is called the _target_ of `rome::delegate`. If a `rom
   The return type of the _target_ beeing called.
 - `Args...`  
   The argument types of the _target_ beeing called (0 to many).
-- `EmptyCallBehavior`  
-  Defines the behavior when an _empty_ delegate is called. This parameter can be omitted.  
+- `TargetRequired`  
+  Whether it is required to assign a valid _target_ to the `rome::delegate` before it is called. Defaults to `true`.
   
-  Can be one of the following types, dependent on the return type `Ret`:  
+  This parameter only has an effect if an _empty_ `rome::delegate` is called:
   
-  | `Ret`      | `EmptyCallBehavior`               | Behavior when calling an _empty_ delegate            |
-  | ---------- | --------------------------------- | ---------------------------------------------------- |
-  | `void`     | `rome::throw_exception` _(default)_ | throws a `rome::bad_delegate_call` exception               |
-  |            | `rome::ignore_call`               | ignores the call and does nothing                    |
-  |            | `rome::undefined_behavior`        | not available for void (compile error)               |
-  | not `void` | `rome::throw_exception` _(default)_ | throws a `rome::bad_delegate_call` exception               |
-  |            | `rome::ignore_call`               | not available non-void (compile error)               |
-  |            | `rome::undefined_behavior`        | calls a nullptr and thus leads to undefined behavior |
+  - `TargetRequired` == `true`:
+    - Throws a `rome::bad_delegate_call` exception.
+    - Instead calls [`std::terminate`](https://en.cppreference.com/w/cpp/error/terminate) if exceptions are disabled.
+  - `TargetRequired` == `false` and `Ret` == `void`:  
+    Ignores the call and returns directly.
+  - `TargetRequired` == `false` and `Ret` != `void`:  
+    Compile error, because it can't return anything.
 
 ## Member functions
 
@@ -62,25 +68,29 @@ The stored callable object is called the _target_ of `rome::delegate`. If a `rom
 - [desctructor](delegate/destructor.md)  
   destroys a `rome::delegate` instance
 - [operator=](delegate/operator_assignment.md)  
-  assigns a new _target_
+  assigns the _target_ of another `rome::delegate` or drops it
 - [swap](delegate/swap.md)  
   swaps the contents
 - [operator bool](delegate/operator_bool.md)  
   checks if a valid _target_ is contained
-> TODO the *.md files from here!
+- [operator==, operator!=](delegate/operator_cmp_delegate.md)  
+  shallow comparision with another `rome::delegate`
+  > TODO
 - [operator()](delegate/operator_function_call.md)  
   invokes the _target_
+  > TODO
 
 ## Non-member functions
 
-- rome::make_delegate  
-  factory function to create a new `rome::delegate` instance with assigned _target_
+- [rome::make_delegate](delegate/make_delegate.md)  
+  creates a new `rome::delegate` instance with an assigned new _target_
   > TODO
-- operator==, operator!=  
+- [operator==, operator!=](delegate/operator_cmp_nullptr.md)  
   compares `rome::delegate` with nullptr
-- std::swap  
-  specialices the std::swap algorithm  
-  > (TODO really do it this way round, add it to the std namespace???)
+  > TODO
+- [swap](delegate/swap.md)  
+  swaps the contents of two `rome::delegate` instances  
+  > TODO
 
 ## Helper classes
 
@@ -90,13 +100,19 @@ The stored callable object is called the _target_ of `rome::delegate`. If a `rom
 
 > TODO
 
+## Notes
+
+`rome::delegate` was originally implemented as a solution for a more transparent and flexible declaration of call interfaces, e.g. for callback functions. For this purpose, however, the more restricted [`rome::event_delegate`](event_delegate.md) might be a better solution.
+
+If the assignment of a _target_ is required, calling the pure virtual function of an injected [interface class](https://en.wikibooks.org/wiki/More_C%2B%2B_Idioms/Interface_Class) might be a better solution. In this case the compiler will check whether the pure virtual function is implemented and thus enforces the assignment of a _target_.
+
 ## Example
 
 > TODO
 
 ## See also
 
-> TODO
+> TODO (std::function)
 
 ## TODO chapter for referencing cppreference.com
 
