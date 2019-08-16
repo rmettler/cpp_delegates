@@ -9,7 +9,7 @@ constexpr delegate(delegate&& other) noexcept; // (3)
 Constructs a `rome::delegate`.
 
 - **1, 2** -- Creates an _empty_ delegate.
-- **3** -- Moves the _target_ and the ownership of _target_ of other to `*this`. If other is _empty_, `*this` will be _empty_ after the call too. Leaves other in _empty_ state after the move.
+- **3** -- Moves the _target_ of other to `*this`. If other is _empty_, `*this` will be _empty_ after the call too. Leaves other in _empty_ state after the move.
 
 Use [`rome::make_delegate`](../delegate/make_delegate.md) to assign a new _target_.
 

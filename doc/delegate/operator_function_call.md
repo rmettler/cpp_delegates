@@ -16,9 +16,8 @@ None if Ret is `void`. Otherwise the return value of the invocation of the store
 
 ## Exceptions
 
-`rome::bad_delegate_call` if `*this` does not store a callable function target, i.e. `!*this == true`.
-
-> TODO: add link from `rome::bad_delegate_call` to its markdown page
+- [`rome::bad_delegate_call`](../delegate/bad_delegate_call.md) if `*this` is _empty_, i.e. `!*this == true`
+- any exceptions thrown by the stored _target_
 
 ## Examples
 

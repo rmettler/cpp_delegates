@@ -8,18 +8,18 @@ A lightweight function interface providing higher flexibility with less effort t
 
 ## Table of contents
 
-- [C++ delegates](#c-delegates)
-  - [Table of contents](#table-of-contents)
-  - [Goals](#goals)
-    - [When to use](#when-to-use)
-    - [When not to use](#when-not-to-use)
-  - [Features](#features)
-  - [Examples](#examples)
-    - [Event delegates](#event-delegates)
-  - [System requirements](#system-requirements)
-  - [Other solutions and other implementations of C++ delegates](#other-solutions-and-other-implementations-of-c-delegates)
-  - [Thanks](#thanks)
-  - [References](#references)
+- [C++ delegates](#C-delegates)
+  - [Table of contents](#Table-of-contents)
+  - [Goals](#Goals)
+    - [When to use](#When-to-use)
+    - [When not to use](#When-not-to-use)
+  - [Features](#Features)
+  - [Examples](#Examples)
+    - [Event delegates](#Event-delegates)
+  - [System requirements](#System-requirements)
+  - [Other solutions and other implementations of C++ delegates](#Other-solutions-and-other-implementations-of-C-delegates)
+  - [Thanks](#Thanks)
+  - [References](#References)
 
 ## Goals
 
@@ -104,13 +104,17 @@ valueChanged(42);
 
 ## Other solutions and other implementations of C++ delegates
 
-*TODO*
+> TODO
 
 - function pointer
 - std::function
 - functor/function object (static interface)
 - signal/slot
 - OOP interfaces
+- Impossibly fast delegates
+- Fastest possible delegates
+- function_ref
+- https://github.com/LoopPerfect/smallfunction, https://hackernoon.com/experimenting-with-small-buffer-optimization-for-c-lambdas-d5b703fb47e4
 
 ## Thanks
 

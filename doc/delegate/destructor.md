@@ -4,9 +4,7 @@
 constexpr ~delegate();
 ```
 
-Destroys the `rome::delegate` instance. If the `rome::delegate` is not _empty_, the _target_ is not destroyed.
-
-> TODO: if ownership was transfered (e.g. by a move or an r-value passed function object), the _target_ IS destroyed also!
+Destroys the `rome::delegate` instance. If the `rome::delegate` instance took the ownership of a _target_, the _target_ is destroyed too.
 
 ## Examples
 

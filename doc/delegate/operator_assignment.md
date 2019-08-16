@@ -7,8 +7,8 @@ constexpr delegate& operator=(std::nullptr_t) noexcept;   // (2)
 
 Assigns the _target_ of another `rome::delegate` or drops it.
 
-- **1** -- Moves the _target_ and the ownership of _target_ of other to `*this`. If other is _empty_, `*this` will be _empty_ after the call too. Leaves other in _empty_ state after the move.
-- **2** -- Drops the current _target_. `*this` is _empty_ after the call.
+- **1** -- Moves the _target_ of other to `*this`. If `*this` is not _empty_, destroys the currently stored _target_ first. If other is _empty_, `*this` will be _empty_ after the call too. Leaves other in _empty_ state after the move.
+- **2** -- Drops the stored _target_ and destroys it. `*this` is _empty_ after the call.
 
 Use [`rome::make_delegate`](../delegate/make_delegate.md) to assign a new _target_.
 
