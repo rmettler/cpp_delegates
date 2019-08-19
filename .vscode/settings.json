@@ -1,37 +1,4 @@
 {
-    "psi-header.config": {
-        "forceToTop": true,
-        "license": "Custom",
-        "blankLinesAfter": 1
-    },
-    "psi-header.license-text": [
-        "",
-        "Copyright <<author>> <<filecreated('YYYY')>>.",
-        "Distributed under the Boost Software License, Version 1.0.",
-        "(See accompanying file LICENSE or copy at",
-        "https://www.boost.org/LICENSE_1_0.txt)",
-        ""
-    ],
-    "psi-header.changes-tracking": {
-        "isActive": false,
-        "autoHeader": "manualSave"
-    },
-    "psi-header.lang-config": [
-        {
-            "language": "*",
-            "begin": "",
-            "end": "",
-            "prefix": "// "
-        }
-    ],
-    "psi-header.templates": [
-        {
-            "language": "cpp",
-            "template": [
-                "<<licensetext>>",
-            ]
-        }
-    ],
     "files.associations": {
         "cctype": "cpp",
         "clocale": "cpp",
