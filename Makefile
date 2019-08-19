@@ -9,16 +9,20 @@ CXXFLAGS = $(CXXFLAGS_GNU_$(COMPILER_KIT))
 LDFLAGS = $(LDFLAGS_GNU_$(COMPILER_KIT))
 
 TEST_EXE = test.exe
+BUILD_DIR = ./build
 
 INCLUDES = -I./include -I./test/thirdparty
 DEFINES = 
 
-MAIN_SOURCE = test/test_main.cpp
-SOURCES = \
-	test/test_function_ptr.cpp
+MAIN_SRC = test/test_main.cpp
+SRCS = \
+	test/test_function_ptr.cpp \
+	test/test_bad_delegate_call.cpp
 
-MAIN_OBJECT = $(MAIN_SOURCE:.cpp=.o)
-OBJECTS = $(SOURCES:.cpp=.o)
+MAIN_OBJ = $(MAIN_SRC:%.cpp=$(BUILD_DIR)/%.o)
+OBJS = $(SRCS:%.cpp=$(BUILD_DIR)/%.o)
+MAIN_DEP = $(MAIN_SRC:%.cpp=$(BUILD_DIR)/%.d)
+DEPS = $(SRCS:%.cpp=$(BUILD_DIR)/%.d)
 
 all: $(TEST_EXE)
 
@@ -26,16 +30,26 @@ test: $(TEST_EXE)
 	@echo "[run]     ./$(TEST_EXE)"
 	@./$(TEST_EXE)
 
-clean:
-	rm -rf $(TEST_EXE) $(OBJECTS)
+$(TEST_EXE): $(BUILD_DIR)/$(TEST_EXE)
+	@echo "[move]    mv -f $(BUILD_DIR)/$(TEST_EXE) $(TEST_EXE)"
+	@mv -f $(BUILD_DIR)/$(TEST_EXE) $(TEST_EXE)
 
-clean.all:
-	rm -rf $(TEST_EXE) $(MAIN_OBJECT) $(OBJECTS)
+$(BUILD_DIR)/$(TEST_EXE): $(MAIN_OBJ) $(OBJS)
+	@mkdir -p $(@D)
+	@echo "[link]    $(CXX) $(LDFLAGS) $(MAIN_OBJ) $(OBJS) -o $@"
+	@$(CXX) $(LDFLAGS) $(MAIN_OBJ) $(OBJS) -o $@
 
-$(TEST_EXE): $(MAIN_OBJECT) $(OBJECTS)
-	@echo "[link]    $(CXX) $(LDFLAGS) $(MAIN_OBJECT) $(OBJECTS) -o $@"
-	@$(CXX) $(LDFLAGS) $(MAIN_OBJECT) $(OBJECTS) -o $@
+-include $(DEPS)
 
-%.o: %.cpp
+$(BUILD_DIR)/%.o: %.cpp
+	@mkdir -p $(@D)
 	@echo "[compile] $(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@"
-	@$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+	@$(CXX) $(CXXFLAGS) $(INCLUDES) -MMD -c $< -o $@
+
+.PHONY: clean clean.all
+
+clean:
+	rm -rf $(TEST_EXE) $(BUILD_DIR)/$(TEST_EXE) $(OBJS) $(DEPS)
+
+cleanall:
+	rm -rf $(TEST_EXE) $(BUILD_DIR)
