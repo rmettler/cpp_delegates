@@ -17,11 +17,6 @@ Use [`rome::make_delegate`](../delegate/make_delegate.md) to assign a new _targe
 
 **other** -- Another `rome::delegate` object used to initialize `*this`.
 
-## Notes
-
-TODO: just as template, there are none! -> remove
-
 ## Examples
 
-> TODO: add **tested** examples for all of the constructors.  
-> TODO: add link to the tests of those.
+> TODO: add **tested** examples for all of the constructors.

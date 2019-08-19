@@ -3,7 +3,7 @@
 Defined in header [`<rome/delegate.hpp>`](../include/rome/delegate.hpp).
 
 ```cpp
-template<typename, bool TargetRequired=true>
+template<typename Signature, bool TargetRequired=true>
 class delegate; // undefined
 
 template<typename Ret, typename... Args, bool TargetRequired>
@@ -14,9 +14,9 @@ Instances of class template `rome::delegate` can store and invoke any callable _
 
 The stored callable object is called the **_target_** of `rome::delegate`. If a `rome::delegate` contains no _target_, it is called **_empty_**. Invoking the _target_ of an _empty_ `rome::delegate` by default results in a [`rome::bad_delegate_call`](delegate/bad_delegate_call.md) exception being thrown (see below).
 
-To assign a new _target_, a new `rome::delegate` needs to be constructed using [`rome::make_delegate`](../delegate/make_delegate.md). If the size of the _target_ exceeds `sizeof(void*)`, a heap allocation might be needed during this process.
+To assign a new _target_, a new `rome::delegate` needs to be constructed using [`rome::make_delegate`](delegate/make_delegate.md). If the size of the _target_ exceeds `sizeof(void*)`, a heap allocation might be needed during this process.
 
-The size of a `rome::delegate` is 3 * `sizeof(void*)`.
+The size of a `rome::delegate` is 3 \* `sizeof(void*)`.
 
 ## Template parameters
 
@@ -65,13 +65,6 @@ The size of a `rome::delegate` is 3 * `sizeof(void*)`.
 - [operator==, operator!=](delegate/operator_cmp_nullptr.md)  
   compares `rome::delegate` with nullptr
 
-## Helper types
-
-- [rome::function_ptr_t](function_ptr.md)  
-  alias template to define a function pointer
-- [rome::member_function_ptr_t](function_ptr.md)  
-  alias template to define a pointer of a non-static member function
-
 ## Notes
 
 `rome::delegate` was originally implemented as a solution for a more transparent and flexible declaration of call interfaces, e.g. for callback functions. For this purpose, however, the more restricted [`rome::event_delegate`](event_delegate.md) might be a better solution.
@@ -93,7 +86,12 @@ If the assignment of a _target_ is required, calling the pure virtual function o
 
 ## See also
 
-> TODO (std::function)
+- [rome::function_ptr_t](function_ptr.md)  
+  helper type to define a function pointer
+- [rome::member_function_ptr_t](function_ptr.md)  
+  helper type to define a pointer of a non-static member function
+- [std::function](https://en.cppreference.com/w/cpp/utility/functional/function)  
+  wraps callable object of any type with specified function call signature
 
 ## TODO chapter for referencing cppreference.com
 

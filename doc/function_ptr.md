@@ -13,7 +13,7 @@ using member_function_ptr_t = ...; // (2)
 Provides alias templates to help define function pointers.
 
 - **1** - Defines a function pointer of form `Ret(*)(Args...)`.
-- **2** - Define a member function pointer of form `Ret(C::*)(Args...)`.
+- **2** - Defines a member function pointer of form `Ret(C::*)(Args...)`.
 
 ## Template parameters
 
@@ -22,7 +22,7 @@ Provides alias templates to help define function pointers.
 
 ## Return value
 
-The the function pointer or member function pointer type.
+The function pointer or member function pointer type.
 
 ## Examples
 

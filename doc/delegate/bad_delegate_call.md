@@ -1,4 +1,4 @@
-# _rome:: **bad_delegate_call**
+# _rome::_ **bad_delegate_call**
 
 Defined in header [`<rome/delegate.hpp>`](../include/rome/delegate.hpp).
 
