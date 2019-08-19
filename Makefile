@@ -15,7 +15,7 @@ DEFINES =
 
 MAIN_SOURCE = test/test_main.cpp
 SOURCES = \
-	test/test_delegate.cpp
+	test/test_function_ptr.cpp
 
 MAIN_OBJECT = $(MAIN_SOURCE:.cpp=.o)
 OBJECTS = $(SOURCES:.cpp=.o)
