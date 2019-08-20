@@ -1,6 +1,6 @@
 # _rome::_ **bad_delegate_call**
 
-Defined in header [`<rome/delegate.hpp>`](../include/rome/delegate.hpp).
+Defined in header [`<rome/bad_delegate_call.hpp>`](../include/rome/bad_delegate_call.hpp).
 
 ```cpp
 class bad_delegate_call;
@@ -23,16 +23,32 @@ class bad_delegate_call;
   destroys the exception object
   
   ```cpp
-  virtual ~exception();
+  virtual ~bad_delegate_call();
   ```
   
 - **what** - _virtual_, inherited from [`std::exception`](https://en.cppreference.com/w/cpp/error/exception)  
-  returns an explanatory string
+  returns the explanatory string "rome::bad_delegate_call"
   
   ```cpp
-  virtual const char* what() const noexcept;
+  const char* what() const noexcept override;
   ```
 
 ## Examples
 
-> TODO
+```cpp
+#include <iostream>
+#include <rome/delegate.hpp>
+
+int main() {
+    try {
+        rome::delegate<void()> d;
+        d();
+    }
+    catch (const std::exception& e) {
+        std::cerr << "caught: " << e.what() << '\n';
+    }
+}
+```
+
+Output:
+> caught: rome::bad_delegate_call

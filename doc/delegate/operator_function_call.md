@@ -16,7 +16,7 @@ None if Ret is `void`. Otherwise the return value of the invocation of the store
 
 ## Exceptions
 
-- [`rome::bad_delegate_call`](../delegate/bad_delegate_call.md) if `*this` is _empty_, i.e. `!*this == true`
+- [`rome::bad_delegate_call`](../bad_delegate_call.md) if `*this` is _empty_, i.e. `!*this == true`
 - any exceptions thrown by the stored _target_
 
 ## Examples
