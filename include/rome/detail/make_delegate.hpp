@@ -51,24 +51,19 @@ struct delegate_factory<Ret (*)(Args...), pMem> {
 template <typename T, T t>
 constexpr auto make_delegate = detail::delegate_factory<T, t>::create;
 
-template <typename Function> struct function_ptr;
+template<typename Signature>
+using function_ptr_t = std::add_pointer_t<Signature>;
 
-template <typename Ret, typename... Args> struct function_ptr<Ret(Args...)> {
-    using type = Ret (*)(Args...);
-};
-
-template <typename Function>
-using function_ptr_t = typename function_ptr<Function>::type;
-
-template <typename C, typename Function> struct member_function_ptr;
+template<typename C, typename Signature>
+struct member_function_ptr;
 
 template <typename C, typename Ret, typename... Args>
 struct member_function_ptr<C, Ret(Args...)> {
     using type = Ret (C::*)(Args...);
 };
 
-template <typename C, typename Function>
-using member_function_ptr_t = typename member_function_ptr<C, Function>::type;
+template<typename C, typename Signature>
+using member_function_ptr_t = typename member_function_ptr<C, Signature>::type;
 
 } // namespace delegates
 } // namespace rome
