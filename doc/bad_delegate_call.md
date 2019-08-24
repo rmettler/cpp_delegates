@@ -33,7 +33,7 @@ class bad_delegate_call;
   const char* what() const noexcept override;
   ```
 
-## Examples
+## Example
 
 ```cpp
 #include <iostream>

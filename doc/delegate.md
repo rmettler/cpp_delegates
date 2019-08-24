@@ -6,7 +6,7 @@ Defined in header [`<rome/delegate.hpp>`](../include/rome/delegate.hpp).
 template<typename Signature, bool TargetRequired=true>
 class delegate; // undefined
 
-template<typename Ret, typename... Args, bool TargetRequired>
+template<bool TargetRequired, typename Ret, typename... Args>
 class delegate<Ret(Args...), TargetRequired>;
 ```
 

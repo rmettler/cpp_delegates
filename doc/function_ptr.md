@@ -24,7 +24,7 @@ Provides alias templates to help define function pointers.
 
 The function pointer or member function pointer type.
 
-## Examples
+## Example
 
 ```cpp
 #include <rome/function_ptr.hpp>
@@ -55,7 +55,7 @@ int main() {
 }
 ```
 
-Prints:
+Output:
 > int of 12.3 = 12  
 > (-1 > 0) = false  
 > (-1 < 0) = true
