@@ -1,65 +1,39 @@
 # C++ delegates
 
-A lightweight function interface providing higher flexibility with less effort than function pointers, function objects or OOP interfaces. Is similar to use, but more performant than `std::function`.
+***Here are some more advanced C++ delegates under development***
 
-**UNDER CONSTRUCTION: The whole readme needs a lot more work.**
+A lightweight function interface which may store and call any callable compatible with the specified function signature. It provides higher flexibility with less effort than function pointers, function objects or OOP interfaces. It is similar to use, but more performant than `std::function`. Compared to other delegate solutions it prevents any undefined behavior.
 
-***
+## Content under development
 
-## Table of contents
+[`rome::delegate`][rome_delegate_md]:
 
-- [C++ delegates](#C-delegates)
-  - [Table of contents](#Table-of-contents)
-  - [Goals](#Goals)
-    - [When to use](#When-to-use)
-    - [When not to use](#When-not-to-use)
-  - [Features](#Features)
-  - [Examples](#Examples)
-    - [Event delegates](#Event-delegates)
-  - [System requirements](#System-requirements)
-  - [Other solutions and other implementations of C++ delegates](#Other-solutions-and-other-implementations-of-C-delegates)
-  - [Thanks](#Thanks)
-  - [References](#References)
+- can be used for any callble
+- supports all function signatures
+- by default requires a target being assigned, otherwise throws an exception
+- if exceptions are disabled, calls std::terminate to prevent undefined behavior
+- to be released soon
 
-## Goals
+`rome::event_delegate`:
 
-There are a lot of articles, examples and libraries out there regarding differnt kinds of C++ delegates. So why yet another one?
+- intended to be used in event driven communication, e.g. for event based components
+- restricts the function signature to:
+  - Only `void` as return type.
+  - Only values, r-value references or any const reference or pointer type as pointer typse.
+    Thus prevents the callee could change the state of the caller.
+- By default assigning a target to the delegate is optional. If nothing is assigned, an empty function is called.
 
-- **Function level interfaces**. TODO: should add abstraction, caller should not have to care about the callee, as long as the callees functions argument and return types match. changed during runtime.
-- **Performance**. (TODO) as less overhead as somehow possible, in speed and code size. Usable for the embedded environment. can compete with any other runtime solution. uses only two pointers and no dynamic memory allocations.
-- **Safe**. (TODO) No undefined behavior when using `void` as return type no callee is set. Omitting runtime checks and thus retaining maximal performance.
-- **Easy to use**. (TODO) supply helpful error messages during compile time. can be copied and compared.
+## Documentation
 
-### When to use
+Until now only [`rome::delegate`][rome_delegate_md] is documented. There are still a lot of examples and some references missing. And since it is not yet fully implemented and tested, the interfaces may change.
 
-- Performance and/or memory constrained environment.
-- Function objects or other static interfaces are infeasible.
+See [`rome::delegate`][rome_delegate_md]
 
-### When not to use
+## Goal
 
-If performance is no issue then std::function may be a better fit. (TODO cite std::function)
+I was searching for a solution where I could understandably specify events that happen in a module and listen to them, if I want to. Then I want to be able to just assign any callable that matches the signature of the event raised and do this by just linking them together. And this solution should be lightweight, safe and be usable in a modern embedded environment.
 
-If callers and callees are known during compile time and you are comfortable using templates, e.g. functors are safer and more performant, but in some occasions may produce more code. (TODO cite functors)
-
-## Features
-
-- Can store the address of a function or object and address of a member method of a given signature.
-- Visibly documents this signature.
-- Delegates calls to operator() to the stored function or member method.
-  - Does a zero overhead call to an empty function, if the return type is void and the delegate was not set.  
-    (Has undefined behavior if the return type is not void and the delegate was not set.)
-- Provides factory functions for easy creation of such delegates.
-- Goes without heap allocations and has full constexpr support. Hence, depending on your application, it can be fully compile time optimized and is a lot more performant than std::function, function-pointers or solutions based on virtual functions.
-
-Defined in [include/rome/delegates.hpp](include/rome/delegates.hpp):
-
-- **delegate**: The original delegate.
-  - If the return type is void, uses a safe implementation which calls an empty function if nothing or nullptr was assigned.
-- **make_delegate**: A factory function which supports creating and assigning delegates.
-- **event_delegate**: A restricted version of *delegate* which follows an event-driven forward only approach.
-  - Restricts the return type to void.
-  - Forbids function signatures with write access to the arguments.
-- **make_event_delegate**: A factory function which supports creating and assigning event delegates.
+During my investigations I stumbled over the [Impssibly Fast C++ Delegates by Sergey Ryazanov] which inspired me. I then found many adaptations for modern C++, but I didn't find any which satisfied my needs. So I started my own project.
 
 ## Examples
 
@@ -108,7 +82,7 @@ valueChanged(42);
 
 - function pointer
 - std::function
-- functor/function object (static interface)
+- functor/function object (compile time interface)
 - signal/slot
 - OOP interfaces
 - Impossibly fast delegates
@@ -125,3 +99,4 @@ The basic delegate inspired by the approach Sergey Ryazanov describes in the art
 1. Ryazanov, Sergey. “The Impossibly Fast C++ Delegates.” [_The Impossibly Fast C++ Delegates_][impossDelegates], CodeProject, 18 July 2005, www.codeproject.com/Articles/11015/The-Impossibly-Fast-C-Delegates.
 
 [impossDelegates]: https://www.codeproject.com/Articles/11015/The-Impossibly-Fast-C-Delegates
+[rome_delegate_md]: doc/delegate.md
