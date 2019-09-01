@@ -1,10 +1,13 @@
-# _rome::delegate<Ret(Args...)>::_ **swap**
+# _rome::delegate<Ret(Args...), TgtReq>::_ **swap**
 
 ```cpp
-constexpr void swap(delegate& other) noexcept;
+template<typename T>
+constexpr void swap(delegate<Ret(Args...), T>& other) noexcept;
 ```
 
 Exchanges the stored callable objects of `*this` and other.
+
+Compile error if `TgtReq` != `T` but either `TgtReq` or `T` are of type `rome::tgt_stat_req`.
 
 ## Parameters
 

@@ -1,8 +1,12 @@
-# _rome::delegate<Ret(Args...)>::_ **operator ==,!=**
+# _rome::delegate<Ret(Args...), TgtReq>::_ **operator ==,!=**
 
 ```cpp
-constexpr bool operator==(const delegate& other) const noexcept; // (1)
-constexpr bool operator!=(const delegate& other) const noexcept; // (2)
+template<typename T>
+constexpr bool operator==(
+    const delegate<Ret(Args...), T>& other) const noexcept; // (1)
+template<typename T>
+constexpr bool operator!=(
+    const delegate<Ret(Args...), T>& other) const noexcept; // (2)
 ```
 
 Compares whether `*this` stores the same callable function _target_ as other.

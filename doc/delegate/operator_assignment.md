@@ -1,14 +1,28 @@
-# _rome::delegate<Ret(Args...)>::_ **operator=**
+# _rome::delegate<Ret(Args...), TgtReq>::_ **operator=**
+
+If `TgtReq` != `rome::tgt_stat_req`:
+
+```cpp
+template<typename T>
+constexpr delegate& operator=(delegate<Ret(Args...), T>&& other) noexcept; // (1)
+constexpr delegate& operator=(std::nullptr_t) noexcept;   // (2)
+```
+
+If `TgtReq` == `rome::tgt_stat_req`:
 
 ```cpp
 constexpr delegate& operator=(delegate&& other) noexcept; // (1)
-constexpr delegate& operator=(std::nullptr_t) noexcept;   // (2)
 ```
 
 Assigns the _target_ of another `rome::delegate` or drops it.
 
 - **1** -- Moves the _target_ of other to `*this`. If `*this` is not _empty_, destroys the currently stored _target_ first. If other is _empty_, `*this` will be _empty_ after the call too. Leaves other in _empty_ state after the move.
-- **2** -- Drops the stored _target_ and destroys it. `*this` is _empty_ after the call.
+  - If `TgtReq` of `*this` == `rome::tgt_stat_req`:  
+    `TgtReq` of other must also be `rome::tgt_stat_req`
+  - Otherwise:  
+    `TgtReq` of other might be any valid type
+- **2** -- Drops the stored _target_ and destroys it. `*this` is _empty_ after the call.  
+  Only available if `TgtReq` != `rome::tgt_stat_req`.
 
 Use [`rome::make_delegate`](../delegate/make_delegate.md) to assign a new _target_.
 

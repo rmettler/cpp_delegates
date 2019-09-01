@@ -1,4 +1,4 @@
-# _rome::delegate<Ret(Args...)>::_ **operator()**
+# _rome::delegate<Ret(Args...), TgtReq>::_ **operator()**
 
 ```cpp
 Ret operator()(Args... args) const;
@@ -16,8 +16,8 @@ None if Ret is `void`. Otherwise the return value of the invocation of the store
 
 ## Exceptions
 
-- [`rome::bad_delegate_call`](../bad_delegate_call.md) if `*this` is _empty_, i.e. `!*this == true`
 - any exceptions thrown by the stored _target_
+- [`rome::bad_delegate_call`](../bad_delegate_call.md) *this is _empty_, i.e. `!*this == true`, and if `TgtReq` == `rome::tgt_dyn_req`
 
 ## Examples
 

@@ -22,6 +22,8 @@ auto make_delegate(T target);                            // (5)
 
 > TODO: was ist z.B. mit member value, der operator() unterstützt? -> testen
 
+> TODO: return type?
+
 Factory method which creates a `rome::delegate` instance from a variety of _target_ sources. Can be used in a way that the argument and return types of the _target_ are identified by the compiler.
 
 - **1** -- Initializes the _target_ with a global function or a static member function.

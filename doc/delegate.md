@@ -3,11 +3,11 @@
 Defined in header [`<rome/delegate.hpp>`](../include/rome/delegate.hpp).
 
 ```cpp
-template<typename Signature, bool TargetRequired=true>
+template<typename Signature, typename TgtReq>
 class delegate; // undefined
 
-template<bool TargetRequired, typename Ret, typename... Args>
-class delegate<Ret(Args...), TargetRequired>;
+template<typename TgtReq, typename Ret, typename... Args>
+class delegate<Ret(Args...), TgtReq>;
 ```
 
 Instances of class template `rome::delegate` can store and invoke any callable _target_ -- functions, lambda expressions, other function objects, std::function, as well as static and non-static member functions.
@@ -24,7 +24,26 @@ The size of a `rome::delegate` is 3 \* `sizeof(void*)`.
   The return type of the _target_ beeing called.
 - `Args...`  
   The argument types of the _target_ beeing called (0 to many).
-- `TargetRequired`  
+- `TgtReq`  
+  Defines the behavior when an _empty_ `rome::delegate` is being called. Defaults to `rome::tgt_dyn_req`.
+  
+  The behavior can be chosen by declaring the delegate with one the following types:
+  
+  - `rome::tgt_dyn_req` _(target dynamically required)_  
+    A valid _target_ is required to be assigned before the `rome::delegate` is called.  
+    When an _empty_ `rome::delegate` is being called:
+    - Throws a [`rome::bad_delegate_call`](delegate/bad_delegate_call.md) exception.
+    - Instead calls [`std::terminate`](https://en.cppreference.com/w/cpp/error/terminate), if exceptions are disabled.
+  - `rome::tgt_opt` _(target optional, only if `Ret`==`void`)_  
+    Assigning a _target_ to the `rome::delegate` is optional. Calling an _empty_ delegate is well defined and directly returns without doing anything.  
+    Compile error, if `Ret` != `void`, because it can't return anything.
+  - `rome::tgt_stat_req` _(target statically required)_  
+    Ensures by design that a `rome::delegate` can never be _empty_. This has following consequences:
+    - Default constructor is deleted.
+    - Move construction and move assignment only accept delegates which are also declared with `rome::tgt_stat_req`.
+    - Assigning a nullptr in order to drop a currently assigned _target_ is not possible, though it may be overridden by assigning a new valid _target_.
+    - A new instance of `rome::delegate` can only be created by using one of the factory functions [create](delegate/create.md) or [rome::make_delegate](delegate/make_delegate.md).
+  
   Whether it is required to assign a valid _target_ to the `rome::delegate` before it is called. Defaults to `true`.
   
   This parameter only has an effect when an _empty_ `rome::delegate` is being called:
@@ -59,7 +78,7 @@ The size of a `rome::delegate` is 3 \* `sizeof(void*)`.
 ## Non-member functions
 
 - [rome::make_delegate](delegate/make_delegate.md)  
-  creates a new `rome::delegate` instance with an assigned new _target_
+  creates a new `rome::delegate` instance with given _target_ assigned
 - [rome::swap](delegate/swap2.md)  
   swaps the contents of two `rome::delegate` instances
 - [operator==, operator!=](delegate/operator_cmp_nullptr.md)  

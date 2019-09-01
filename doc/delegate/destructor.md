@@ -1,4 +1,4 @@
-# _rome::delegate<Ret(Args...)>::_ **~delegate**
+# _rome::delegate<Ret(Args...), TgtReq>::_ **~delegate**
 
 ```cpp
 constexpr ~delegate();
