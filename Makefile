@@ -19,6 +19,7 @@ SRCS = \
 	test/test_function_ptr.cpp \
 	test/test_bad_delegate_call.cpp \
 	test/delegate/test_delegate.cpp \
+	test/delegate/test_delegate/test_explicit_instantiations.cpp \
 	test/delegate/test_delegate/test_default_construction.cpp
 
 MAIN_OBJ = $(MAIN_SRC:%.cpp=$(BUILD_DIR)/%.o)

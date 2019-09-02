@@ -43,18 +43,6 @@ The size of a `rome::delegate` is 3 \* `sizeof(void*)`.
     - Move construction and move assignment only accept delegates which are also declared with `rome::tgt_stat_req`.
     - Assigning a nullptr in order to drop a currently assigned _target_ is not possible, though it may be overridden by assigning a new valid _target_.
     - A new instance of `rome::delegate` can only be created by using one of the factory functions [create](delegate/create.md) or [rome::make_delegate](delegate/make_delegate.md).
-  
-  Whether it is required to assign a valid _target_ to the `rome::delegate` before it is called. Defaults to `true`.
-  
-  This parameter only has an effect when an _empty_ `rome::delegate` is being called:
-  
-  - `TargetRequired` == `true`:
-    - Throws a [`rome::bad_delegate_call`](delegate/bad_delegate_call.md) exception.
-    - Instead calls [`std::terminate`](https://en.cppreference.com/w/cpp/error/terminate) if exceptions are disabled.
-  - `TargetRequired` == `false` and `Ret` == `void`:  
-    Ignores the call and returns directly.
-  - `TargetRequired` == `false` and `Ret` != `void`:  
-    Compile error, because it can't return anything.
 
 ## Member functions
 

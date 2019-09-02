@@ -12,7 +12,7 @@
 #include <rome/delegate.hpp>
 #include <type_traits>
 
-#include "test_delegate/test_declaration.hpp"
+#include "test_delegate/test_declarations.hpp"
 #include "test_delegate/test_default_construction.hpp"
 
 TEST_SUITE_BEGIN("header file: rome/delegate.hpp");

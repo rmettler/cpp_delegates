@@ -22,52 +22,54 @@ template<typename TDelegate>
 constexpr bool is_signature_error_produced =
     std::is_base_of<rome::detail::delegate::signature_error, TDelegate>::value;
 
+// helper to check whether the delegate with given signature is of base
+// class which would produce a target requirement error using static_assert during creation
+template<typename TDelegate>
+constexpr bool is_target_req_error_produced =
+    std::is_base_of<rome::detail::delegate::target_requirement_error, TDelegate>::value;
+
 template<typename T>
 void checkEmpty(const T& dgt) {
-    SUBCASE("Check whether given delegate is empty.") {
-        CHECK(dgt == nullptr);
-        CHECK(nullptr == dgt);
-        CHECK(!dgt);
-        {
-            const T defaultDgt;
-            CHECK(dgt == defaultDgt);
-            CHECK(defaultDgt == dgt);
-        }
-        {
-            const T valueInitDgt{};
-            CHECK(dgt == valueInitDgt);
-            CHECK(valueInitDgt == dgt);
-        }
-        {
-            const T nullInitDgt{nullptr};
-            CHECK(dgt == nullInitDgt);
-            CHECK(nullInitDgt == dgt);
-        }
+    CHECK(dgt == nullptr);
+    CHECK(nullptr == dgt);
+    CHECK(!dgt);
+    {
+        const T defaultDgt;
+        CHECK(dgt == defaultDgt);
+        CHECK(defaultDgt == dgt);
+    }
+    {
+        const T valueInitDgt{};
+        CHECK(dgt == valueInitDgt);
+        CHECK(valueInitDgt == dgt);
+    }
+    {
+        const T nullInitDgt{nullptr};
+        CHECK(dgt == nullInitDgt);
+        CHECK(nullInitDgt == dgt);
     }
 }
 
 template<typename T>
 void checkNotEmpty(const T& dgt) {
-    SUBCASE("Check whether given delegate is not empty.") {
-        CHECK(dgt != nullptr);
-        CHECK(nullptr != dgt);
-        CHECK(!!dgt);
+    CHECK(dgt != nullptr);
+    CHECK(nullptr != dgt);
+    CHECK(!!dgt);
 
-        {
-            const T defaultDgt;
-            CHECK(dgt != defaultDgt);
-            CHECK(defaultDgt != dgt);
-        }
-        {
-            const T valueInitDgt{};
-            CHECK(dgt != valueInitDgt);
-            CHECK(valueInitDgt != dgt);
-        }
-        {
-            const T nullInitDgt{nullptr};
-            CHECK(dgt != nullInitDgt);
-            CHECK(nullInitDgt != dgt);
-        }
+    {
+        const T defaultDgt;
+        CHECK(dgt != defaultDgt);
+        CHECK(defaultDgt != dgt);
+    }
+    {
+        const T valueInitDgt{};
+        CHECK(dgt != valueInitDgt);
+        CHECK(valueInitDgt != dgt);
+    }
+    {
+        const T nullInitDgt{nullptr};
+        CHECK(dgt != nullInitDgt);
+        CHECK(nullInitDgt != dgt);
     }
 }
 

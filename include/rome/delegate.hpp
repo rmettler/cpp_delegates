@@ -25,6 +25,10 @@
 
 namespace rome {
 
+struct tgt_dyn_req;
+struct tgt_stat_req;
+struct tgt_opt;
+
 namespace detail {
     namespace delegate {
         struct signature_error {};
@@ -32,42 +36,60 @@ namespace detail {
         template<typename Signature>
         struct signature_error_ : signature_error {
             constexpr signature_error_() {
-                static_assert(wrong<Signature>::value,
+                static_assert(wrong<Signature>,
                     "Invalid template parameter. The first template parameter must be a function "
                     "signature of form 'Ret (Args...)'."
                     "E.g.: 'delgate<float (std::array<int,10>&)>'");
             }
         };
+
+        template<typename Ret, typename TgtReq>
+        constexpr bool checkTgtReq() {
+            return std::is_same<TgtReq, rome::tgt_dyn_req>::value
+                   || std::is_same<TgtReq, rome::tgt_stat_req>::value
+                   || (std::is_same<TgtReq, rome::tgt_opt>::value
+                       && std::is_same<Ret, void>::value);
+        }
+
+        struct target_requirement_error {};
+
+        template<typename Ret, typename TgtReq>
+        struct target_requirement_error_ : target_requirement_error {
+            constexpr target_requirement_error_() {
+                static_assert(wrong<Ret, TgtReq>,
+                    "Invalid template parameter. The second template parameter TgtReq must either "
+                    "be empty or contain one of the types rome::tgt_dyn_req, rome::tgt_stat_req or "
+                    "rome::tgt_opt, where rome::tgt_opt is only valid if the return type Ret is "
+                    "void.");
+            }
+        };
     };  // namespace delegate
 };      // namespace detail
 
-template<typename Signature, bool TargetRequired = true>
+template<typename Signature, typename TgtReq = tgt_dyn_req>
 class delegate : detail::delegate::signature_error_<Signature> {};
 
-template<bool TargetRequired, typename Ret, typename... Args>
-class delegate<Ret(Args...), TargetRequired> {
+template<typename TgtReq, typename Ret, typename... Args>
+class delegate<Ret(Args...), TgtReq>
+    : std::conditional<detail::delegate::checkTgtReq<Ret, TgtReq>(), detail::ok,
+          detail::delegate::target_requirement_error_<Ret, TgtReq>>::type {
   public:
-    constexpr delegate()                = default;
-    constexpr delegate(const delegate&) = default;
-    constexpr delegate(delegate&&)      = default;
-    constexpr delegate(std::nullptr_t) : delegate{} {
+    constexpr delegate() noexcept  = default;
+    constexpr delegate(delegate&&) = default;
+    constexpr delegate(std::nullptr_t) noexcept : delegate{} {
     }
 
-    constexpr delegate& operator=(const delegate&) = default;
     constexpr delegate& operator=(delegate&&) = default;
-    constexpr delegate& operator              =(std::nullptr_t) {
+    constexpr delegate& operator              =(std::nullptr_t) noexcept {
         *this = std::move(delegate{});
         return *this;
     }
 
-    constexpr bool isLinked() const {
-        return callee_ != null_callee;
-    }
     constexpr operator bool() const {
-        return isLinked();
+        return !!(*this);
     }
     constexpr bool operator!() const {
-        return !isLinked();
+        return callee_ == null_callee;
     }
 
     constexpr bool operator==(const delegate& rhs) {
@@ -169,24 +191,32 @@ class delegate<Ret(Args...), TargetRequired> {
     caller_type callee_               = null_callee;
 };
 
-template<typename Sig, bool TR>
-constexpr bool operator==(const delegate<Sig, TR>& lhs, std::nullptr_t) {
+template<typename Ret, typename... Args>
+class delegate<Ret(Args...), tgt_stat_req>
+    : std::conditional<detail::delegate::checkTgtReq<Ret, tgt_stat_req>(), detail::ok,
+          detail::delegate::target_requirement_error_<Ret, tgt_stat_req>>::type {
+  public:
+    constexpr delegate(delegate&&) = default;
+};
+
+template<typename Sig, typename TgtReq>
+constexpr bool operator==(const delegate<Sig, TgtReq>& lhs, std::nullptr_t) {
     return !lhs;
 }
 
-template<typename Sig, bool TR>
-constexpr bool operator==(std::nullptr_t, const delegate<Sig, TR>& rhs) {
+template<typename Sig, typename TgtReq>
+constexpr bool operator==(std::nullptr_t, const delegate<Sig, TgtReq>& rhs) {
     return !rhs;
 }
 
-template<typename Sig, bool TR>
-constexpr bool operator!=(const delegate<Sig, TR>& lhs, std::nullptr_t) {
-    return !(lhs == nullptr);
+template<typename Sig, typename TgtReq>
+constexpr bool operator!=(const delegate<Sig, TgtReq>& lhs, std::nullptr_t) {
+    return lhs;
 }
 
-template<typename Sig, bool TR>
-constexpr bool operator!=(std::nullptr_t, const delegate<Sig, TR>& rhs) {
-    return !(rhs == nullptr);
+template<typename Sig, typename TgtReq>
+constexpr bool operator!=(std::nullptr_t, const delegate<Sig, TgtReq>& rhs) {
+    return rhs;
 }
 
 }  // namespace rome
