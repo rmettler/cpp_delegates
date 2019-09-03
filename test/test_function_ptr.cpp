@@ -18,7 +18,7 @@ int function(float f) {
     return static_cast<int>(f);
 }
 
-TEST_CASE("helper type: rome::function_ptr_t") {
+TEST_CASE("rome::function_ptr_t") {
     static_assert(std::is_same<rome::function_ptr_t<int(float)>, decltype(&function)>::value, "");
     rome::function_ptr_t<int(float)> ptr = &function;
     CHECK(3 == (*ptr)(3.9));
@@ -34,7 +34,7 @@ struct C {
     }
 };
 
-TEST_CASE("helper type: rome::member_function_ptr_t") {
+TEST_CASE("rome::member_function_ptr_t") {
     static_assert(
         std::is_same<rome::member_function_ptr_t<C, bool(int)>, decltype(&C::nonConstMemFn)>::value,
         "");

@@ -186,3 +186,6 @@ template class ::rome::delegate<TFunctionPtr(TFunctionPtr), rome::tgt_stat_req>;
 static_assert(test_rome_delegate::is_target_req_error_produced<
                   ::rome::delegate<TFunctionPtr(TFunctionPtr), rome::tgt_opt>>,
     "");
+
+TEST_CASE("rome::delegate - explicit template instantiations") {
+}

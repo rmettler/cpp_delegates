@@ -12,22 +12,10 @@
 #include <rome/delegate.hpp>
 #include <type_traits>
 
-#include "test_delegate/test_declarations.hpp"
-#include "test_delegate/test_default_construction.hpp"
-
 TEST_SUITE_BEGIN("header file: rome/delegate.hpp");
 
 namespace test_rome_delegate {
 
-TEST_CASE("rome::delegate declaration") {
-    declaration::test_default_template_params();
-    declaration::test_declaration_with_correct_signature();
-    declaration::test_declaration_with_wrong_signature();
-}
-
-TEST_CASE("rome::delegate default construction") {
-    default_construction::test_default_construction();
-}
 
 // rome::delegate::create
 //   - global function

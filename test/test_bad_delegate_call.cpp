@@ -15,7 +15,7 @@
 
 TEST_SUITE_BEGIN("header file: rome/bad_delegate_call.hpp");
 
-TEST_CASE("exception: rome::bad_delegate_call") {
+TEST_CASE("rome::bad_delegate_call") {
     static_assert(std::is_nothrow_default_constructible<rome::bad_delegate_call>::value, "");
     static_assert(std::is_nothrow_copy_constructible<rome::bad_delegate_call>::value, "");
     static_assert(std::is_nothrow_copy_assignable<rome::bad_delegate_call>::value, "");
