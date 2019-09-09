@@ -21,7 +21,8 @@ SRCS = \
 	test/delegate/test_delegate.cpp \
 	test/delegate/test_delegate/test_declarations.cpp \
 	test/delegate/test_delegate/test_explicit_instantiations.cpp \
-	test/delegate/test_delegate/test_default_construction.cpp
+	test/delegate/test_delegate/test_default_construction.cpp \
+	test/delegate/test_delegate/test_create.cpp
 
 MAIN_OBJ = $(MAIN_SRC:%.cpp=$(BUILD_DIR)/%.o)
 OBJS = $(SRCS:%.cpp=$(BUILD_DIR)/%.o)
