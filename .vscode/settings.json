@@ -52,6 +52,13 @@
         "condition_variable": "cpp",
         "iomanip": "cpp",
         "mutex": "cpp",
-        "numeric": "cpp"
+        "numeric": "cpp",
+        "algorithm": "cpp",
+        "iterator": "cpp",
+        "map": "cpp",
+        "memory_resource": "cpp",
+        "random": "cpp",
+        "set": "cpp",
+        "string": "cpp"
     }
 }
