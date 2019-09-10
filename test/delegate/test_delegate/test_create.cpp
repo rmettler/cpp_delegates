@@ -50,15 +50,20 @@ struct Calls {
         news                 = 0;
         deletes              = 0;
     }
-    void checkWith(const Calls& exp) {
-        CHECK(defaultConstructions == exp.defaultConstructions);
-        CHECK(copyConstructions == exp.copyConstructions);
-        CHECK(moveConstructions == exp.moveConstructions);
-        CHECK(moveAssigns == exp.moveAssigns);
-        CHECK(destroys == exp.destroys);
-        CHECK(calls == exp.calls);
-        CHECK(news == exp.news);
-        CHECK(deletes == exp.deletes);
+    bool operator==(const Calls& rhs) {
+        CHECK(defaultConstructions == rhs.defaultConstructions);
+        CHECK(copyConstructions == rhs.copyConstructions);
+        CHECK(moveConstructions == rhs.moveConstructions);
+        CHECK(moveAssigns == rhs.moveAssigns);
+        CHECK(destroys == rhs.destroys);
+        CHECK(calls == rhs.calls);
+        CHECK(news == rhs.news);
+        CHECK(deletes == rhs.deletes);
+        return (defaultConstructions == rhs.defaultConstructions)
+               && (copyConstructions == rhs.copyConstructions)
+               && (moveConstructions == rhs.moveConstructions) && (moveAssigns == rhs.moveAssigns)
+               && (destroys == rhs.destroys) && (calls == rhs.calls) && (news == rhs.news)
+               && (deletes == rhs.deletes);
     }
 };
 
@@ -129,82 +134,160 @@ struct BiggerFunctor {
 };
 Calls BiggerFunctor::calls = {};
 
+struct BadAlignedFunctor {
+    static Calls calls;
+    alignas(2*sizeof(void*)) Calls& calls_;
+    BadAlignedFunctor() : calls_{calls} {
+        ++calls.defaultConstructions;
+    }
+    BadAlignedFunctor(const BadAlignedFunctor&) : calls_{calls} {
+        ++calls.copyConstructions;
+    }
+    BadAlignedFunctor(BadAlignedFunctor&&) : calls_{calls} {
+        ++calls.moveConstructions;
+    }
+    BadAlignedFunctor& operator=(BadAlignedFunctor&&) {
+        ++calls.moveAssigns;
+        return *this;
+    }
+    ~BadAlignedFunctor() {
+        ++calls.destroys;
+    }
+    static void* operator new(std::size_t sz) {
+        ++calls.news;
+        return ::operator new(sz);
+    }
+    static void operator delete(void* ptr) {
+        ++calls.deletes;
+        ::operator delete(ptr);
+    }
+    void operator()() {
+        ++calls.calls;
+    }
+};
+Calls BadAlignedFunctor::calls = {};
+
 TEST_CASE("target_t") {
     // TODO: do this with delegate instead!
     using target_t = rome::detail::delegate::target_t<void()>;
     Calls calls;
     calls.reset();
-    SUBCASE("functor with small buffer optimization") {
-        SmallFunctor::calls.reset();
+    SUBCASE("functor WITH small buffer optimization") {
+        using Functor = SmallFunctor;
+        CHECK(sizeof(Functor) <= sizeof(void*));
+        CHECK(alignof(Functor) <= sizeof(void*));
+        Functor::calls.reset();
         {
-            SmallFunctor sf;
+            Functor sf;
             ++calls.defaultConstructions;
-            SmallFunctor::calls.checkWith(calls);
+            CHECK((Functor::calls == calls));
             {
                 auto t1 = target_t::create(sf);
                 ++calls.copyConstructions;
                 ++calls.destroys;  // the temporary copy
                 ++calls.moveConstructions;
-                SmallFunctor::calls.checkWith(calls);
+                CHECK((Functor::calls == calls));
 
                 t1();
                 ++calls.calls;
-                SmallFunctor::calls.checkWith(calls);
+                CHECK((Functor::calls == calls));
                 {
                     auto t2{std::move(t1)};
-                    SmallFunctor::calls.checkWith(calls);
+                    CHECK((Functor::calls == calls));
 
                     t1();
-                    SmallFunctor::calls.checkWith(calls);
+                    CHECK((Functor::calls == calls));
 
                     t2();
                     ++calls.calls;
-                    SmallFunctor::calls.checkWith(calls);
+                    CHECK((Functor::calls == calls));
                 }
-                ++calls.destroys; // destroys t2
-                SmallFunctor::calls.checkWith(calls);
+                ++calls.destroys;  // destroys t2
+                CHECK((Functor::calls == calls));
             }
-            SmallFunctor::calls.checkWith(calls);
+            CHECK((Functor::calls == calls));
         }
-        ++calls.destroys; // destroys sf
-        SmallFunctor::calls.checkWith(calls);
+        ++calls.destroys;  // destroys sf
+        CHECK((Functor::calls == calls));
     }
-    SUBCASE("functor with small buffer optimization") {
-        BiggerFunctor::calls.reset();
+    SUBCASE("functor too big for small buffer optimization") {
+        using Functor = BiggerFunctor;
+        CHECK(sizeof(Functor) > sizeof(void*));
+        CHECK(alignof(Functor) <= sizeof(void*));
+        Functor::calls.reset();
         {
-            BiggerFunctor sf;
+            Functor sf;
             ++calls.defaultConstructions;
-            BiggerFunctor::calls.checkWith(calls);
+            CHECK((Functor::calls == calls));
             {
                 auto t1 = target_t::create(sf);
                 ++calls.copyConstructions;
-                ++calls.destroys;
+                ++calls.destroys;  // the temporary copy
                 ++calls.news;
                 ++calls.moveConstructions;
-                BiggerFunctor::calls.checkWith(calls);
+                CHECK((Functor::calls == calls));
 
                 t1();
                 ++calls.calls;
-                BiggerFunctor::calls.checkWith(calls);
+                CHECK((Functor::calls == calls));
                 {
                     auto t2{std::move(t1)};
-                    BiggerFunctor::calls.checkWith(calls);
+                    CHECK((Functor::calls == calls));
 
                     t1();
-                    BiggerFunctor::calls.checkWith(calls);
+                    CHECK((Functor::calls == calls));
 
                     t2();
                     ++calls.calls;
-                    BiggerFunctor::calls.checkWith(calls);
+                    CHECK((Functor::calls == calls));
                 }
-                ++calls.destroys; // destroys t2
-                ++calls.deletes; // deletes t2
-                BiggerFunctor::calls.checkWith(calls);
+                ++calls.destroys;  // destroys t2
+                ++calls.deletes;   // deletes t2
+                CHECK((Functor::calls == calls));
             }
-            BiggerFunctor::calls.checkWith(calls);
+            CHECK((Functor::calls == calls));
         }
-        ++calls.destroys; // destroys sf
-        BiggerFunctor::calls.checkWith(calls);
+        ++calls.destroys;  // destroys sf
+        CHECK((Functor::calls == calls));
+    }
+    SUBCASE("functor too badly aligned for small buffer optimization") {
+        using Functor = BadAlignedFunctor;
+        CHECK(alignof(Functor) > sizeof(void*));
+        Functor::calls.reset();
+        {
+            Functor sf;
+            ++calls.defaultConstructions;
+            CHECK((Functor::calls == calls));
+            {
+                auto t1 = target_t::create(sf);
+                ++calls.copyConstructions;
+                ++calls.destroys;  // the temporary copy
+                ++calls.news;
+                ++calls.moveConstructions;
+                CHECK((Functor::calls == calls));
+
+                t1();
+                ++calls.calls;
+                CHECK((Functor::calls == calls));
+                {
+                    auto t2{std::move(t1)};
+                    CHECK((Functor::calls == calls));
+
+                    t1();
+                    CHECK((Functor::calls == calls));
+
+                    t2();
+                    ++calls.calls;
+                    CHECK((Functor::calls == calls));
+                }
+                ++calls.destroys;  // destroys t2
+                ++calls.deletes;   // deletes t2
+                CHECK((Functor::calls == calls));
+            }
+            CHECK((Functor::calls == calls));
+        }
+        ++calls.destroys;  // destroys sf
+        CHECK((Functor::calls == calls));
     }
 }
 
