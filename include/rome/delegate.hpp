@@ -68,8 +68,11 @@ namespace detail {
             }
         };
 
+        template<typename Signature>
+        class target_t;
+
         template<typename Ret, typename... Args>
-        class target_t {
+        class target_t<Ret(Args...)> {
           private:
             using callee_type  = Ret (*)(void*&, Args...);
             using deleter_type = void (*)(void*&);
@@ -81,14 +84,14 @@ namespace detail {
             static constexpr bool isSmallBufferOptimizable() {
                 return sizeof(T) <= sizeof(void*) && alignof(T) <= alignment();
             }
+
             alignas(alignment()) void* buffer_;
             callee_type callee_;
             deleter_type deleter_;
 
           public:
-            constexpr target_t()                    = delete;
-            constexpr target_t(const target_t&)     = delete;
-            constexpr target_t(target_t&&) noexcept = default;
+            constexpr target_t()                = delete;
+            constexpr target_t(const target_t&) = delete;
             constexpr target_t(void* buffer, callee_type callee, deleter_type deleter) noexcept
                 : buffer_{buffer}, callee_{callee}, deleter_{deleter} {
             }
@@ -96,23 +99,29 @@ namespace detail {
                 (*deleter_)(buffer_);
             }
             constexpr target_t& operator=(const target_t&) = delete;
-            constexpr target_t& operator=(target_t&&) noexcept = default;
 
-            // TODO: remove
+
+            // TODO: move to delegate and enable copy ctor instead!
             constexpr target_t(target_t&& target) noexcept
                 : buffer_{target.buffer_}, callee_{target.callee_}, deleter_{target.deleter_} {
                 target.buffer_ = nullptr;
-                target.callee_ = no_call;  // TODO: depends on chosen default! -> move to delegate<>
+                target.callee_ = no_call;  // TODO: depends on chosen default !->move to delegate<> target.deleter_ = no_delete;
                 target.deleter_ = no_delete;
             }
-            // TODO: remove
+            // TODO: move to delegate and enable copy assignment instead!
             constexpr target_t& operator=(target_t&& target) noexcept {
                 buffer_        = target.buffer_;
                 callee_        = target.callee_;
                 deleter_       = target.deleter_;
                 target.buffer_ = nullptr;
-                target.callee_ = no_call;  // TODO: depends on chosen default! -> move to delegate<>
+                target.callee_ = no_call;  // TODO: depends on chosen default! -> move to delegate<> target.deleter_ = no_delete;
                 target.deleter_ = no_delete;
+                return *this;
+            }
+
+
+            Ret operator()(Args... args) {
+                (*callee_)(buffer_, args...);
             }
 
             template<typename T, std::enable_if_t<isSmallBufferOptimizable<T>(), int> = 0>
@@ -138,18 +147,18 @@ namespace detail {
                 return target_t{new T(std::move(t)), callee, deleter};
             }
 
-            static void no_delete(void*) {
+            static void no_delete(void*&) {
             }
 
-            static Ret no_call(void*, Args...) {
+            static Ret no_call(void*&, Args...) {
             }
 
 #if (defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND))
-            [[noreturn]] static Ret exception_call(void*, Args...) {
+            [[noreturn]] static Ret exception_call(void*&, Args...) {
                 throw rome::bad_delegate_call{};
             }
 #else
-            [[noreturn]] static Ret exception_call(void*, Args...) {
+            [[noreturn]] static Ret exception_call(void*&, Args...) {
                 std::terminate();
             }
 #endif
