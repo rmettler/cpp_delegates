@@ -32,6 +32,9 @@ template<typename T>
 void checkEmpty(const T& dgt) {
     CHECK(dgt == nullptr);
     CHECK(nullptr == dgt);
+    CHECK(!(dgt != nullptr));
+    CHECK(!(nullptr != dgt));
+    CHECK(!static_cast<bool>(dgt));
     CHECK(!dgt);
     {
         const T defaultDgt;
@@ -54,6 +57,9 @@ template<typename T>
 void checkNotEmpty(const T& dgt) {
     CHECK(dgt != nullptr);
     CHECK(nullptr != dgt);
+    CHECK(!(dgt == nullptr));
+    CHECK(!(nullptr == dgt));
+    CHECK(static_cast<bool>(dgt));
     CHECK(!!dgt);
 
     {

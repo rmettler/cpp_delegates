@@ -39,7 +39,7 @@ namespace detail {
 
         template<typename Signature>
         struct signature_error_ : signature_error {
-            constexpr signature_error_() {
+            constexpr signature_error_() noexcept {
                 static_assert(wrong<Signature>,
                     "Invalid template parameter. The first template parameter must be a function "
                     "signature of form 'Ret (Args...)'."
@@ -59,109 +59,13 @@ namespace detail {
 
         template<typename Ret, typename TgtReq>
         struct target_requirement_error_ : target_requirement_error {
-            constexpr target_requirement_error_() {
+            constexpr target_requirement_error_() noexcept {
                 static_assert(wrong<Ret, TgtReq>,
                     "Invalid template parameter. The second template parameter TgtReq must either "
                     "be empty or contain one of the types rome::tgt_dyn_req, rome::tgt_stat_req or "
                     "rome::tgt_opt, where rome::tgt_opt is only valid if the return type Ret is "
                     "void.");
             }
-        };
-
-        template<typename Signature>
-        class target_t;
-
-        template<typename Ret, typename... Args>
-        class target_t<Ret(Args...)> {
-          private:
-            using callee_type  = Ret (*)(void*&, Args...);
-            using deleter_type = void (*)(void*&);
-
-            static constexpr size_t alignment() {
-                return std::max(sizeof(void*), alignof(void*));
-            }
-            template<typename T>
-            static constexpr bool isSmallBufferOptimizable() {
-                return sizeof(T) <= sizeof(void*) && alignof(T) <= alignment();
-            }
-
-            alignas(alignment()) void* buffer_;
-            callee_type callee_;
-            deleter_type deleter_;
-
-          public:
-            constexpr target_t()                = delete;
-            constexpr target_t(const target_t&) = delete;
-            constexpr target_t(void* buffer, callee_type callee, deleter_type deleter) noexcept
-                : buffer_{buffer}, callee_{callee}, deleter_{deleter} {
-            }
-            ~target_t() {
-                (*deleter_)(buffer_);
-            }
-            constexpr target_t& operator=(const target_t&) = delete;
-
-
-            // TODO: move to delegate and enable copy ctor instead!
-            constexpr target_t(target_t&& target) noexcept
-                : buffer_{target.buffer_}, callee_{target.callee_}, deleter_{target.deleter_} {
-                target.buffer_ = nullptr;
-                target.callee_ = no_call;  // TODO: depends on chosen default !->move to delegate<> target.deleter_ = no_delete;
-                target.deleter_ = no_delete;
-            }
-            // TODO: move to delegate and enable copy assignment instead!
-            constexpr target_t& operator=(target_t&& target) noexcept {
-                buffer_        = target.buffer_;
-                callee_        = target.callee_;
-                deleter_       = target.deleter_;
-                target.buffer_ = nullptr;
-                target.callee_ = no_call;  // TODO: depends on chosen default! -> move to delegate<> target.deleter_ = no_delete;
-                target.deleter_ = no_delete;
-                return *this;
-            }
-
-
-            Ret operator()(Args... args) {
-                (*callee_)(buffer_, args...);
-            }
-
-            template<typename T, std::enable_if_t<isSmallBufferOptimizable<T>(), int> = 0>
-            static target_t create(T t) {
-                auto callee = [](void*& buffer, Args... args) -> Ret {
-                    return (*static_cast<T*>(static_cast<void*>(&buffer)))(args...);
-                };
-                auto deleter = [](void*& buffer) -> void {
-                    static_cast<T*>(static_cast<void*>(&buffer))->~T();
-                };
-                target_t target{nullptr, callee, deleter};
-                auto ptr = ::new (&target.buffer_) T(std::move(t));
-                assert(ptr == static_cast<T*>(static_cast<void*>(&target.buffer_)));
-                return target;
-            }
-
-            template<typename T, std::enable_if_t<!isSmallBufferOptimizable<T>(), int> = 0>
-            static target_t create(T t) {
-                auto callee = [](void*& buffer, Args... args) -> Ret {
-                    return (*static_cast<T*>(buffer))(args...);
-                };
-                auto deleter = [](void*& buffer) -> void { delete static_cast<T*>(buffer); };
-                return target_t{new T(std::move(t)), callee, deleter};
-            }
-
-            static void no_delete(void*&) {
-            }
-
-            static Ret no_call(void*&, Args...) {
-            }
-
-#if (defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND))
-            [[noreturn]] static Ret exception_call(void*&, Args...) {
-                throw rome::bad_delegate_call{};
-            }
-#else
-            [[noreturn]] static Ret exception_call(void*&, Args...) {
-                std::terminate();
-            }
-#endif
         };
     };  // namespace delegate
 };      // namespace detail
@@ -173,35 +77,53 @@ template<typename TgtReq, typename Ret, typename... Args>
 class delegate<Ret(Args...), TgtReq>
     : std::conditional<detail::delegate::checkTgtReq<Ret, TgtReq>(), detail::ok,
           detail::delegate::target_requirement_error_<Ret, TgtReq>>::type {
+    using target_type = detail::delegate::target_t<Ret(Args...)>;
+
+    static constexpr target_type createEmptyTarget() {
+        // TODO: depend no_call ot TgtReq
+        return target_type{nullptr, target_type::no_call, target_type::no_delete};
+    }
+
   public:
-    constexpr delegate() noexcept  = default;
-    constexpr delegate(delegate&&) = default;
+    // TODO: only if TgtReq matches and adapt the callee
+    constexpr delegate() noexcept : target_{createEmptyTarget()} {
+    }
+    constexpr delegate(delegate&& orig) noexcept : target_{orig.target_} {
+        orig.target_ = createEmptyTarget();
+    }
+
+    // TODO: only if TgtReq matches
     constexpr delegate(std::nullptr_t) noexcept : delegate{} {
     }
 
-    constexpr delegate& operator=(delegate&&) = default;
-    constexpr delegate& operator              =(std::nullptr_t) noexcept {
-        *this = std::move(delegate{});
+    constexpr delegate& operator=(delegate&& orig) noexcept {
+        target_      = orig.target_;
+        orig.target_ = createEmptyTarget();
+    }
+    // TODO: only if TgtReq matches
+    constexpr delegate& operator=(std::nullptr_t) noexcept {
+        *this = delegate{};
         return *this;
     }
 
-    constexpr operator bool() const {
+    constexpr operator bool() const noexcept {
         return !!(*this);
     }
-    constexpr bool operator!() const {
-        return callee_ == null_callee;
+    constexpr bool operator!() const noexcept {
+        // TODO: update this and check target_t! (depending on default)
+        return target_.callee_ == createEmptyTarget().callee_;
     }
 
     constexpr bool operator==(const delegate& rhs) {
-        return (obj_ == rhs.obj_) && (callee_ == rhs.callee_);
+        return target_ == rhs.target_;
     }
 
     constexpr bool operator!=(const delegate& rhs) {
         return !(*this == rhs);
     }
 
-    constexpr Ret operator()(Args... args) const {
-        return callee_(obj_, std::forward<Args>(args)...);
+    inline Ret operator()(Args... args) const {
+        return (*callee_)(obj_, std::forward<Args>(args)...);
     }
 
     template<Ret (*pFunction)(Args...)>
@@ -287,6 +209,7 @@ class delegate<Ret(Args...), TgtReq>
 
     using caller_type = Ret (*)(void*, Args...);
 
+    target_type target_;
     alignas(sizeof(void*)) void* obj_ = nullptr;
     caller_type callee_               = null_callee;
 };
