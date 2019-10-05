@@ -11,12 +11,12 @@
 #include <doctest.h>
 
 #include <functional>
-#include <rome/detail/delegate_target.hpp>
+#include <rome/detail/delegate_impl.hpp>
 #include <type_traits>
 
 namespace test_rome_delegate {
 
-TEST_SUITE_BEGIN("header file: rome/detail/delegate_target.hpp");
+TEST_SUITE_BEGIN("header file: rome/detail/delegate_impl.hpp");
 
 struct Calls {
     int defaultConstructions;
@@ -154,11 +154,60 @@ struct BadAlignedFunctor {
 };
 Calls BadAlignedFunctor::calls = {};
 
+struct Functions {
+    static Calls calls;
+    static void static_function() {
+        ++calls.calls;
+    }
+    static void static_function(int) {
+        ++calls.calls;
+    }
+    void member_function() {
+        ++calls.calls;
+    }
+    void member_function(int) {
+        ++calls.calls;
+    }
+};
+Calls Functions::calls = {};
+
 TEST_CASE("delegate_target") {
     // TODO: do this with delegate instead!
-    using target_t = rome::detail::delegate_target<void()>;
+    using target_t = rome::detail::delegate_impl::delegate_impl<void(),
+        rome::detail::delegate_impl::no_call_invoker>;
     Calls calls;
     calls.reset();
+    SUBCASE("static function using unoptimized create") {
+        Functions::calls.reset();
+        // check proper test setup
+        CHECK((Functions::calls == calls));
+        {
+            auto t1 = target_t::create<&Functions::static_function>();
+            CHECK((Functions::calls == calls));
+            CHECK(static_cast<bool>(t1));
+
+            t1();
+            ++calls.calls;
+            CHECK((Functions::calls == calls));
+
+            auto t2{std::move(t1)};
+            CHECK((Functions::calls == calls));
+            CHECK(!static_cast<bool>(t1));
+            CHECK(static_cast<bool>(t2));
+
+            t1();
+            CHECK((Functions::calls == calls));
+
+            t1 = target_t{};
+            t1();
+            CHECK((Functions::calls == calls));
+
+            t2();
+            ++calls.calls;
+            CHECK((Functions::calls == calls));
+        }
+        CHECK((Functions::calls == calls));
+    }
     SUBCASE("functor WITH small buffer optimization") {
         using Functor = SmallFunctor;
         Functor::calls.reset();
@@ -186,14 +235,13 @@ TEST_CASE("delegate_target") {
             {
                 auto t2{std::move(t1)};
                 CHECK((Functor::calls == calls));
-                CHECK(static_cast<bool>(t1));
+                CHECK(!static_cast<bool>(t1));
                 CHECK(static_cast<bool>(t2));
 
                 t1();
-                ++calls.calls;
                 CHECK((Functor::calls == calls));
 
-                t1 = target_t{nullptr, target_t::no_call, target_t::no_delete};
+                t1 = target_t{};
                 t1();
                 CHECK((Functor::calls == calls));
 
@@ -204,6 +252,7 @@ TEST_CASE("delegate_target") {
             ++calls.destroys;  // destroys t2
             CHECK((Functor::calls == calls));
         }
+        // destruction of t1 doesn't call ~Functor
         ++calls.destroys;  // destroys f
         CHECK((Functor::calls == calls));
     }
@@ -234,12 +283,13 @@ TEST_CASE("delegate_target") {
             {
                 auto t2{std::move(t1)};
                 CHECK((Functor::calls == calls));
+                CHECK(!static_cast<bool>(t1));
+                CHECK(static_cast<bool>(t2));
 
                 t1();
-                ++calls.calls;
                 CHECK((Functor::calls == calls));
 
-                t1 = target_t{nullptr, target_t::no_call, target_t::no_delete};
+                t1 = target_t{};
                 t1();
                 CHECK((Functor::calls == calls));
 
@@ -251,6 +301,7 @@ TEST_CASE("delegate_target") {
             ++calls.deletes;   // deletes t2
             CHECK((Functor::calls == calls));
         }
+        // destruction of t1 doesn't call ~Functor
         ++calls.destroys;  // destroys f
         CHECK((Functor::calls == calls));
     }
@@ -280,12 +331,13 @@ TEST_CASE("delegate_target") {
             {
                 auto t2{std::move(t1)};
                 CHECK((Functor::calls == calls));
+                CHECK(!static_cast<bool>(t1));
+                CHECK(static_cast<bool>(t2));
 
                 t1();
-                ++calls.calls;
                 CHECK((Functor::calls == calls));
 
-                t1 = target_t{nullptr, target_t::no_call, target_t::no_delete};
+                t1 = target_t{};
                 t1();
                 CHECK((Functor::calls == calls));
 
@@ -297,6 +349,7 @@ TEST_CASE("delegate_target") {
             ++calls.deletes;   // deletes t2
             CHECK((Functor::calls == calls));
         }
+        // destruction of t1 doesn't call ~Functor
         ++calls.destroys;  // destroys f
         CHECK((Functor::calls == calls));
     }
