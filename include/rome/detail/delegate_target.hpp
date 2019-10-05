@@ -16,101 +16,188 @@
 #include "rome/bad_delegate_call.hpp"
 
 namespace rome {
-namespace detail {
+namespace delegate_impl {
 
-    template<typename Signature>
+    using buffer_type = void*;
+    template<typename Ret, typename... Args>
+    using invoker_type = Ret (*)(buffer_type const&, Args&&...);
+    using deleter_type = void (*)(buffer_type const&);
+
+    static constexpr auto bufferAlignment() {
+        return std::max(sizeof(buffer_type), alignof(buffer_type));
+    }
+
+    // Whether the T can be locally stored in buffer_type or not.
+    template<typename T>
+    static constexpr bool isSmallBufferOptimizable() {
+        return (sizeof(T) <= sizeof(buffer_type)) && (alignof(T) <= bufferAlignment());
+    }
+
+    // Used as template parameter for delegate_target to set invoker to when empty.
+    struct no_call_invoker {
+        template<typename Ret, typename... Args,
+            typename = std::enable_if_t<std::is_same<Ret, void>::value>>
+        static Ret invoke(buffer_type const&, Args&&...) {
+        }
+    };
+    // Used as template parameter for delegate_target to set invoker to when empty.
+    struct exception_call_invoker {
+        template<typename Ret, typename... Args>
+        [[noreturn]] static Ret invoke(buffer_type const&, Args&&...) {
+#if (defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND))
+            throw rome::bad_delegate_call{};
+#else
+            std::terminate();
+#endif
+        }
+    };
+
+    // Used as deleter in delegate_target when no destruction of buffer is needed.
+    void no_delete(buffer_type const& buffer) {
+    }
+
+
+    template<typename Signature, typename EmptyInvoker>
     class delegate_target;
 
-    template<typename Ret, typename... Args>
-    class delegate_target<Ret(Args...)> {
+    template<typename Ret, typename... Args, typename EmptyInvoker>
+    class delegate_target<Ret(Args...), EmptyInvoker> {
       private:
-        using callee_type  = Ret (*)(void* const&, Args...);
-        using deleter_type = void (*)(void* const&);
-
-        static constexpr auto alignment() {
-            return std::max(sizeof(void*), alignof(void*));
-        }
-        template<typename T>
-        static constexpr bool isSmallBufferOptimizable() {
-            return sizeof(T) <= sizeof(void*) && alignof(T) <= alignment();
-        }
+        alignas(bufferAlignment()) buffer_type buffer_ = nullptr;
+        invoker_type<Ret, Args...> callee_             = EmptyInvoker::invoke;
+        deleter_type deleter_                          = no_delete;
 
       public:
-        alignas(alignment()) void* buffer_;
-        callee_type callee_;
-        deleter_type deleter_;
-
-        constexpr delegate_target() noexcept                       = delete;
-        constexpr delegate_target(const delegate_target&) noexcept = delete;
-        constexpr delegate_target(delegate_target&& orig) noexcept = default;
-        constexpr delegate_target(void* buffer, callee_type callee, deleter_type deleter) noexcept
-            : buffer_{buffer}, callee_{callee}, deleter_{deleter} {
+        constexpr delegate_target() noexcept             = default;
+        delegate_target(delegate_target const&) noexcept = delete;
+        delegate_target(delegate_target&& orig) noexcept {
+            orig.swap(*this);
         }
+
         ~delegate_target() {
             (*deleter_)(buffer_);
         }
-        constexpr delegate_target& operator=(const delegate_target&) noexcept = delete;
-        constexpr delegate_target& operator=(delegate_target&& orig) noexcept = default;
 
-        constexpr bool operator==(const delegate_target& rhs) const noexcept {
+        delegate_target& operator=(delegate_target const&) noexcept = delete;
+        delegate_target& operator=(delegate_target&& orig) noexcept {
+            delegate_target(std::move(orig)).swap(*this);
+        };
+        delegate_target& operator=(std::nullptr_t) {
+            *this = delegate_target();
+        }
+
+        void swap(delegate_target& other) {
+            std::swap(buffer_, other.buffer_);
+            std::swap(callee_, other.callee_);
+            std::swap(deleter_, other.deleter_);
+        }
+
+        constexpr bool operator==(delegate_target const& rhs) const noexcept {
             return (buffer_ == rhs.buffer_) && (callee_ == rhs.callee_)
                    && (deleter_ == rhs.deleter_);
         }
 
         constexpr operator bool() {
-            return false; // TODO
+            return callee_ != static_cast<decltype(callee_)>(EmptyInvoker::invoke);
         }
 
+        // TODO: use perfect forwarding here!
         inline Ret operator()(Args... args) const {
             (*callee_)(buffer_, std::forward<Args>(args)...);
         }
 
-        template<typename T, std::enable_if_t<isSmallBufferOptimizable<T>(), int> = 0>
-        static delegate_target create(T t) {
+        // Creates a new delegate_target and stores the passed static function inside its local
+        // buffer.
+        // TODO: compare this solution with the lower one and then romove it!
+        // TODO: prevent misuse with similar applications of this function (T t)
+        template<std::enable_if_t<isSmallBufferOptimizable<Ret (*)(Args...)>(), int> = 0>
+        static delegate_target create(Ret (*function)(Args...)) {
             // Reason for using const_cast here:
             // The functor needs be able to change its own members. Here, the functor and
             // its members are embedded in delegate_target::buffer_ using small buffer
             // optimization. Thus the functor needs to be able to change buffer_, even so
             // the delegate_target doesn't change its behavior.
-            auto callee = [](void* const& buffer, Args... args) -> Ret {
-                auto pFunctor = const_cast<void*>(static_cast<void const*>(&buffer));
-                return (*static_cast<T*>(pFunctor))(args...);
+            using Function = Ret (*)(Args...);
+            delegate_target d;
+            auto ptr = ::new (&d.buffer_) Function(std::move(function));
+            assert(ptr == static_cast<Function*>(static_cast<void*>(&d.buffer_)));
+            d.callee_ = [](buffer_type const& buffer, Args&&... args) -> Ret {
+                auto pFunctor = static_cast<void*>(const_cast<buffer_type*>(&buffer));
+                return (*static_cast<Function*>(pFunctor))(std::forward<Args>(args)...);
             };
-            auto deleter = [](void* const& buffer) -> void {
-                auto pFunctor = const_cast<void*>(static_cast<void const*>(&buffer));
-                static_cast<T*>(pFunctor)->~T();
+            d.deleter_ = [](buffer_type const& buffer) -> void {
+                auto pFunctor = static_cast<void*>(const_cast<buffer_type*>(&buffer));
+                static_cast<Function*>(pFunctor)->~Function();
             };
-            delegate_target target{nullptr, callee, deleter};
-            auto ptr = ::new (&target.buffer_) T(std::move(t));
-            assert(ptr == static_cast<T*>(static_cast<void*>(&target.buffer_)));
-            return target;
+            return d;
         }
 
-        template<typename T, std::enable_if_t<!isSmallBufferOptimizable<T>(), int> = 0>
-        static delegate_target create(T t) {
-            auto callee = [](void* const& buffer, Args... args) -> Ret {
-                return (*static_cast<T*>(buffer))(args...);
+        // Creates a new delegate_target and stores the passed non-static member function inside its
+        // local buffer.
+        template<Ret (*function)(Args...)>
+        static delegate_target create() {
+            delegate_target d;
+            d.buffer_ = nullptr;
+            d.callee_ = [](buffer_type const& buffer, Args&&... args) -> Ret {
+                return (*function)(std::forward<Args>(args)...);
             };
-            auto deleter = [](void* const& buffer) -> void { delete static_cast<T*>(buffer); };
-            return delegate_target{new T(std::move(t)), callee, deleter};
+            d.deleter_ = no_delete;
+            return d;
         }
 
-        static void no_delete(void* const&) {
+        // Creates a new delegate_target and stores the passed non-static member function inside its
+        // local buffer.
+        template<typename C, Ret (C::*method)(Args...)>
+        static delegate_target create(C& obj) {
+            delegate_target d;
+            d.buffer_ = &obj;
+            d.callee_ = [](buffer_type const& buffer, Args&&... args) -> Ret {
+                return (static_cast<C*>(buffer)->*method)(std::forward<Args>(args)...);
+            };
+            d.deleter_ = no_delete;
+            return d;
         }
 
-        static Ret no_call(void* const&, Args...) {
+        // Creates a new delegate_target and stores the passed invokable inside its local
+        // buffer.
+        template<typename Invokable,
+            std::enable_if_t<isSmallBufferOptimizable<Invokable>(), int> = 0>
+        static delegate_target create(Invokable invokable) {
+            // Reason for using const_cast here:
+            // The functor needs be able to change its own members. Here, the functor and
+            // its members are embedded in delegate_target::buffer_ using small buffer
+            // optimization. Thus the functor needs to be able to change buffer_, even so
+            // the delegate_target doesn't change its behavior.
+            delegate_target d;
+            auto ptr = ::new (&d.buffer_) Invokable(std::move(invokable));
+            assert(ptr == static_cast<Invokable*>(static_cast<void*>(&d.buffer_)));
+            d.callee_ = [](buffer_type const& buffer, Args&&... args) -> Ret {
+                auto pFunctor = static_cast<void*>(const_cast<buffer_type*>(&buffer));
+                return (*static_cast<Invokable*>(pFunctor))(std::forward<Args>(args)...);
+            };
+            d.deleter_ = [](buffer_type const& buffer) -> void {
+                auto pFunctor = static_cast<void*>(const_cast<buffer_type*>(&buffer));
+                static_cast<Invokable*>(pFunctor)->~Invokable();
+            };
+            return d;
         }
 
-#if (defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND))
-        [[noreturn]] static Ret exception_call(void* const&, Args...) {
-            throw rome::bad_delegate_call{};
+        // Creates a new delegate_target and stores the passed invokable at a new location
+        // outside its local buffer.
+        template<typename Invokable,
+            std::enable_if_t<!isSmallBufferOptimizable<Invokable>(), int> = 0>
+        static delegate_target create(Invokable invokable) {
+            delegate_target d;
+            d.buffer_ = new Invokable(std::move(invokable));
+            d.callee_ = [](buffer_type const& buffer, Args&&... args) -> Ret {
+                return (*static_cast<Invokable*>(buffer))(std::forward<Args>(args)...);
+            };
+            d.deleter_ = [](buffer_type const& buffer) -> void {
+                delete static_cast<Invokable*>(buffer);
+            };
+            return d;
         }
-#else
-        [[noreturn]] static Ret exception_call(void* const&, Args...) {
-            std::terminate();
-        }
-#endif
     };
 
-}  // namespace detail
+}  // namespace delegate_impl
 }  // namespace rome
