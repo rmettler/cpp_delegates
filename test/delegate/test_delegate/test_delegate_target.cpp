@@ -11,12 +11,12 @@
 #include <doctest.h>
 
 #include <functional>
-#include <rome/detail/delegate_impl.hpp>
+#include <rome/detail/base_delegate.hpp>
 #include <type_traits>
 
 namespace test_rome_delegate {
 
-TEST_SUITE_BEGIN("header file: rome/detail/delegate_impl.hpp");
+TEST_SUITE_BEGIN("header file: rome/detail/base_delegate.hpp");
 
 struct Calls {
     int defaultConstructions;
@@ -173,8 +173,8 @@ Calls Functions::calls = {};
 
 TEST_CASE("delegate_target") {
     // TODO: do this with delegate instead!
-    using target_t = rome::detail::delegate_impl::delegate_impl<void(),
-        rome::detail::delegate_impl::no_call_invoker>;
+    using target_t = rome::detail::base_delegate::base_delegate<void(),
+        rome::detail::base_delegate::no_call_invoker>;
     Calls calls;
     calls.reset();
     SUBCASE("static function using unoptimized create") {
