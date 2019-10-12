@@ -28,20 +28,22 @@ namespace detail {
             return std::max(sizeof(buffer_type), alignof(buffer_type));
         }
 
-        // Whether the T can be locally stored in buffer_type or not.
+        // Whether the type T can be locally stored in buffer_type or not.
         template<typename T>
         static constexpr bool isSmallBufferOptimizable() {
             return (sizeof(T) <= sizeof(buffer_type)) && (alignof(T) <= bufferAlignment());
         }
 
-        // Used as template parameter for base_delegate to set invoker to when empty.
+        // Used as template parameter for base_delegate. Calls the provided invoke function when
+        // empty.
         struct no_call_invoker {
             template<typename Ret, typename... Args,
                 typename = std::enable_if_t<std::is_same<Ret, void>::value>>
             static Ret invoke(buffer_type const&, Args&&...) {
             }
         };
-        // Used as template parameter for base_delegate to set invoker to when empty.
+        // Used as template parameter for base_delegate. Calls the provided invoke function when
+        // empty.
         struct exception_call_invoker {
             template<typename Ret, typename... Args>
             [[noreturn]] static Ret invoke(buffer_type const&, Args&&...) {
@@ -83,14 +85,15 @@ namespace detail {
             base_delegate& operator=(base_delegate&& orig) noexcept {
                 base_delegate(std::move(orig)).swap(*this);
             };
-            base_delegate& operator=(std::nullptr_t) {
+            base_delegate& operator=(std::nullptr_t) noexcept {
                 *this = base_delegate();
             }
 
-            void swap(base_delegate& other) {
-                std::swap(buffer_, other.buffer_);
-                std::swap(callee_, other.callee_);
-                std::swap(deleter_, other.deleter_);
+            void swap(base_delegate& other) noexcept {
+                using std::swap;
+                swap(buffer_, other.buffer_);
+                swap(callee_, other.callee_);
+                swap(deleter_, other.deleter_);
             }
 
             constexpr bool operator==(base_delegate const& rhs) const noexcept {
@@ -98,12 +101,12 @@ namespace detail {
                        && (deleter_ == rhs.deleter_);
             }
 
-            constexpr operator bool() {
+            constexpr operator bool() noexcept {
                 return callee_ != static_cast<decltype(callee_)>(EmptyInvoker::invoke);
             }
 
             // TODO: use perfect forwarding here!
-            inline Ret operator()(Args... args) const {
+            Ret operator()(Args... args) const {
                 (*callee_)(buffer_, std::forward<Args>(args)...);
             }
 
@@ -199,6 +202,11 @@ namespace detail {
                 return d;
             }
         };
+
+        template<typename Ret, typename... Args, typename EmptyInvoker>
+        inline void swap(base_delegate<Ret(Args...), EmptyInvoker>& lhs, base_delegate<Ret(Args...), EmptyInvoker>& rhs) noexcept {
+            lhs.swap(rhs);
+        }
 
     }  // namespace base_delegate
 }  // namespace detail
