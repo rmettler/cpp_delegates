@@ -31,7 +31,7 @@ struct FunctorCallCounter {
         *this = {};
     }
 
-    bool operator==(const FunctorCallCounter& rhs) {
+    bool operator==(const FunctorCallCounter& rhs) const {
         CHECK(defaultConstruction == rhs.defaultConstruction);
         CHECK(destruction == rhs.destruction);
         CHECK(copyConstruction == rhs.copyConstruction);
@@ -50,236 +50,217 @@ struct FunctorCallCounter {
     }
 };
 
-template<typename Signature>
+template<typename Derived, typename CallCounter, typename Signature>
+class MockBase;
+
+template<typename Derived, typename CallCounter, typename Ret, typename... Args>
+class MockBase<Derived, CallCounter, Ret(Args...)> {
+  public:
+    using mocked_call_type = Ret (*)(Args...);
+    static mocked_call_type behavior;
+    using call_counter_type = CallCounter;
+    static call_counter_type performedCalls;
+
+    static const call_counter_type& init() {
+        performedCalls = {};
+        return performedCalls;
+    }
+};
+template<typename Derived, typename CallCounter, typename Ret, typename... Args>
+typename MockBase<Derived, CallCounter, Ret(Args...)>::mocked_call_type
+    MockBase<Derived, CallCounter, Ret(Args...)>::behavior = nullptr;
+template<typename Derived, typename CallCounter, typename Ret, typename... Args>
+typename MockBase<Derived, CallCounter, Ret(Args...)>::call_counter_type
+    MockBase<Derived, CallCounter, Ret(Args...)>::performedCalls = {};
+
+
+template<typename Signature, size_t N = 0>
 class FunctionMock;
 
-template<typename Ret, typename... Args>
-class FunctionMock<Ret(Args...)> {
-  public:
-    using mock_call_type = Ret (*)(Args...);
-    static mock_call_type mockCall;
-    static int callCounter;
-
-    static Ret static_function(Args... args) {
-        ++callCounter;
-        return (*mockCall)(args...);
-    }
-};
-template<typename Ret, typename... Args>
-typename FunctionMock<Ret(Args...)>::mock_call_type FunctionMock<Ret(Args...)>::mockCall = nullptr;
-template<typename Ret, typename... Args>
-int FunctionMock<Ret(Args...)>::callCounter = 0;
-
-template<typename Signature>
-class MemberFunctionMock;
-
-template<typename Ret, typename... Args>
-class MemberFunctionMock<Ret(Args...)> {
-    using mock_call_type = Ret (*)(Args...);
-    const mock_call_type mockCall_;
+template<typename Ret, typename... Args, size_t N>
+class FunctionMock<Ret(Args...), N>
+    : public MockBase<FunctionMock<Ret(Args...), N>, int, Ret(Args...)> {
+    using base     = MockBase<FunctionMock, int, Ret(Args...)>;
+    FunctionMock() = delete;
 
   public:
-    static int callCounter;
-
-    // used to create the mock during test setup
-    template<typename T>
-    MemberFunctionMock(T mockCall) : mockCall_{mockCall} {
-    }
-
-    Ret member_function(Args... args) {
-        ++callCounter;
-        return (*mockCall_)(args...);
+    using performed_calls_type = typename base::call_counter_type;
+    static Ret mockedCall(Args... args) {
+        ++base::performedCalls;
+        return (*base::behavior)(std::forward<Args>(args)...);
     }
 };
-template<typename Ret, typename... Args>
-int MemberFunctionMock<Ret(Args...)>::callCounter = {};
 
-template<typename Signature>
-class ConstMemberFunctionMock;
+template<typename Signature, size_t N = 0>
+class MethodMock;
 
-template<typename Ret, typename... Args>
-class ConstMemberFunctionMock<Ret(Args...)> {
-    using mock_call_type = Ret (*)(Args...);
-    const mock_call_type mockCall_;
+template<typename Ret, typename... Args, size_t N>
+class MethodMock<Ret(Args...), N>
+    : public MockBase<MethodMock<Ret(Args...), N>, int, Ret(Args...)> {
+    using base = MockBase<MethodMock, int, Ret(Args...)>;
 
   public:
-    static int callCounter;
-
-    // used to create the mock during test setup
-    template<typename T>
-    ConstMemberFunctionMock(T mockCall) : mockCall_{mockCall} {
-    }
-
-    Ret const_member_function(Args... args) const {
-        ++callCounter;
-        return (*mockCall_)(args...);
+    Ret mockedCall(Args... args) {
+        ++base::performedCalls;
+        return (*base::behavior)(std::forward<Args>(args)...);
     }
 };
-template<typename Ret, typename... Args>
-int ConstMemberFunctionMock<Ret(Args...)>::callCounter = {};
 
-template<typename Signature>
+template<typename Signature, size_t N = 0>
+class ConstMethodMock;
+
+template<typename Ret, typename... Args, size_t N>
+class ConstMethodMock<Ret(Args...), N>
+    : public MockBase<ConstMethodMock<Ret(Args...), N>, int, Ret(Args...)> {
+    using base = MockBase<ConstMethodMock, int, Ret(Args...)>;
+
+  public:
+    Ret mockedCall(Args... args) const {
+        ++base::performedCalls;
+        return (*base::behavior)(std::forward<Args>(args)...);
+    }
+};
+
+template<typename Signature, size_t N = 0>
 class SmallFunctorMock;
 
-template<typename Ret, typename... Args>
-class SmallFunctorMock<Ret(Args...)> {
-    Ret (*mockCall_)(Args...) = nullptr;
+template<typename Ret, typename... Args, size_t N>
+class SmallFunctorMock<Ret(Args...), N>
+    : public MockBase<SmallFunctorMock<Ret(Args...), N>, FunctorCallCounter, Ret(Args...)> {
+    using base = MockBase<SmallFunctorMock, FunctorCallCounter, Ret(Args...)>;
+
+    // dummy member to create size
+    void* dummy_;
 
   public:
-    static FunctorCallCounter callCounter;
-
-    // used to create the mock during test setup
-    template<typename T>
-    SmallFunctorMock(T mockCall) : mockCall_{mockCall} {
-    }
-
     // Mocked functions from here!
     SmallFunctorMock() {
-        ++callCounter.defaultConstruction;
+        ++base::performedCalls.defaultConstruction;
     }
     ~SmallFunctorMock() {
-        ++callCounter.destruction;
+        ++base::performedCalls.destruction;
     }
-    SmallFunctorMock(const SmallFunctorMock& orig) : mockCall_{orig.mockCall_} {
-        ++callCounter.copyConstruction;
+    SmallFunctorMock(const SmallFunctorMock&) {
+        ++base::performedCalls.copyConstruction;
     }
-    SmallFunctorMock(SmallFunctorMock&& orig) : mockCall_{orig.mockCall_} {
-        ++callCounter.moveConstruction;
+    SmallFunctorMock(SmallFunctorMock&&) {
+        ++base::performedCalls.moveConstruction;
     }
-    SmallFunctorMock& operator=(const SmallFunctorMock& rhs) {
-        ++callCounter.copyAssignment;
-        mockCall_ = rhs.mockCall_;
+    SmallFunctorMock& operator=(const SmallFunctorMock&) {
+        ++base::performedCalls.copyAssignment;
         return *this;
     }
-    SmallFunctorMock& operator=(SmallFunctorMock&& rhs) {
-        ++callCounter.moveAssignment;
-        mockCall_ = rhs.mockCall_;
+    SmallFunctorMock& operator=(SmallFunctorMock&&) {
+        ++base::performedCalls.moveAssignment;
         return *this;
     }
     Ret operator()(Args... args) {
-        ++callCounter.callOperator;
-        return (*mockCall_)(args...);
+        ++base::performedCalls.callOperator;
+        return (*base::behavior)(std::forward<Args>(args)...);
     }
     static void* operator new(std::size_t sz) {
-        ++callCounter.newOperator;
+        ++base::performedCalls.newOperator;
         return ::operator new(sz);
     }
     static void operator delete(void* ptr) {
-        ++callCounter.deleteOperator;
+        ++base::performedCalls.deleteOperator;
         ::operator delete(ptr);
     }
 };
-template<typename Ret, typename... Args>
-FunctorCallCounter SmallFunctorMock<Ret(Args...)>::callCounter = {};
 
-template<typename Signature>
+template<typename Signature, size_t N = 0>
 class BiggerFunctorMock;
 
-template<typename Ret, typename... Args>
-class BiggerFunctorMock<Ret(Args...)> {
-    Ret (*mockCall_)(Args...) = nullptr;
-    const FunctorCallCounter& callCounter_ =
-        callCounter;  // just a dummy address to add another member
+template<typename Ret, typename... Args, size_t N>
+class BiggerFunctorMock<Ret(Args...), N>
+    : public MockBase<BiggerFunctorMock<Ret(Args...), N>, FunctorCallCounter, Ret(Args...)> {
+    using base = MockBase<BiggerFunctorMock, FunctorCallCounter, Ret(Args...)>;
+
+    // dummy member to create size
+    void* dummy1_;
+    bool dummy2_;
 
   public:
-    static FunctorCallCounter callCounter;
-
-    // used to create the mock during test setup
-    template<typename T>
-    BiggerFunctorMock(T mockCall) : mockCall_{mockCall} {
-    }
-
     // Mocked functions from here!
     BiggerFunctorMock() {
-        ++callCounter.defaultConstruction;
+        ++base::performedCalls.defaultConstruction;
     }
     ~BiggerFunctorMock() {
-        ++callCounter.destruction;
+        ++base::performedCalls.destruction;
     }
-    BiggerFunctorMock(const BiggerFunctorMock& orig) : mockCall_{orig.mockCall_} {
-        ++callCounter.copyConstruction;
+    BiggerFunctorMock(const BiggerFunctorMock&) {
+        ++base::performedCalls.copyConstruction;
     }
-    BiggerFunctorMock(BiggerFunctorMock&& orig) : mockCall_{orig.mockCall_} {
-        ++callCounter.moveConstruction;
+    BiggerFunctorMock(BiggerFunctorMock&&) {
+        ++base::performedCalls.moveConstruction;
     }
-    BiggerFunctorMock& operator=(const BiggerFunctorMock& rhs) {
-        ++callCounter.copyAssignment;
-        mockCall_ = rhs.mockCall_;
+    BiggerFunctorMock& operator=(const BiggerFunctorMock&) {
+        ++base::performedCalls.copyAssignment;
         return *this;
     }
-    BiggerFunctorMock& operator=(BiggerFunctorMock&& rhs) {
-        ++callCounter.moveAssignment;
-        mockCall_ = rhs.mockCall_;
+    BiggerFunctorMock& operator=(BiggerFunctorMock&&) {
+        ++base::performedCalls.moveAssignment;
         return *this;
     }
     Ret operator()(Args... args) {
-        ++callCounter.callOperator;
-        return (*mockCall_)(args...);
+        ++base::performedCalls.callOperator;
+        return (*base::behavior)(std::forward<Args>(args)...);
     }
     static void* operator new(std::size_t sz) {
-        ++callCounter.newOperator;
+        ++base::performedCalls.newOperator;
         return ::operator new(sz);
     }
     static void operator delete(void* ptr) {
-        ++callCounter.deleteOperator;
+        ++base::performedCalls.deleteOperator;
         ::operator delete(ptr);
     }
 };
-template<typename Ret, typename... Args>
-FunctorCallCounter BiggerFunctorMock<Ret(Args...)>::callCounter = {};
 
-template<typename Signature>
+template<typename Signature, size_t N = 0>
 class BadAlignedFunctorMock;
 
-template<typename Ret, typename... Args>
-class BadAlignedFunctorMock<Ret(Args...)> {
-    alignas(2 * sizeof(void*)) Ret (*mockCall_)(Args...) = nullptr;
+template<typename Ret, typename... Args, size_t N>
+class BadAlignedFunctorMock<Ret(Args...), N>
+    : public MockBase<BadAlignedFunctorMock<Ret(Args...), N>, FunctorCallCounter, Ret(Args...)> {
+    using base = MockBase<BadAlignedFunctorMock, FunctorCallCounter, Ret(Args...)>;
+
+    // dummy member to create size and alignment
+    alignas(2 * sizeof(void*)) void* dummy_;
 
   public:
-    static FunctorCallCounter callCounter;
-
-    // used to create the mock during test setup
-    template<typename T>
-    BadAlignedFunctorMock(T mockCall) : mockCall_{mockCall} {
-    }
-
     // Mocked functions from here!
     BadAlignedFunctorMock() {
-        ++callCounter.defaultConstruction;
+        ++base::performedCalls.defaultConstruction;
     }
     ~BadAlignedFunctorMock() {
-        ++callCounter.destruction;
+        ++base::performedCalls.destruction;
     }
-    BadAlignedFunctorMock(const BadAlignedFunctorMock& orig) : mockCall_{orig.mockCall_} {
-        ++callCounter.copyConstruction;
+    BadAlignedFunctorMock(const BadAlignedFunctorMock&) {
+        ++base::performedCalls.copyConstruction;
     }
-    BadAlignedFunctorMock(BadAlignedFunctorMock&& orig) : mockCall_{orig.mockCall_} {
-        ++callCounter.moveConstruction;
+    BadAlignedFunctorMock(BadAlignedFunctorMock&&) {
+        ++base::performedCalls.moveConstruction;
     }
-    BadAlignedFunctorMock& operator=(const BadAlignedFunctorMock& rhs) {
-        ++callCounter.copyAssignment;
-        mockCall_ = rhs.mockCall_;
+    BadAlignedFunctorMock& operator=(const BadAlignedFunctorMock&) {
+        ++base::performedCalls.copyAssignment;
         return *this;
     }
-    BadAlignedFunctorMock& operator=(BadAlignedFunctorMock&& rhs) {
-        ++callCounter.moveAssignment;
-        mockCall_ = rhs.mockCall_;
+    BadAlignedFunctorMock& operator=(BadAlignedFunctorMock&&) {
+        ++base::performedCalls.moveAssignment;
         return *this;
     }
     Ret operator()(Args... args) {
-        ++callCounter.callOperator;
-        return (*mockCall_)(args...);
+        ++base::performedCalls.callOperator;
+        return (*base::behavior)(std::forward<Args>(args)...);
     }
     static void* operator new(std::size_t sz) {
-        ++callCounter.newOperator;
+        ++base::performedCalls.newOperator;
         return ::operator new(sz);
     }
     static void operator delete(void* ptr) {
-        ++callCounter.deleteOperator;
+        ++base::performedCalls.deleteOperator;
         ::operator delete(ptr);
     }
 };
-template<typename Ret, typename... Args>
-FunctorCallCounter BadAlignedFunctorMock<Ret(Args...)>::callCounter = {};
 
 }  // namespace test_rome_delegate

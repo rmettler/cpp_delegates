@@ -25,52 +25,52 @@ TEST_CASE("base_delegate") {
     using delegate_type = rome::detail::base_delegate::base_delegate<void(),
         rome::detail::base_delegate::no_call_invoker>;
     SUBCASE("static function") {
-        using mock_type     = FunctionMock<void()>;
-        mock_type::mockCall = []() {};
-        auto& currentCalls  = mock_type::callCounter;
-        currentCalls        = 0;
-        int expectedCalls   = 0;
+        // TODO: change all mocks to use this mockCall strategy!
+        using mock_type            = FunctionMock<void()>;
+        mock_type::behavior        = []() {};
+        const auto& performedCalls = mock_type::init();
+        auto expectedCalls         = performedCalls;
         // check proper test setup
-        CHECK((currentCalls == expectedCalls));
+        CHECK((performedCalls == expectedCalls));
         {
-            auto d1 = delegate_type::create<&mock_type::static_function>();
-            CHECK((currentCalls == expectedCalls));
+            auto d1 = delegate_type::create<&mock_type::mockedCall>();
+            CHECK((performedCalls == expectedCalls));
             CHECK(static_cast<bool>(d1));
 
             d1();
             ++expectedCalls;
-            CHECK((currentCalls == expectedCalls));
+            CHECK((performedCalls == expectedCalls));
 
             auto d2{std::move(d1)};
-            CHECK((currentCalls == expectedCalls));
+            CHECK((performedCalls == expectedCalls));
             CHECK(!static_cast<bool>(d1));
             CHECK(static_cast<bool>(d2));
 
             d1();
-            CHECK((currentCalls == expectedCalls));
+            CHECK((performedCalls == expectedCalls));
 
             d1 = delegate_type{};
             d1();
-            CHECK((currentCalls == expectedCalls));
+            CHECK((performedCalls == expectedCalls));
 
             d2();
             ++expectedCalls;
-            CHECK((currentCalls == expectedCalls));
+            CHECK((performedCalls == expectedCalls));
         }
-        CHECK((currentCalls == expectedCalls));
+        CHECK((performedCalls == expectedCalls));
     }
     SUBCASE("functor WITH small buffer optimization") {
-        using functor_type               = SmallFunctorMock<void()>;
-        auto& currentCalls               = functor_type::callCounter;
-        currentCalls                     = {};
-        FunctorCallCounter expectedCalls = {};
-        // check proper test setup
+        using functor_type         = SmallFunctorMock<void()>;
+        functor_type::behavior     = []() {};
+        const auto& performedCalls = functor_type::init();
+        auto expectedCalls         = performedCalls;
         CHECK(sizeof(functor_type) <= sizeof(void*));
         CHECK(alignof(functor_type) <= sizeof(void*));
-        CHECK((currentCalls == expectedCalls));
+        CHECK((performedCalls == expectedCalls));
         {
-            functor_type f{[]() {}};
-            CHECK((currentCalls == expectedCalls));
+            functor_type f{};
+            ++expectedCalls.defaultConstruction;
+            CHECK((performedCalls == expectedCalls));
 
             auto d1 = delegate_type::create(f);
             // copy construction and destruction during the temporary object f is passed
@@ -78,48 +78,49 @@ TEST_CASE("base_delegate") {
             ++expectedCalls.destruction;
             // move construction used to initialize buffer_
             ++expectedCalls.moveConstruction;
-            CHECK((currentCalls == expectedCalls));
+            CHECK((performedCalls == expectedCalls));
             CHECK(static_cast<bool>(d1));
 
             d1();
             ++expectedCalls.callOperator;
-            CHECK((currentCalls == expectedCalls));
+            CHECK((performedCalls == expectedCalls));
             {
                 auto d2{std::move(d1)};
-                CHECK((currentCalls == expectedCalls));
+                CHECK((performedCalls == expectedCalls));
                 CHECK(!static_cast<bool>(d1));
                 CHECK(static_cast<bool>(d2));
 
                 d1();
-                CHECK((currentCalls == expectedCalls));
+                CHECK((performedCalls == expectedCalls));
 
                 d1 = delegate_type{};
                 d1();
-                CHECK((currentCalls == expectedCalls));
+                CHECK((performedCalls == expectedCalls));
 
                 d2();
                 ++expectedCalls.callOperator;
-                CHECK((currentCalls == expectedCalls));
+                CHECK((performedCalls == expectedCalls));
             }
             ++expectedCalls.destruction;  // destroys d2
-            CHECK((currentCalls == expectedCalls));
+            CHECK((performedCalls == expectedCalls));
         }
         // destruction of d1 doesn't call ~functor_type
         ++expectedCalls.destruction;  // destroys f
-        CHECK((currentCalls == expectedCalls));
+        CHECK((performedCalls == expectedCalls));
     }
     SUBCASE("functor too big for small buffer optimization") {
-        using functor_type               = BiggerFunctorMock<void()>;
-        auto& currentCalls               = functor_type::callCounter;
-        currentCalls                     = {};
-        FunctorCallCounter expectedCalls = {};
+        using functor_type         = BiggerFunctorMock<void()>;
+        functor_type::behavior     = []() {};
+        const auto& performedCalls = functor_type::init();
+        auto expectedCalls         = performedCalls;
         // check proper test setup
         CHECK(sizeof(functor_type) > sizeof(void*));
         CHECK(alignof(functor_type) <= sizeof(void*));
-        CHECK((currentCalls == expectedCalls));
+        CHECK((performedCalls == expectedCalls));
         {
-            functor_type f{[]() {}};
-            CHECK((currentCalls == expectedCalls));
+            functor_type f{};
+            ++expectedCalls.defaultConstruction;
+            CHECK((performedCalls == expectedCalls));
 
             auto d1 = delegate_type::create(f);
             // copy construction and destruction during the temporary object f is passed
@@ -128,47 +129,48 @@ TEST_CASE("base_delegate") {
             // move construction used to initialize buffer_
             ++expectedCalls.newOperator;
             ++expectedCalls.moveConstruction;
-            CHECK((currentCalls == expectedCalls));
+            CHECK((performedCalls == expectedCalls));
 
             d1();
             ++expectedCalls.callOperator;
-            CHECK((currentCalls == expectedCalls));
+            CHECK((performedCalls == expectedCalls));
             {
                 auto d2{std::move(d1)};
-                CHECK((currentCalls == expectedCalls));
+                CHECK((performedCalls == expectedCalls));
                 CHECK(!static_cast<bool>(d1));
                 CHECK(static_cast<bool>(d2));
 
                 d1();
-                CHECK((currentCalls == expectedCalls));
+                CHECK((performedCalls == expectedCalls));
 
                 d1 = delegate_type{};
                 d1();
-                CHECK((currentCalls == expectedCalls));
+                CHECK((performedCalls == expectedCalls));
 
                 d2();
                 ++expectedCalls.callOperator;
-                CHECK((currentCalls == expectedCalls));
+                CHECK((performedCalls == expectedCalls));
             }
             ++expectedCalls.destruction;     // destroys d2
             ++expectedCalls.deleteOperator;  // deletes d2
-            CHECK((currentCalls == expectedCalls));
+            CHECK((performedCalls == expectedCalls));
         }
         // destruction of d1 doesn't call ~functor_type
         ++expectedCalls.destruction;  // destroys f
-        CHECK((currentCalls == expectedCalls));
+        CHECK((performedCalls == expectedCalls));
     }
     SUBCASE("functor too badly aligned for small buffer optimization") {
-        using functor_type               = BadAlignedFunctorMock<void()>;
-        auto& currentCalls               = functor_type::callCounter;
-        currentCalls                     = {};
-        FunctorCallCounter expectedCalls = {};
+        using functor_type         = BadAlignedFunctorMock<void()>;
+        functor_type::behavior     = []() {};
+        const auto& performedCalls = functor_type::init();
+        auto expectedCalls         = performedCalls;
         // check proper test setup
         CHECK(alignof(functor_type) > sizeof(void*));
-        CHECK((currentCalls == expectedCalls));
+        CHECK((performedCalls == expectedCalls));
         {
-            functor_type f{[]() {}};
-            CHECK((currentCalls == expectedCalls));
+            functor_type f{};
+            ++expectedCalls.defaultConstruction;
+            CHECK((performedCalls == expectedCalls));
 
             auto d1 = delegate_type::create(f);
             // copy construction and destruction during the temporary object f is passed
@@ -177,35 +179,35 @@ TEST_CASE("base_delegate") {
             // move construction used to initialize buffer_
             ++expectedCalls.newOperator;
             ++expectedCalls.moveConstruction;
-            CHECK((currentCalls == expectedCalls));
+            CHECK((performedCalls == expectedCalls));
 
             d1();
             ++expectedCalls.callOperator;
-            CHECK((currentCalls == expectedCalls));
+            CHECK((performedCalls == expectedCalls));
             {
                 auto d2{std::move(d1)};
-                CHECK((currentCalls == expectedCalls));
+                CHECK((performedCalls == expectedCalls));
                 CHECK(!static_cast<bool>(d1));
                 CHECK(static_cast<bool>(d2));
 
                 d1();
-                CHECK((currentCalls == expectedCalls));
+                CHECK((performedCalls == expectedCalls));
 
                 d1 = delegate_type{};
                 d1();
-                CHECK((currentCalls == expectedCalls));
+                CHECK((performedCalls == expectedCalls));
 
                 d2();
                 ++expectedCalls.callOperator;
-                CHECK((currentCalls == expectedCalls));
+                CHECK((performedCalls == expectedCalls));
             }
             ++expectedCalls.destruction;     // destroys d2
             ++expectedCalls.deleteOperator;  // deletes d2
-            CHECK((currentCalls == expectedCalls));
+            CHECK((performedCalls == expectedCalls));
         }
         // destruction of d1 doesn't call ~functor_type
         ++expectedCalls.destruction;  // destroys f
-        CHECK((currentCalls == expectedCalls));
+        CHECK((performedCalls == expectedCalls));
     }
 }
 
