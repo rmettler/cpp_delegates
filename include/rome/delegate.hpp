@@ -66,16 +66,24 @@ class delegate<Ret(Args...), Character>
     : std::conditional<detail::delegateHasValidCharacter<Ret, Character>(), detail::ok,
           detail::invalid_delegate_character_<Ret, Character>>::type {
   public:
-    // TODO: only if Character matches and adapt the callee
-    constexpr delegate() noexcept                = default;
+    // TODO: ev ist es einfacher, für target_enforced ganz zu spezialisieren
+    template<typename C                                                 = Character,
+        std::enable_if_t<!std::is_same<C, target_enforced>::value, int> = 0>
+    constexpr delegate() noexcept {
+    }
+    constexpr delegate(const delegate&) noexcept = delete;
     constexpr delegate(delegate&& orig) noexcept = default;
 
-    // TODO: only if Character matches
+    template<typename C                                                 = Character,
+        std::enable_if_t<!std::is_same<C, target_enforced>::value, int> = 0>
     constexpr delegate(std::nullptr_t) noexcept : delegate{} {
     }
 
+    constexpr delegate& operator=(const delegate&) = delete;
     constexpr delegate& operator=(delegate&& orig) = default;
-    // TODO: only if Character matches
+    
+    template<typename C                                                 = Character,
+        std::enable_if_t<!std::is_same<C, target_enforced>::value, int> = 0>
     constexpr delegate& operator=(std::nullptr_t) noexcept {
         *this = delegate{};
         return *this;
@@ -89,6 +97,8 @@ class delegate<Ret(Args...), Character>
         return false;
     }
 
+    // TODO: dieser operator macht keinen Sinn mehr, da vergleich wegen Heap pointer nicht
+    //       mehr sauber möglich ist und vergleichen ohne kopieren zu können witzlos ist.
     constexpr bool operator==(const delegate& rhs) {
         // TODO target_ == rhs.target_
         return false;
