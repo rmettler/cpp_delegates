@@ -16,18 +16,6 @@
 
 namespace test_rome_delegate {
 
-// helper to check whether the delegate with given signature is of base
-// class which would produce a signature error using static_assert during creation
-template<typename TDelegate>
-constexpr bool is_signature_error_produced =
-    std::is_base_of<rome::detail::delegate::signature_error, TDelegate>::value;
-
-// helper to check whether the delegate with given signature is of base
-// class which would produce a target requirement error using static_assert during creation
-template<typename TDelegate>
-constexpr bool is_target_req_error_produced =
-    std::is_base_of<rome::detail::delegate::target_requirement_error, TDelegate>::value;
-
 template<typename T>
 void checkEmpty(const T& dgt) {
     CHECK(dgt == nullptr);

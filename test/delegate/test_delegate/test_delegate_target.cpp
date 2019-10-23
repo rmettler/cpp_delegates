@@ -60,15 +60,15 @@ TEST_CASE("base_delegate") {
         CHECK((performedCalls == expectedCalls));
     }
     SUBCASE("functor WITH small buffer optimization") {
-        using functor_type         = SmallFunctorMock<void()>;
-        functor_type::behavior     = []() {};
-        const auto& performedCalls = functor_type::init();
+        using mock_type         = SmallFunctorMock<void()>;
+        mock_type::behavior     = []() {};
+        const auto& performedCalls = mock_type::init();
         auto expectedCalls         = performedCalls;
-        CHECK(sizeof(functor_type) <= sizeof(void*));
-        CHECK(alignof(functor_type) <= sizeof(void*));
+        CHECK(sizeof(mock_type) <= sizeof(void*));
+        CHECK(alignof(mock_type) <= sizeof(void*));
         CHECK((performedCalls == expectedCalls));
         {
-            functor_type f{};
+            mock_type f{};
             ++expectedCalls.defaultConstruction;
             CHECK((performedCalls == expectedCalls));
 
@@ -104,21 +104,21 @@ TEST_CASE("base_delegate") {
             ++expectedCalls.destruction;  // destroys d2
             CHECK((performedCalls == expectedCalls));
         }
-        // destruction of d1 doesn't call ~functor_type
+        // destruction of d1 doesn't call ~mock_type
         ++expectedCalls.destruction;  // destroys f
         CHECK((performedCalls == expectedCalls));
     }
     SUBCASE("functor too big for small buffer optimization") {
-        using functor_type         = BiggerFunctorMock<void()>;
-        functor_type::behavior     = []() {};
-        const auto& performedCalls = functor_type::init();
+        using mock_type         = BiggerFunctorMock<void()>;
+        mock_type::behavior     = []() {};
+        const auto& performedCalls = mock_type::init();
         auto expectedCalls         = performedCalls;
         // check proper test setup
-        CHECK(sizeof(functor_type) > sizeof(void*));
-        CHECK(alignof(functor_type) <= sizeof(void*));
+        CHECK(sizeof(mock_type) > sizeof(void*));
+        CHECK(alignof(mock_type) <= sizeof(void*));
         CHECK((performedCalls == expectedCalls));
         {
-            functor_type f{};
+            mock_type f{};
             ++expectedCalls.defaultConstruction;
             CHECK((performedCalls == expectedCalls));
 
@@ -155,20 +155,20 @@ TEST_CASE("base_delegate") {
             ++expectedCalls.deleteOperator;  // deletes d2
             CHECK((performedCalls == expectedCalls));
         }
-        // destruction of d1 doesn't call ~functor_type
+        // destruction of d1 doesn't call ~mock_type
         ++expectedCalls.destruction;  // destroys f
         CHECK((performedCalls == expectedCalls));
     }
     SUBCASE("functor too badly aligned for small buffer optimization") {
-        using functor_type         = BadAlignedFunctorMock<void()>;
-        functor_type::behavior     = []() {};
-        const auto& performedCalls = functor_type::init();
+        using mock_type         = BadAlignedFunctorMock<void()>;
+        mock_type::behavior     = []() {};
+        const auto& performedCalls = mock_type::init();
         auto expectedCalls         = performedCalls;
         // check proper test setup
-        CHECK(alignof(functor_type) > sizeof(void*));
+        CHECK(alignof(mock_type) > sizeof(void*));
         CHECK((performedCalls == expectedCalls));
         {
-            functor_type f{};
+            mock_type f{};
             ++expectedCalls.defaultConstruction;
             CHECK((performedCalls == expectedCalls));
 
@@ -205,7 +205,7 @@ TEST_CASE("base_delegate") {
             ++expectedCalls.deleteOperator;  // deletes d2
             CHECK((performedCalls == expectedCalls));
         }
-        // destruction of d1 doesn't call ~functor_type
+        // destruction of d1 doesn't call ~mock_type
         ++expectedCalls.destruction;  // destroys f
         CHECK((performedCalls == expectedCalls));
     }
