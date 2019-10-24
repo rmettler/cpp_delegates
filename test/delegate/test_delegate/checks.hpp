@@ -21,14 +21,7 @@
     static_assert(!((dgt) != nullptr));                                                            \
     static_assert(!(nullptr != (dgt)));                                                            \
     static_assert(!static_cast<bool>(dgt));                                                        \
-    static_assert(!(dgt));                                                                         \
-    {                                                                                              \
-        constexpr decltype(dgt) defaultDgt;                                                        \
-        static_assert((dgt) == defaultDgt);                                                        \
-        static_assert(defaultDgt == (dgt));                                                        \
-        static_assert(!((dgt) != defaultDgt));                                                     \
-        static_assert(!(defaultDgt != (dgt)));                                                     \
-    }
+    static_assert(!(dgt));
 
 #define ROME_DELEGATE_CHECK_NOT_EMPTY(dgt)                                                         \
     CHECK(dgt != nullptr);                                                                         \
@@ -36,14 +29,7 @@
     static_assert(!((dgt) == nullptr));                                                            \
     static_assert(!(nullptr == (dgt)));                                                            \
     static_assert(static_cast<bool>(dgt));                                                         \
-    static_assert(!!(dgt));                                                                        \
-    {                                                                                              \
-        constexpr decltype(dgt) defaultDgt;                                                        \
-        static_assert(!((dgt) == defaultDgt));                                                     \
-        static_assert(!(defaultDgt == (dgt)));                                                     \
-        static_assert((dgt) != defaultDgt);                                                        \
-        static_assert(defaultDgt != (dgt));                                                        \
-    }
+    static_assert(!!(dgt));
 
 namespace test_rome_delegate {
 
@@ -55,13 +41,6 @@ void checkEmpty(const T& dgt) {
     CHECK(!(nullptr != dgt));
     CHECK(!static_cast<bool>(dgt));
     CHECK(!dgt);
-    {
-        const T defaultDgt;
-        CHECK(dgt == defaultDgt);
-        CHECK(defaultDgt == dgt);
-        CHECK(!(dgt != defaultDgt));
-        CHECK(!(defaultDgt != dgt));
-    }
 }
 
 template<typename T>
@@ -72,13 +51,6 @@ void checkNotEmpty(const T& dgt) {
     CHECK(!(nullptr == dgt));
     CHECK(static_cast<bool>(dgt));
     CHECK(!!dgt);
-    {
-        const T defaultDgt;
-        CHECK(!(dgt == defaultDgt));
-        CHECK(!(defaultDgt == dgt));
-        CHECK(dgt != defaultDgt);
-        CHECK(defaultDgt != dgt);
-    }
 }
 
 }  // namespace test_rome_delegate

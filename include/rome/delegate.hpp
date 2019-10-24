@@ -29,61 +29,65 @@
 
 namespace rome {
 
-// Used as template argument for delegates to declare that
-// TODO descriptions
-struct target_optional;
-struct target_expected;
-struct target_enforced;
+// Used as template argument for delegates to declare that it is valid behavior invoking an empty
+// delegate.
+struct target_is_optional;
+// Used as template argument for delegates to declare that an assigned target is expected when the
+// delegate is invoked and leads to an exception otherwise.
+struct target_is_expected;
+// Used as template argument for delegates to declare that an assigned target is mandatory when the
+// delegate is invoke and thus the design ensures that always a delegate is assigned.
+struct target_is_mandatory;
 
 namespace detail {
-    template<typename Ret, typename Character>
-    constexpr bool delegateHasValidCharacter() {
-        return std::is_same<Character, rome::target_expected>::value
-               || std::is_same<Character, rome::target_enforced>::value
-               || (std::is_same<Character, rome::target_optional>::value
+    template<typename Ret, typename ExpectedBehavior>
+    constexpr bool delegateHasValidExpectedBehavior() {
+        return std::is_same<ExpectedBehavior, rome::target_is_expected>::value
+               || std::is_same<ExpectedBehavior, rome::target_is_mandatory>::value
+               || (std::is_same<ExpectedBehavior, rome::target_is_optional>::value
                    && std::is_same<Ret, void>::value);
     }
 
-    struct invalid_delegate_character {};
+    struct invalid_delegate_expected_behavior {};
 
-    template<typename Ret, typename Character>
-    struct invalid_delegate_character_ : invalid_delegate_character {
-        constexpr invalid_delegate_character_() noexcept {
-            static_assert(wrong<Ret, Character>,
-                "Invalid template parameter. The second template parameter 'Character' must "
-                "either be empty or contain one of the types 'rome::target_optional', "
-                "'rome::target_expected' or 'rome::target_enforced', where "
-                "'rome::target_optional' is only valid if the return type 'Ret' is 'void'.");
+    template<typename Ret, typename ExpectedBehavior>
+    struct invalid_delegate_expected_behavior_ : invalid_delegate_expected_behavior {
+        constexpr invalid_delegate_expected_behavior_() noexcept {
+            static_assert(wrong<Ret, ExpectedBehavior>,
+                "Invalid template parameter. The second template parameter 'ExpectedBehavior' must "
+                "either be empty or contain one of the types 'rome::target_is_optional', "
+                "'rome::target_is_expected' or 'rome::target_is_mandatory', where "
+                "'rome::target_is_optional' is only valid if the return type 'Ret' is 'void'.");
         }
     };
 };  // namespace detail
 
-template<typename Signature, typename Character = target_expected>
+template<typename Signature, typename ExpectedBehavior = target_is_expected>
 class delegate;
 
-template<typename Character, typename Ret, typename... Args>
-class delegate<Ret(Args...), Character>
-    : std::conditional<detail::delegateHasValidCharacter<Ret, Character>(), detail::ok,
-          detail::invalid_delegate_character_<Ret, Character>>::type {
+template<typename ExpectedBehavior, typename Ret, typename... Args>
+class delegate<Ret(Args...), ExpectedBehavior>
+    : std::conditional<detail::delegateHasValidExpectedBehavior<Ret, ExpectedBehavior>(),
+          detail::ok, detail::invalid_delegate_expected_behavior_<Ret, ExpectedBehavior>>::type {
   public:
-    // TODO: ev ist es einfacher, für target_enforced ganz zu spezialisieren
-    template<typename C                                                 = Character,
-        std::enable_if_t<!std::is_same<C, target_enforced>::value, int> = 0>
+    // TODO: ev ist es einfacher, für target_is_mandatory ganz zu spezialisieren
+    template<typename C                                                     = ExpectedBehavior,
+        std::enable_if_t<!std::is_same<C, target_is_mandatory>::value, int> = 0>
     constexpr delegate() noexcept {
     }
     constexpr delegate(const delegate&) noexcept = delete;
     constexpr delegate(delegate&& orig) noexcept = default;
 
-    template<typename C                                                 = Character,
-        std::enable_if_t<!std::is_same<C, target_enforced>::value, int> = 0>
+    template<typename C                                                     = ExpectedBehavior,
+        std::enable_if_t<!std::is_same<C, target_is_mandatory>::value, int> = 0>
     constexpr delegate(std::nullptr_t) noexcept : delegate{} {
     }
 
     constexpr delegate& operator=(const delegate&) = delete;
     constexpr delegate& operator=(delegate&& orig) = default;
-    
-    template<typename C                                                 = Character,
-        std::enable_if_t<!std::is_same<C, target_enforced>::value, int> = 0>
+
+    template<typename C                                                     = ExpectedBehavior,
+        std::enable_if_t<!std::is_same<C, target_is_mandatory>::value, int> = 0>
     constexpr delegate& operator=(std::nullptr_t) noexcept {
         *this = delegate{};
         return *this;
@@ -199,23 +203,23 @@ class delegate<Ret(Args...), Character>
     caller_type callee_               = null_callee;
 };
 
-template<typename Sig, typename Character>
-constexpr bool operator==(const delegate<Sig, Character>& lhs, std::nullptr_t) {
+template<typename Sig, typename ExpectedBehavior>
+constexpr bool operator==(const delegate<Sig, ExpectedBehavior>& lhs, std::nullptr_t) {
     return !lhs;
 }
 
-template<typename Sig, typename Character>
-constexpr bool operator==(std::nullptr_t, const delegate<Sig, Character>& rhs) {
+template<typename Sig, typename ExpectedBehavior>
+constexpr bool operator==(std::nullptr_t, const delegate<Sig, ExpectedBehavior>& rhs) {
     return !rhs;
 }
 
-template<typename Sig, typename Character>
-constexpr bool operator!=(const delegate<Sig, Character>& lhs, std::nullptr_t) {
+template<typename Sig, typename ExpectedBehavior>
+constexpr bool operator!=(const delegate<Sig, ExpectedBehavior>& lhs, std::nullptr_t) {
     return lhs;
 }
 
-template<typename Sig, typename Character>
-constexpr bool operator!=(std::nullptr_t, const delegate<Sig, Character>& rhs) {
+template<typename Sig, typename ExpectedBehavior>
+constexpr bool operator!=(std::nullptr_t, const delegate<Sig, ExpectedBehavior>& rhs) {
     return rhs;
 }
 

@@ -52,9 +52,9 @@ namespace {
         template<typename Character>
         using delegate_type = rome::delegate<void(Args...), Character>;
         static constexpr bool test() {
-            testDefaultConstruction<delegate_type<rome::target_optional>>();
-            testDefaultConstruction<delegate_type<rome::target_expected>>();
-            testDefaultConstruction<delegate_type<rome::target_enforced>>();
+            testDefaultConstruction<delegate_type<rome::target_is_optional>>();
+            testDefaultConstruction<delegate_type<rome::target_is_expected>>();
+            testDefaultConstruction<delegate_type<rome::target_is_mandatory>>();
             return true;
         }
     };
@@ -64,10 +64,10 @@ namespace {
         template<typename Character>
         using delegate_type = rome::delegate<void(Args...), Character>;
         static constexpr bool test() {
-            testDefaultConstruction<delegate_type<rome::target_optional>>();
-            testDefaultConstruction<delegate_type<rome::target_expected>>();
+            testDefaultConstruction<delegate_type<rome::target_is_optional>>();
+            testDefaultConstruction<delegate_type<rome::target_is_expected>>();
             static_assert(
-                !std::is_default_constructible<delegate_type<rome::target_enforced>>::value, "");
+                !std::is_default_constructible<delegate_type<rome::target_is_mandatory>>::value, "");
             return true;
         }
     };
@@ -80,8 +80,8 @@ namespace {
     template<typename Signature>
     void test_with_non_void_ret() {
         {
-            // TODO: target_optional fehlt!
-            using T = rome::delegate<Signature, rome::target_expected>;
+            // TODO: target_is_optional fehlt!
+            using T = rome::delegate<Signature, rome::target_is_expected>;
             static_assert(std::is_nothrow_default_constructible<T>::value, "");
             T defaultDgt;
             test_rome_delegate::checkEmpty(defaultDgt);
@@ -89,7 +89,7 @@ namespace {
             test_rome_delegate::checkEmpty(valueInitDgt);
         }
         {
-            using T = rome::delegate<Signature, rome::target_enforced>;
+            using T = rome::delegate<Signature, rome::target_is_mandatory>;
             static_assert(!std::is_default_constructible<T>::value, "");
         }
     }
@@ -97,7 +97,7 @@ namespace {
     template<typename Signature>
     void test_with_void_ret() {
         test_with_non_void_ret<Signature>();  // TODO passt nicht! einzeln aufschreiben
-        using T = rome::delegate<Signature, rome::target_optional>;
+        using T = rome::delegate<Signature, rome::target_is_optional>;
         static_assert(std::is_nothrow_default_constructible<T>::value, "");
         T defaultDgt;
         test_rome_delegate::checkEmpty(defaultDgt);
