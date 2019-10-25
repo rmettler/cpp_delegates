@@ -1,8 +1,12 @@
-COMPILER_KIT = GNU
+COMPILER_KIT = CLANG
 
 CXX_GNU = g++
-CXXFLAGS_GNU = -std=c++14 -Wall -Werror -Wextra -pedantic
+CXXFLAGS_GNU = -std=c++14 -Wall -Werror -Wextra -pedantic -O3
 LDFLAGS_GNU = 
+
+CXX_CLANG = clang++
+CXXFLAGS_CLANG = -std=c++14 -Weverything -O3
+LDFLAGS_CLANG = 
 
 CXX = $(CXX_$(COMPILER_KIT))
 CXXFLAGS = $(CXXFLAGS_GNU_$(COMPILER_KIT))

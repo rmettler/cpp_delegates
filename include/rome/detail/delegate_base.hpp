@@ -84,9 +84,11 @@ namespace detail {
             delegate_base& operator=(delegate_base const&) noexcept = delete;
             delegate_base& operator=(delegate_base&& orig) noexcept {
                 delegate_base(std::move(orig)).swap(*this);
+                return *this;
             };
             delegate_base& operator=(std::nullptr_t) noexcept {
                 *this = delegate_base();
+                return *this;
             }
 
             void swap(delegate_base& other) noexcept {

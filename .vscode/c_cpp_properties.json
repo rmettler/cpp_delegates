@@ -11,9 +11,10 @@
                 "UNICODE",
                 "_UNICODE"
             ],
-            "compilerPath": "C:\\msys64\\mingw64\\bin\\gcc.exe",
             "intelliSenseMode": "clang-x64",
-            "cppStandard": "c++14"
+            "cppStandard": "c++14",
+            "compilerPath": "/usr/bin/clang",
+            "compilerArgs": []
         }
     ],
     "version": 4
