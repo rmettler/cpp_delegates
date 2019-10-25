@@ -11,21 +11,20 @@
 #include <doctest.h>
 
 #include <functional>
-#include <rome/detail/base_delegate.hpp>
+#include <rome/detail/delegate_base.hpp>
 #include <type_traits>
 
 #include "mocks.hpp"
 
 namespace test_rome_delegate {
 
-TEST_SUITE_BEGIN("header file: rome/detail/base_delegate.hpp");
+TEST_SUITE_BEGIN("header file: rome/detail/delegate_base.hpp");
 
-TEST_CASE("base_delegate") {
+TEST_CASE("delegate_base") {
     // TODO: do this with delegate instead!
-    using delegate_type = rome::detail::base_delegate::base_delegate<void(),
-        rome::detail::base_delegate::no_call_invoker>;
+    using delegate_type = rome::detail::delegate_base::delegate_base<void(),
+        rome::detail::delegate_base::no_call_invoker>;
     SUBCASE("static function") {
-        // TODO: change all mocks to use this mockCall strategy!
         using mock_type            = FunctionMock<void()>;
         mock_type::behavior        = []() {};
         const auto& performedCalls = mock_type::init();
