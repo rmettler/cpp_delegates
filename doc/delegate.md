@@ -71,7 +71,7 @@ The size of a `rome::delegate` is 3 \* `sizeof(void*)`.
 - [operator==, operator!=](delegate/operator_cmp_nullptr.md)  
   compares `rome::delegate` with nullptr
 
-> **Comparision with `std::function`**
+> **Comparision with `std::function`, TODO move this!**
 >
 > - Similar declaration and usage as `std::function`.
 > - Trades a bit of usability for a more efficient implementation than `std::function`.  
@@ -94,42 +94,57 @@ The size of a `rome::delegate` is 3 \* `sizeof(void*)`.
 
 #include "rome/delegate.hpp"
 
-struct CommandInput {
-    rome::delegate<void(const std::vector<int>&), rome::target_is_optional> onAddCommandRead;
+struct CommandProcessor {
+    rome::delegate<void(const std::vector<int>&), rome::target_is_mandatory> onAddCommandRead;
+    rome::delegate<void(const std::vector<int>&), rome::target_is_expected> onSubtractCommandRead;
     rome::delegate<void(const std::vector<int>&), rome::target_is_optional> onProductCommandRead;
-    void keepReadingCommands() {
-        while (true) {
-            readCommand();
-        }
-    }
-    void readCommand() {
-        std::string line;
-        std::getline(std::cin, line);
+    void processCommand(const std::string& line) {
         std::istringstream iss{line.substr(2)};
         const std::vector<int> args{std::istream_iterator<int>{iss}, std::istream_iterator<int>{}};
         if ('+' == line.at(0)) {
             onAddCommandRead(args);
         }
+        else if ('-' == line.at(0)) {
+            onSubtractCommandRead(args);
+        }
         else if ('*' == line.at(0)) {
             onProductCommandRead(args);
         }
     }
+    CommandProcessor(rome::delegate<void(const std::vector<int>&), rome::target_is_mandatory>&& dgt)
+        : onAddCommandRead{std::move(dgt)} {
+    }
 };
 
 int main() {
-    CommandInput ci;
-    ci.onAddCommandRead = decltype(ci.onAddCommandRead)::create([](const std::vector<int>& args) {
+    CommandProcessor cp{decltype(cp.onAddCommandRead)::create([](const std::vector<int>& args) {
         const auto result = std::accumulate(args.begin(), args.end(), 0);
         std::cout << "sum = " << result << '\n';
-    });
-    ci.keepReadingCommands();
+    })};
+    std::string cmd1{"+ 1 2 3"};
+    std::string cmd2{"- 1 2 3"};
+    std::string cmd3{"* 1 2 3"};
+    std::cout << "cmd1:" << '\n';
+    cp.processCommand(cmd1);  // calls the delegate mandatory to be passed during construction
+    try {
+        std::cout << "cmd2:" << '\n';
+        cp.processCommand(cmd2);  // calls expected but unassigned delegate
+    }
+    catch (const rome::bad_delegate_call& ex) {
+        std::cout << ex.what() << '\n';
+    }
+    std::cout << "cmd3:" << '\n';
+    cp.processCommand(cmd3);  // calls optional and unassigned delegate
 }
-
-// input : + 1 2 3
-// output: sum = 6
-// input : * 1 2 3
-// no output
 ```
+
+Console output:
+
+> cmd1:  
+> sum = 6  
+> cmd2:  
+> rome::bad_delegate_call  
+> cmd3:
 
 ## See also
 
