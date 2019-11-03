@@ -65,7 +65,7 @@ namespace detail {
 template<typename Signature, typename ExpectedBehavior = target_is_expected>
 class delegate;
 
-template<typename ExpectedBehavior, typename Ret, typename... Args>
+template<typename Ret, typename... Args, typename ExpectedBehavior>
 class delegate<Ret(Args...), ExpectedBehavior>
     : std::conditional<detail::delegateHasValidExpectedBehavior<Ret, ExpectedBehavior>(),
           detail::ok, detail::invalid_delegate_expected_behavior_<Ret, ExpectedBehavior>>::type {

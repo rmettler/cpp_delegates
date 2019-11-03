@@ -6,7 +6,7 @@ Defined in header [`<rome/delegate.hpp>`](../include/rome/delegate.hpp).
 template<typename Signature, typename ExpectedBehavior = target_is_expected>
 class delegate; // undefined
 
-template<typename ExpectedBehavior, typename Ret, typename... Args>
+template<typename Ret, typename... Args, typename ExpectedBehavior>
 class delegate<Ret(Args...), ExpectedBehavior>;
 ```
 
@@ -18,7 +18,8 @@ Invoking the _target_ of an _empty_ `rome::delegate` results in a behavior confi
 
 To assign a new _target_, a new `rome::delegate` needs to be constructed using [`create`](delegate/create.md). If the size of an assigned function object exceeds `sizeof(void*)`, a heap allocation might be needed during this process. All other _targets_ are guaranteed to be embedded in the local memory of the `rome::delegate`. Thus it is possible to efficiently assign a _target_ from a lambda expression with one captured pointer.
 
-The size of a `rome::delegate` is 3 \* `sizeof(void*)`.
+The size of a `rome::delegate` is the size of an object pointer plus twice the size of a function pointer:  
+`sizeof(rome::delegate<Ret(Args...), ExpectedBehavior>) == sizeof(void*) + 2*sizeof(void (*)())`
 
 ## Template parameters
 
