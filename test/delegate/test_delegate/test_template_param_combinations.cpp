@@ -24,10 +24,12 @@ template class ::rome::delegate<void(int), rome::target_is_mandatory>;
 template class ::rome::delegate<void(int), rome::target_is_optional>;
 template class ::rome::delegate<int(), rome::target_is_expected>;
 template class ::rome::delegate<int(), rome::target_is_mandatory>;
-static_assert(produces_expected_behavior_error<::rome::delegate<int(), rome::target_is_optional>>, "");
+static_assert(
+    produces_expected_behavior_error<::rome::delegate<int(), rome::target_is_optional>>, "");
 template class ::rome::delegate<int(int), rome::target_is_expected>;
 template class ::rome::delegate<int(int), rome::target_is_mandatory>;
-static_assert(produces_expected_behavior_error<::rome::delegate<int(int), rome::target_is_optional>>, "");
+static_assert(
+    produces_expected_behavior_error<::rome::delegate<int(int), rome::target_is_optional>>, "");
 
 enum E : int { e_zero, e_one };
 template class ::rome::delegate<void(E), rome::target_is_expected>;
@@ -35,7 +37,8 @@ template class ::rome::delegate<void(E), rome::target_is_mandatory>;
 template class ::rome::delegate<void(E), rome::target_is_optional>;
 template class ::rome::delegate<E(E), rome::target_is_expected>;
 template class ::rome::delegate<E(E), rome::target_is_mandatory>;
-static_assert(produces_expected_behavior_error<::rome::delegate<E(E), rome::target_is_optional>>, "");
+static_assert(
+    produces_expected_behavior_error<::rome::delegate<E(E), rome::target_is_optional>>, "");
 
 enum class EC : int { zero, one };
 template class ::rome::delegate<void(EC), rome::target_is_expected>;
@@ -43,7 +46,8 @@ template class ::rome::delegate<void(EC), rome::target_is_mandatory>;
 template class ::rome::delegate<void(EC), rome::target_is_optional>;
 template class ::rome::delegate<EC(EC), rome::target_is_expected>;
 template class ::rome::delegate<EC(EC), rome::target_is_mandatory>;
-static_assert(produces_expected_behavior_error<::rome::delegate<EC(EC), rome::target_is_optional>>, "");
+static_assert(
+    produces_expected_behavior_error<::rome::delegate<EC(EC), rome::target_is_optional>>, "");
 
 union U {
     int i;
@@ -53,7 +57,8 @@ template class ::rome::delegate<void(U), rome::target_is_mandatory>;
 template class ::rome::delegate<void(U), rome::target_is_optional>;
 template class ::rome::delegate<U(U), rome::target_is_expected>;
 template class ::rome::delegate<U(U), rome::target_is_mandatory>;
-static_assert(produces_expected_behavior_error<::rome::delegate<U(U), rome::target_is_optional>>, "");
+static_assert(
+    produces_expected_behavior_error<::rome::delegate<U(U), rome::target_is_optional>>, "");
 
 struct C {
     int i;
@@ -69,39 +74,45 @@ template class ::rome::delegate<void(C), rome::target_is_mandatory>;
 template class ::rome::delegate<void(C), rome::target_is_optional>;
 template class ::rome::delegate<C(C), rome::target_is_expected>;
 template class ::rome::delegate<C(C), rome::target_is_mandatory>;
-static_assert(produces_expected_behavior_error<::rome::delegate<C(C), rome::target_is_optional>>, "");
+static_assert(
+    produces_expected_behavior_error<::rome::delegate<C(C), rome::target_is_optional>>, "");
 template class ::rome::delegate<void(C&), rome::target_is_expected>;
 template class ::rome::delegate<void(C&), rome::target_is_mandatory>;
 template class ::rome::delegate<void(C&), rome::target_is_optional>;
 template class ::rome::delegate<C&(C&), rome::target_is_expected>;
 template class ::rome::delegate<C&(C&), rome::target_is_mandatory>;
-static_assert(produces_expected_behavior_error<::rome::delegate<C&(C&), rome::target_is_optional>>, "");
+static_assert(
+    produces_expected_behavior_error<::rome::delegate<C&(C&), rome::target_is_optional>>, "");
 template class ::rome::delegate<void(const C&), rome::target_is_expected>;
 template class ::rome::delegate<void(const C&), rome::target_is_mandatory>;
 template class ::rome::delegate<void(const C&), rome::target_is_optional>;
 template class ::rome::delegate<const C&(const C&), rome::target_is_expected>;
 template class ::rome::delegate<const C&(const C&), rome::target_is_mandatory>;
-static_assert(
-    produces_expected_behavior_error<::rome::delegate<const C&(const C&), rome::target_is_optional>>, "");
+static_assert(produces_expected_behavior_error<
+                  ::rome::delegate<const C&(const C&), rome::target_is_optional>>,
+    "");
 template class ::rome::delegate<void(C&&), rome::target_is_expected>;
 template class ::rome::delegate<void(C&&), rome::target_is_mandatory>;
 template class ::rome::delegate<void(C&&), rome::target_is_optional>;
 template class ::rome::delegate<C && (C &&), rome::target_is_expected>;
 template class ::rome::delegate<C && (C &&), rome::target_is_mandatory>;
-static_assert(produces_expected_behavior_error<::rome::delegate<C && (C &&), rome::target_is_optional>>, "");
+static_assert(
+    produces_expected_behavior_error<::rome::delegate<C && (C &&), rome::target_is_optional>>, "");
 template class ::rome::delegate<void(C*), rome::target_is_expected>;
 template class ::rome::delegate<void(C*), rome::target_is_mandatory>;
 template class ::rome::delegate<void(C*), rome::target_is_optional>;
 template class ::rome::delegate<C*(C*), rome::target_is_expected>;
 template class ::rome::delegate<C*(C*), rome::target_is_mandatory>;
-static_assert(produces_expected_behavior_error<::rome::delegate<C*(C*), rome::target_is_optional>>, "");
+static_assert(
+    produces_expected_behavior_error<::rome::delegate<C*(C*), rome::target_is_optional>>, "");
 template class ::rome::delegate<void(const C*), rome::target_is_expected>;
 template class ::rome::delegate<void(const C*), rome::target_is_mandatory>;
 template class ::rome::delegate<void(const C*), rome::target_is_optional>;
 template class ::rome::delegate<const C*(const C*), rome::target_is_expected>;
 template class ::rome::delegate<const C*(const C*), rome::target_is_mandatory>;
-static_assert(
-    produces_expected_behavior_error<::rome::delegate<const C*(const C*), rome::target_is_optional>>, "");
+static_assert(produces_expected_behavior_error<
+                  ::rome::delegate<const C*(const C*), rome::target_is_optional>>,
+    "");
 
 using TMemberObject = int C::*;
 template class ::rome::delegate<void(TMemberObject), rome::target_is_expected>;
@@ -109,8 +120,8 @@ template class ::rome::delegate<void(TMemberObject), rome::target_is_mandatory>;
 template class ::rome::delegate<void(TMemberObject), rome::target_is_optional>;
 template class ::rome::delegate<TMemberObject(TMemberObject), rome::target_is_expected>;
 template class ::rome::delegate<TMemberObject(TMemberObject), rome::target_is_mandatory>;
-static_assert(
-    produces_expected_behavior_error<::rome::delegate<TMemberObject(TMemberObject), rome::target_is_optional>>,
+static_assert(produces_expected_behavior_error<
+                  ::rome::delegate<TMemberObject(TMemberObject), rome::target_is_optional>>,
     "");
 
 using TMemberFunction = int (C::*)(int);
@@ -127,8 +138,10 @@ using TConstMemberFunction = int (C::*)(int) const;
 template class ::rome::delegate<void(TConstMemberFunction), rome::target_is_expected>;
 template class ::rome::delegate<void(TConstMemberFunction), rome::target_is_mandatory>;
 template class ::rome::delegate<void(TConstMemberFunction), rome::target_is_optional>;
-template class ::rome::delegate<TConstMemberFunction(TConstMemberFunction), rome::target_is_expected>;
-template class ::rome::delegate<TConstMemberFunction(TConstMemberFunction), rome::target_is_mandatory>;
+template class ::rome::delegate<TConstMemberFunction(TConstMemberFunction),
+    rome::target_is_expected>;
+template class ::rome::delegate<TConstMemberFunction(TConstMemberFunction),
+    rome::target_is_mandatory>;
 static_assert(
     produces_expected_behavior_error<
         ::rome::delegate<TConstMemberFunction(TConstMemberFunction), rome::target_is_optional>>,
@@ -145,8 +158,9 @@ template class ::rome::delegate<void(TArrayRef), rome::target_is_mandatory>;
 template class ::rome::delegate<void(TArrayRef), rome::target_is_optional>;
 template class ::rome::delegate<TArrayRef(TArrayRef), rome::target_is_expected>;
 template class ::rome::delegate<TArrayRef(TArrayRef), rome::target_is_mandatory>;
-static_assert(
-    produces_expected_behavior_error<::rome::delegate<TArrayRef(TArrayRef), rome::target_is_optional>>, "");
+static_assert(produces_expected_behavior_error<
+                  ::rome::delegate<TArrayRef(TArrayRef), rome::target_is_optional>>,
+    "");
 
 using TArrayPtr = int (*)[10];
 template class ::rome::delegate<void(TArrayPtr), rome::target_is_expected>;
@@ -154,8 +168,9 @@ template class ::rome::delegate<void(TArrayPtr), rome::target_is_mandatory>;
 template class ::rome::delegate<void(TArrayPtr), rome::target_is_optional>;
 template class ::rome::delegate<TArrayPtr(TArrayPtr), rome::target_is_expected>;
 template class ::rome::delegate<TArrayPtr(TArrayPtr), rome::target_is_mandatory>;
-static_assert(
-    produces_expected_behavior_error<::rome::delegate<TArrayPtr(TArrayPtr), rome::target_is_optional>>, "");
+static_assert(produces_expected_behavior_error<
+                  ::rome::delegate<TArrayPtr(TArrayPtr), rome::target_is_optional>>,
+    "");
 
 using TFunctionRef = int (&)(int);
 template class ::rome::delegate<void(TFunctionRef), rome::target_is_expected>;
@@ -163,8 +178,8 @@ template class ::rome::delegate<void(TFunctionRef), rome::target_is_mandatory>;
 template class ::rome::delegate<void(TFunctionRef), rome::target_is_optional>;
 template class ::rome::delegate<TFunctionRef(TFunctionRef), rome::target_is_expected>;
 template class ::rome::delegate<TFunctionRef(TFunctionRef), rome::target_is_mandatory>;
-static_assert(
-    produces_expected_behavior_error<::rome::delegate<TFunctionRef(TFunctionRef), rome::target_is_optional>>,
+static_assert(produces_expected_behavior_error<
+                  ::rome::delegate<TFunctionRef(TFunctionRef), rome::target_is_optional>>,
     "");
 
 using TFunctionPtr = int (*)(int);
@@ -173,9 +188,13 @@ template class ::rome::delegate<void(TFunctionPtr), rome::target_is_mandatory>;
 template class ::rome::delegate<void(TFunctionPtr), rome::target_is_optional>;
 template class ::rome::delegate<TFunctionPtr(TFunctionPtr), rome::target_is_expected>;
 template class ::rome::delegate<TFunctionPtr(TFunctionPtr), rome::target_is_mandatory>;
-static_assert(
-    produces_expected_behavior_error<::rome::delegate<TFunctionPtr(TFunctionPtr), rome::target_is_optional>>,
+static_assert(produces_expected_behavior_error<
+                  ::rome::delegate<TFunctionPtr(TFunctionPtr), rome::target_is_optional>>,
     "");
 
-TEST_CASE("rome::delegate - explicit template instantiations") {
+TEST_CASE("rome::delegate - template parameter combinations") {
+    CHECK_MESSAGE(
+        true, "explicit template instantiations build with different possible type combinations");
+    CHECK_MESSAGE(true, "templates of different types fail to instantiate if ExpectedBehavior is "
+                        "rome::target_is_optional and the return type is not void");
 }
