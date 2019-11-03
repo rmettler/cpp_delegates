@@ -21,7 +21,7 @@ int function(float f) {
 TEST_CASE("rome::function_ptr_t") {
     static_assert(std::is_same<rome::function_ptr_t<int(float)>, decltype(&function)>::value, "");
     rome::function_ptr_t<int(float)> ptr = &function;
-    CHECK(3 == (*ptr)(3.9));
+    CHECK(3 == (*ptr)(3.9f));
 }
 
 struct C {

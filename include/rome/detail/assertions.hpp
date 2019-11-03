@@ -48,7 +48,7 @@ namespace detail {
                     "E.g.: 'event_delgate<void (std::array<int,10> const&)>'");
             }
         };
-    };  // namespace event_delegate
+    }  // namespace event_delegate
 
 }  // namespace detail
 }  // namespace rome

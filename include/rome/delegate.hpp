@@ -60,7 +60,7 @@ namespace detail {
                 "'rome::target_is_optional' is only valid if the return type 'Ret' is 'void'.");
         }
     };
-};  // namespace detail
+}  // namespace detail
 
 template<typename Signature, typename ExpectedBehavior = target_is_expected>
 class delegate;
@@ -103,7 +103,7 @@ class delegate<Ret(Args...), ExpectedBehavior>
 
     // TODO: dieser operator macht keinen Sinn mehr, da vergleich wegen Heap pointer nicht
     //       mehr sauber möglich ist und vergleichen ohne kopieren zu können witzlos ist.
-    constexpr bool operator==(const delegate& rhs) {
+    constexpr bool operator==(const delegate&) {
         // TODO target_ == rhs.target_
         return false;
     }
@@ -142,21 +142,19 @@ class delegate<Ret(Args...), ExpectedBehavior>
 
     template<typename T>
     static constexpr delegate create(T& functor) {
-        delegate d;
-        d.obj_    = &functor;
-        d.callee_ = &functor_call<T>;
-        return d;
+        return delegate{&functor, &functor_call<T>};
     }
 
     template<typename T>
     static constexpr delegate create(const T& functor) {
-        delegate d;
-        d.obj_    = const_cast<T*>(&functor);
-        d.callee_ = &const_functor_call<T>;
-        return d;
+        return delegate{const_cast<T*>(&functor), &const_functor_call<T>};
     }
 
   private:
+    constexpr delegate(void* obj, Ret (*callee)(void*, Args...)) noexcept
+        : obj_{obj}, callee_{callee} {
+    }
+
     template<typename C, Ret (C::*pMethod)(Args...)>
     static Ret method_call(void* obj, Args... args) {
         return (static_cast<C*>(obj)->*pMethod)(args...);

@@ -56,7 +56,7 @@ namespace detail {
         };
 
         // Used as deleter in delegate_base when no destruction of buffer is needed.
-        void no_delete(buffer_type const& buffer) {
+        void no_delete(buffer_type const&) {
         }
 
 
@@ -66,6 +66,7 @@ namespace detail {
         template<typename Ret, typename... Args, typename EmptyInvoker>
         class delegate_base<Ret(Args...), EmptyInvoker> {
           private:
+            // TODO: update types to be big enough for all used pointers!
             alignas(bufferAlignment()) buffer_type buffer_ = nullptr;
             invoker_type<Ret, Args...> callee_             = EmptyInvoker::invoke;
             deleter_type deleter_                          = no_delete;
@@ -83,11 +84,11 @@ namespace detail {
 
             delegate_base& operator=(delegate_base const&) noexcept = delete;
             delegate_base& operator=(delegate_base&& orig) noexcept {
-                delegate_base(std::move(orig)).swap(*this);
+                delegate_base{std::move(orig)}.swap(*this);
                 return *this;
-            };
+            }
             delegate_base& operator=(std::nullptr_t) noexcept {
-                *this = delegate_base();
+                *this = delegate_base{};
                 return *this;
             }
 
@@ -96,11 +97,6 @@ namespace detail {
                 swap(buffer_, other.buffer_);
                 swap(callee_, other.callee_);
                 swap(deleter_, other.deleter_);
-            }
-
-            constexpr bool operator==(delegate_base const& rhs) const noexcept {
-                return (buffer_ == rhs.buffer_) && (callee_ == rhs.callee_)
-                       && (deleter_ == rhs.deleter_);
             }
 
             constexpr operator bool() noexcept {
@@ -118,7 +114,7 @@ namespace detail {
             static delegate_base create() {
                 delegate_base d;
                 d.buffer_ = nullptr;
-                d.callee_ = [](buffer_type const& buffer, Args&&... args) -> Ret {
+                d.callee_ = [](buffer_type const&, Args&&... args) -> Ret {
                     return (*function)(std::forward<Args>(args)...);
                 };
                 d.deleter_ = no_delete;
@@ -149,7 +145,7 @@ namespace detail {
                 // optimization. Thus the functor needs to be able to change buffer_, even so
                 // the delegate_base doesn't change its behavior.
                 delegate_base d;
-                auto ptr = ::new (&d.buffer_) Invokable(std::move(invokable));
+                const auto ptr = ::new (&d.buffer_) Invokable(std::move(invokable));
                 assert(ptr == static_cast<Invokable*>(static_cast<void*>(&d.buffer_)));
                 d.callee_ = [](buffer_type const& buffer, Args&&... args) -> Ret {
                     auto pFunctor = static_cast<void*>(const_cast<buffer_type*>(&buffer));
@@ -180,7 +176,8 @@ namespace detail {
         };
 
         template<typename Ret, typename... Args, typename EmptyInvoker>
-        inline void swap(delegate_base<Ret(Args...), EmptyInvoker>& lhs, delegate_base<Ret(Args...), EmptyInvoker>& rhs) noexcept {
+        inline void swap(delegate_base<Ret(Args...), EmptyInvoker>& lhs,
+            delegate_base<Ret(Args...), EmptyInvoker>& rhs) noexcept {
             lhs.swap(rhs);
         }
 

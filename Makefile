@@ -5,12 +5,12 @@ CXXFLAGS_GNU = -std=c++14 -Wall -Werror -Wextra -pedantic -O3
 LDFLAGS_GNU = 
 
 CXX_CLANG = clang++
-CXXFLAGS_CLANG = -std=c++14 -Weverything -O3
+CXXFLAGS_CLANG = -std=c++14 -O3 -Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Wno-c++98-compat-bind-to-temporary-copy -Wno-padded -Wno-missing-prototypes -Wno-weak-vtables
 LDFLAGS_CLANG = 
 
 CXX = $(CXX_$(COMPILER_KIT))
-CXXFLAGS = $(CXXFLAGS_GNU_$(COMPILER_KIT))
-LDFLAGS = $(LDFLAGS_GNU_$(COMPILER_KIT))
+CXXFLAGS = $(CXXFLAGS_$(COMPILER_KIT))
+LDFLAGS = $(LDFLAGS_$(COMPILER_KIT))
 
 TEST_EXE = test.exe
 BUILD_DIR = ./build
@@ -20,13 +20,12 @@ DEFINES =
 
 MAIN_SRC = test/test_main.cpp
 SRCS = \
+	test/delegate/test_delegate/test_delegate_base.cpp \
 	test/test_function_ptr.cpp \
 	test/test_bad_delegate_call.cpp \
-	test/delegate/test_delegate/test_delegate_base.cpp \
 	test/delegate/test_delegate.cpp \
 	test/delegate/test_delegate/test_declarations.cpp \
 	test/delegate/test_delegate/test_explicit_instantiations.cpp \
-	test/delegate/test_delegate/test_default_construction.cpp \
 	test/delegate/test_delegate/test_create.cpp
 
 MAIN_OBJ = $(MAIN_SRC:%.cpp=$(BUILD_DIR)/%.o)
