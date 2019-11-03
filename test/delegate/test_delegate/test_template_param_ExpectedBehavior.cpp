@@ -20,7 +20,7 @@ template<typename TDelegate>
 constexpr bool produces_expected_behavior_error =
     std::is_base_of<rome::detail::invalid_delegate_expected_behavior, TDelegate>::value;
 
-constexpr void test_default_template_params() {
+constexpr bool test_default_type() {
     using rome::delegate;
     static_assert(
         std::is_same<delegate<bool(int)>, delegate<bool(int), rome::target_is_expected>>::value,
@@ -28,20 +28,27 @@ constexpr void test_default_template_params() {
     static_assert(
         std::is_same<delegate<void(int)>, delegate<void(int), rome::target_is_expected>>::value,
         "");
+    return true;
 }
 
-constexpr void test_declaration_with_correct_signature() {
+constexpr bool test_supported_types_do_not_fail() {
     using rome::delegate;
     static_assert(!produces_expected_behavior_error<delegate<bool(int)>>, "");
-    static_assert(!produces_expected_behavior_error<delegate<bool(int), rome::target_is_expected>>, "");
-    static_assert(!produces_expected_behavior_error<delegate<bool(int), rome::target_is_mandatory>>, "");
+    static_assert(
+        !produces_expected_behavior_error<delegate<bool(int), rome::target_is_expected>>, "");
+    static_assert(
+        !produces_expected_behavior_error<delegate<bool(int), rome::target_is_mandatory>>, "");
     static_assert(!produces_expected_behavior_error<delegate<void(int)>>, "");
-    static_assert(!produces_expected_behavior_error<delegate<void(int), rome::target_is_expected>>, "");
-    static_assert(!produces_expected_behavior_error<delegate<void(int), rome::target_is_mandatory>>, "");
-    static_assert(!produces_expected_behavior_error<delegate<void(int), rome::target_is_optional>>, "");
+    static_assert(
+        !produces_expected_behavior_error<delegate<void(int), rome::target_is_expected>>, "");
+    static_assert(
+        !produces_expected_behavior_error<delegate<void(int), rome::target_is_mandatory>>, "");
+    static_assert(
+        !produces_expected_behavior_error<delegate<void(int), rome::target_is_optional>>, "");
+    return true;
 }
 
-constexpr void test_declaration_with_wrong_signature() {
+constexpr bool test_unsupported_types_do_fail() {
     using rome::delegate;
 
     // Uncomment the following lines to check the compile error message:
@@ -49,14 +56,16 @@ constexpr void test_declaration_with_wrong_signature() {
     // delegate<bool(int), int> d2{};
     // delegate<bool(int), rome::target_is_optional> d3{};
 
-    static_assert(produces_expected_behavior_error<delegate<bool(int), rome::target_is_optional>>, "");
+    static_assert(
+        produces_expected_behavior_error<delegate<bool(int), rome::target_is_optional>>, "");
     static_assert(produces_expected_behavior_error<delegate<void(int), int>>, "");
+    return true;
 }
 
-TEST_CASE("rome::delegate - declaration") {
-    test_default_template_params();
-    test_declaration_with_correct_signature();
-    test_declaration_with_wrong_signature();
+TEST_CASE("rome::delegate - template parameter 'ExpectedBehavior'") {
+    CHECK(test_default_type());
+    CHECK(test_supported_types_do_not_fail());
+    CHECK(test_unsupported_types_do_fail());
 }
 
 TEST_SUITE_END();
