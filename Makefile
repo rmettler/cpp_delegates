@@ -1,3 +1,12 @@
+#
+# Project: C++ delegates
+#
+# Copyright Roger Mettler 2019.
+# Distributed under the Boost Software License, Version 1.0.
+# (See accompanying file LICENSE or copy at
+# https://www.boost.org/LICENSE_1_0.txt)
+#
+
 COMPILER_KIT = CLANG
 
 CXX_GNU = g++
@@ -20,12 +29,12 @@ DEFINES =
 
 MAIN_SRC = test/test_main.cpp
 SRCS = \
-	test/delegate/test_delegate/test_delegate_base.cpp \
 	test/test_function_ptr.cpp \
 	test/test_bad_delegate_call.cpp \
 	test/delegate/test_delegate.cpp \
+	test/delegate/test_delegate/test_template_param_combinations.cpp \
 	test/delegate/test_delegate/test_template_param_ExpectedBehavior.cpp \
-	test/delegate/test_delegate/test_explicit_instantiations.cpp \
+	test/delegate/test_delegate/test_delegate_base.cpp \
 	test/delegate/test_delegate/test_create.cpp
 
 MAIN_OBJ = $(MAIN_SRC:%.cpp=$(BUILD_DIR)/%.o)

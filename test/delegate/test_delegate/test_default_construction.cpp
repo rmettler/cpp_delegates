@@ -19,24 +19,6 @@ namespace test_rome_delegate {
 TEST_SUITE_BEGIN("header file: rome/delegate.hpp");
 
 namespace {
-    // helpers to create a whole lot of function argument combinations of
-    // values, pointers, references and cv-modifiers
-    template<typename... T>
-    using add_ref = int(T..., T&..., T&&...);
-
-    template<typename... T>
-    using add_cv = add_ref<T..., T const..., T volatile..., T const volatile...>;
-
-    template<typename... T>
-    using add_ptr = add_cv<T..., T*..., T const*..., T volatile*..., T const volatile*...>;
-
-    template<typename... T>
-    using add_ptr_ptr = add_ptr<T..., T*..., T const*..., T volatile*..., T const volatile*...>;
-
-    template<typename... T>
-    using add_ptr_ptr_ptr =
-        add_ptr_ptr<T..., T*..., T const*..., T volatile*..., T const volatile*...>;
-
     template<typename Delegate>
     constexpr bool testDefaultConstruction() {
         static_assert(std::is_nothrow_default_constructible<Delegate>::value, "");
@@ -67,7 +49,8 @@ namespace {
             testDefaultConstruction<delegate_type<rome::target_is_optional>>();
             testDefaultConstruction<delegate_type<rome::target_is_expected>>();
             static_assert(
-                !std::is_default_constructible<delegate_type<rome::target_is_mandatory>>::value, "");
+                !std::is_default_constructible<delegate_type<rome::target_is_mandatory>>::value,
+                "");
             return true;
         }
     };
@@ -123,8 +106,6 @@ struct C {
 
 void test_default_construction() {
     test<void()>();
-    // TODO add all below again!
-    /*
     test_with_void_ret<void()>();
     test_with_void_ret<void(int)>();
     test_with_non_void_ret<int(void)>();
@@ -186,10 +167,6 @@ void test_default_construction() {
     using TFunctionPtr = int (*)(int);
     test_with_void_ret<void(TFunctionPtr)>();
     test_with_non_void_ret<TFunctionPtr(TFunctionPtr)>();
-
-    // for many different arguments
-    test_with_non_void_ret<add_ptr_ptr_ptr<C>>();
-    */
 }
 
 TEST_CASE("rome::delegate - default construction") {

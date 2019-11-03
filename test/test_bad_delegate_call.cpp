@@ -10,7 +10,6 @@
 #include <doctest.h>
 
 #include <rome/bad_delegate_call.hpp>
-#include <string>
 #include <type_traits>
 
 TEST_SUITE_BEGIN("header file: rome/bad_delegate_call.hpp");
@@ -22,15 +21,9 @@ TEST_CASE("rome::bad_delegate_call") {
     static_assert(std::is_nothrow_move_constructible<rome::bad_delegate_call>::value, "");
     static_assert(std::is_nothrow_move_assignable<rome::bad_delegate_call>::value, "");
     static_assert(std::is_nothrow_destructible<rome::bad_delegate_call>::value, "");
-
-    std::string exceptionString;
-    try {
-        throw rome::bad_delegate_call{};
-    }
-    catch (const std::exception& e) {
-        exceptionString = e.what();
-    }
-    CHECK("rome::bad_delegate_call" == exceptionString);
+    static_assert(std::is_base_of<std::exception, rome::bad_delegate_call>::value, "");
+    CHECK_THROWS_WITH_AS(
+        throw rome::bad_delegate_call{}, "rome::bad_delegate_call", rome::bad_delegate_call);
 }
 
 TEST_SUITE_END();  // rome/bad_delegate_call.hpp

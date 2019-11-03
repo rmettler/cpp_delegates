@@ -14,9 +14,6 @@
 
 TEST_SUITE_BEGIN("header file: rome/delegate.hpp");
 
-namespace test_rome_delegate {
-
-
 // rome::delegate::create
 //   - global function
 //   - static member function
@@ -40,6 +37,4 @@ namespace test_rome_delegate {
 //   - different signatures
 //   - TargetRequired = [default, true, false]
 
-}  // namespace test_rome_delegate
-
-TEST_SUITE_END();
+TEST_SUITE_END();  // rome/delegate.hpp

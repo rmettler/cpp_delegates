@@ -7,9 +7,12 @@
 // https://www.boost.org/LICENSE_1_0.txt)
 //
 
-#include <rome/delegate.hpp>
+#include <doctest.h>
 
-#include "checks.hpp"
+#include <rome/delegate.hpp>
+#include <type_traits>
+
+TEST_SUITE_BEGIN("header file: rome/delegate.hpp");
 
 template<typename TDelegate>
 constexpr bool produces_expected_behavior_error =
@@ -192,9 +195,39 @@ static_assert(produces_expected_behavior_error<
                   ::rome::delegate<TFunctionPtr(TFunctionPtr), rome::target_is_optional>>,
     "");
 
+namespace {
+// helpers to create a whole lot of function argument combinations of values, pointers, references
+// and cv-modifiers
+template<typename... T>
+using add_ref = int(T..., T&..., T&&...);
+
+template<typename... T>
+using add_cv = add_ref<T..., T const..., T volatile..., T const volatile...>;
+
+template<typename... T>
+using add_ptr = add_cv<T..., T*..., T const*..., T volatile*..., T const volatile*...>;
+
+template<typename... T>
+using add_ptr_ptr = add_ptr<T..., T*..., T const*..., T volatile*..., T const volatile*...>;
+
+template<typename... T>
+using add_ptr_ptr_ptr = add_ptr_ptr<T..., T*..., T const*..., T volatile*..., T const volatile*...>;
+}  // namespace
+using TSignature = add_ptr_ptr_ptr<C>;
+template class ::rome::delegate<void(TSignature), rome::target_is_expected>;
+template class ::rome::delegate<void(TSignature), rome::target_is_mandatory>;
+template class ::rome::delegate<void(TSignature), rome::target_is_optional>;
+template class ::rome::delegate<int(TSignature), rome::target_is_expected>;
+template class ::rome::delegate<int(TSignature), rome::target_is_mandatory>;
+static_assert(
+    produces_expected_behavior_error<::rome::delegate<int(TSignature), rome::target_is_optional>>,
+    "");
+
 TEST_CASE("rome::delegate - template parameter combinations") {
     CHECK_MESSAGE(
         true, "explicit template instantiations build with different possible type combinations");
     CHECK_MESSAGE(true, "templates of different types fail to instantiate if ExpectedBehavior is "
                         "rome::target_is_optional and the return type is not void");
 }
+
+TEST_SUITE_END();  // rome/delegate.hpp

@@ -7,12 +7,10 @@
 // https://www.boost.org/LICENSE_1_0.txt)
 //
 
+#include <doctest.h>
+
 #include <rome/delegate.hpp>
 #include <type_traits>
-
-#include "checks.hpp"
-
-namespace test_rome_delegate {
 
 TEST_SUITE_BEGIN("header file: rome/delegate.hpp");
 
@@ -68,6 +66,4 @@ TEST_CASE("rome::delegate - template parameter 'ExpectedBehavior'") {
     CHECK(test_unsupported_types_do_fail());
 }
 
-TEST_SUITE_END();
-
-}  // namespace test_rome_delegate
+TEST_SUITE_END();  // rome/delegate.hpp
