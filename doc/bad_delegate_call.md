@@ -41,7 +41,7 @@ class bad_delegate_call;
 
 int main() {
     try {
-        rome::delegate<void()> d;
+        rome::delegate<void(), rome::target_is_expected> d;
         d();
     }
     catch (const std::exception& e) {
