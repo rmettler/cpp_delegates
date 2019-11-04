@@ -19,47 +19,6 @@ namespace test_rome_delegate {
 TEST_SUITE_BEGIN("header file: rome/delegate.hpp");
 
 namespace {
-    template<typename Delegate>
-    constexpr bool testDefaultConstruction() {
-        static_assert(std::is_nothrow_default_constructible<Delegate>::value, "");
-        // TODO add tests
-        return true;
-    }
-
-    template<typename Signature>
-    struct tester;
-
-    template<typename Ret, typename... Args>
-    struct tester<Ret(Args...)> {
-        template<typename Character>
-        using delegate_type = rome::delegate<void(Args...), Character>;
-        static constexpr bool test() {
-            testDefaultConstruction<delegate_type<rome::target_is_optional>>();
-            testDefaultConstruction<delegate_type<rome::target_is_expected>>();
-            testDefaultConstruction<delegate_type<rome::target_is_mandatory>>();
-            return true;
-        }
-    };
-
-    template<typename... Args>
-    struct tester<void(Args...)> {
-        template<typename Character>
-        using delegate_type = rome::delegate<void(Args...), Character>;
-        static constexpr bool test() {
-            testDefaultConstruction<delegate_type<rome::target_is_optional>>();
-            testDefaultConstruction<delegate_type<rome::target_is_expected>>();
-            static_assert(
-                !std::is_default_constructible<delegate_type<rome::target_is_mandatory>>::value,
-                "");
-            return true;
-        }
-    };
-
-    template<typename Signature>
-    constexpr void test() {
-        static_assert(tester<Signature>::test(), "");
-    }
-
     template<typename Signature>
     void test_with_non_void_ret() {
         {
@@ -105,7 +64,6 @@ struct C {
 };
 
 void test_default_construction() {
-    test<void()>();
     test_with_void_ret<void()>();
     test_with_void_ret<void(int)>();
     test_with_non_void_ret<int(void)>();
