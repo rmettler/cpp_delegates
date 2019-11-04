@@ -1,25 +1,25 @@
 # **operator==,!=**(rome::delegate)
 
 ```cpp
-template<typename TgtReq, typename Ret, typename... Args>
+template<typename Ret, typename... Args, typename ExpectedBehavior>
 constexpr bool operator==(
-    const delegate<Ret(Args...),
-    TgtReq>& d, std::nullptr_t) noexcept; // (1)
+    const delegate<Ret(Args...), ExpectedBehavior>& d,
+    std::nullptr_t) noexcept;                                    // (1)
 
-template<typename TgtReq, typename Ret, typename... Args>
+template<typename Ret, typename... Args, typename ExpectedBehavior>
 constexpr bool operator==(
     std::nullptr_t,
-    const delegate<Ret(Args...), TgtReq>& d) noexcept; // (2)
+    const delegate<Ret(Args...), ExpectedBehavior>& d) noexcept; // (2)
 
-template<typename TgtReq, typename Ret, typename... Args>
+template<typename Ret, typename... Args, typename ExpectedBehavior>
 constexpr bool operator!=(
-    const delegate<Ret(Args...), TgtReq>& d,
-    std::nullptr_t) noexcept; // (3)
+    const delegate<Ret(Args...), ExpectedBehavior>& d,
+    std::nullptr_t) noexcept;                                    // (3)
 
-template<typename TgtReq, typename Ret, typename... Args>
+template<typename Ret, typename... Args, typename ExpectedBehavior>
 constexpr bool operator!=(
     std::nullptr_t,
-    const delegate<Ret(Args...), TgtReq>& d) noexcept; // (4)
+    const delegate<Ret(Args...), ExpectedBehavior>& d) noexcept; // (4)
 ```
 
 Compares a `rome::delegate` with null pointer.
@@ -31,9 +31,9 @@ Compares a `rome::delegate` with null pointer.
 ## Return value
 
 - **1, 2** -- Returns `true` if the `rome::delegate` is _empty_. Same as `!d`.  
-  Is alwas `true` if `TgtReq` == `rome::tgt_stat_req`.
+  Is alwas `true` if `ExpectedBehavior` == `rome::target_is_mandatory`.
 - **3, 4** -- Returns `true` if the `rome::delegate` is not _empty_. Same ase `static_cast<bool>(d)`.  
-  Is alwas `false` if `TgtReq` == `rome::tgt_stat_req`.
+  Is alwas `false` if `ExpectedBehavior` == `rome::target_is_mandatory`.
 
 ## Examples
 

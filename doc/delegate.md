@@ -42,7 +42,7 @@ The size of a `rome::delegate` is the size of an object pointer plus twice the s
     Compile error, if `Ret` != `void`.
   - `rome::target_is_mandatory`  
     Ensures by design that a `rome::delegate` cannot be _empty_. This has following consequences:
-    - Default constructor is deleted. A new instance of `rome::delegate` can only be created by using one of the factory functions [create](delegate/create.md) or [rome::make_delegate](delegate/make_delegate.md).
+    - Default constructor is deleted. A new instance of `rome::delegate` can only be created by using one of the factory functions [create](delegate/create.md).
     - Move construction and move assignment only accept delegates which are also declared with `rome::target_is_mandatory`.
     - There is no possibility to drop a currently assigned _target_, though it can be overridden by assigning a new _target_.
 
@@ -65,8 +65,6 @@ The size of a `rome::delegate` is the size of an object pointer plus twice the s
 
 ## Non-member functions
 
-- [rome::make_delegate](delegate/make_delegate.md)  
-  creates a new `rome::delegate` instance with given _target_ assigned
 - [rome::swap](delegate/swap2.md)  
   swaps the contents of two `rome::delegate` instances
 - [operator==, operator!=](delegate/operator_cmp_nullptr.md)  
