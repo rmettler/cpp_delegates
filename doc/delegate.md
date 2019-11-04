@@ -70,17 +70,6 @@ The size of a `rome::delegate` is the size of an object pointer plus twice the s
 - [operator==, operator!=](delegate/operator_cmp_nullptr.md)  
   compares `rome::delegate` with nullptr
 
-> **Comparision with `std::function`, TODO move this!**
->
-> - Similar declaration and usage as `std::function`.
-> - Trades a bit of usability for a more efficient implementation than `std::function`.  
->   > (TODO: reference a benchmark that shows that this is true for both  the libstdc++ and libc++ (when std::function uses SBO and when not)!)
-> - Already stores the object pointer for non-static member functions, so  no `std::bind` or additional lambda is needed.
-> - `rome::delegate` can be configured to ignore a call to an _empty_ > `rome::delegate`, where `std::function` always throws an exception.
-> - Size of `rome::delegate` is specified.  
-> - Definable behavior when calling an empty `rome::delegate`, `std::function` always throws an exception.
->   > (TODO: do this in tabular form listing the features)
-
 ## Example
 
 ```cpp
@@ -153,7 +142,3 @@ Console output:
   helper type to define a pointer to a non-static member function
 - [std::function](https://en.cppreference.com/w/cpp/utility/functional/function)  
   wraps callable object of any type with specified function call signature
-
-## TODO chapter for referencing cppreference.com
-
-> TODO: because description is heavily influenced by their description of std::function

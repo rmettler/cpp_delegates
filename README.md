@@ -90,13 +90,28 @@ valueChanged(42);
 - function_ref
 - https://github.com/LoopPerfect/smallfunction, https://hackernoon.com/experimenting-with-small-buffer-optimization-for-c-lambdas-d5b703fb47e4
 
+> **Comparision with `std::function`**
+>
+> - Similar declaration and usage as `std::function`.
+> - Trades a bit of usability for a more efficient implementation than `std::function`.  
+>   > (TODO: reference a benchmark that shows that this is true for both  the libstdc++ and libc++ (when std::function uses SBO and when not)!)
+> - Already stores the object pointer for non-static member functions, so  no `std::bind` or additional lambda is needed.
+> - `rome::delegate` can be configured to ignore a call to an _empty_ > `rome::delegate`, where `std::function` always throws an exception.
+> - Size of `rome::delegate` is specified.  
+> - Definable behavior when calling an empty `rome::delegate`, `std::function` always throws an exception.
+>   > (TODO: do this in tabular form listing the features)
+
 ## Thanks
 
-The basic delegate inspired by the approach Sergey Ryazanov describes in the article [_The Impossibly Fast C++ Delegates_][impossDelegates]. He explains how you can use the fact that the address of any function can be passed as non-type template argument to create highly optimizable function delegates.
+- The basic delegate is inspired by the approach Sergey Ryazanov describes in the article [_The Impossibly Fast C++ Delegates_][impossDelegates]. He explains how you can use the fact that the address of any function can be passed as non-type template argument to create highly optimizable function delegates.
+- The documentation of the delegates used parts of the documentation of [_std::function_][std_function] at cppreference.com.
+- Lee David helped finding more comprehensible names.
 
 ## References
 
 1. Ryazanov, Sergey. “The Impossibly Fast C++ Delegates.” [_The Impossibly Fast C++ Delegates_][impossDelegates], CodeProject, 18 July 2005, www.codeproject.com/Articles/11015/The-Impossibly-Fast-C-Delegates.
+2. Cppreference. [_std::function_][std_function], cppreference.com, 17 September 2019, https://en.cppreference.com/w/cpp/utility/functional/function, CC-BY-SA.
 
 [impossDelegates]: https://www.codeproject.com/Articles/11015/The-Impossibly-Fast-C-Delegates
 [rome_delegate_md]: doc/delegate.md
+[std_function]: https://en.cppreference.com/w/cpp/utility/functional/function
