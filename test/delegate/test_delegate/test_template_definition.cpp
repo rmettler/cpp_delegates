@@ -16,6 +16,66 @@ TEST_SUITE_BEGIN("header file: rome/delegate.hpp");
 
 namespace {
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-template"
+template<typename T, decltype(T{nullptr}, int{}) = 0,
+    std::enable_if_t<noexcept(std::declval<T>().operator=(nullptr)), int> = 0>
+constexpr std::true_type is_nothrow_nullptr_constructible_impl(int);
+
+template<typename T>
+constexpr std::false_type is_nothrow_nullptr_constructible_impl(...);
+
+// check whether T can be constructed with nullptr
+template<typename T>
+struct is_nothrow_nullptr_constructible
+    : decltype(is_nothrow_nullptr_constructible_impl<T>(int{})) {};
+
+template<typename T, T& (T::*)(std::nullptr_t) = (&T::operator=),
+    std::enable_if_t<noexcept(std::declval<T>().operator=(nullptr)), int> = 0>
+constexpr std::true_type is_nothrow_nullptr_assignable_impl(int);
+
+template<typename T>
+constexpr std::false_type is_nothrow_nullptr_assignable_impl(...);
+
+// check whether nullptr can be assigned to T
+template<typename T>
+struct is_nothrow_nullptr_assignable : decltype(is_nothrow_nullptr_assignable_impl<T>(int{})) {};
+
+template<typename T, decltype(static_cast<bool>(std::declval<T>())) = true,
+    std::enable_if_t<noexcept(static_cast<bool>(std::declval<T>())), int> = 0>
+constexpr std::true_type is_nothrow_bool_castable_impl(int);
+
+template<typename T>
+constexpr std::false_type is_nothrow_bool_castable_impl(...);
+
+// check whether T can be casted to bool or not
+template<typename T>
+struct is_nothrow_bool_castable : decltype(is_nothrow_bool_castable_impl<T>(int{})) {};
+
+template<typename T, void (T::*)(T&) = (&T::swap),
+    std::enable_if_t<noexcept(std::declval<T>().swap(std::declval<T&>())), int> = 0>
+constexpr std::true_type is_nothrow_swappable_impl(int);
+
+template<typename T>
+constexpr std::false_type is_nothrow_swappable_impl(...);
+
+// check whether T can be swapped with T
+template<typename T>
+struct is_nothrow_swappable : decltype(is_nothrow_swappable_impl<T>(int{})) {};
+
+template<typename T, typename Ret, typename... Args, Ret (T::*)(Args...) const = &T::operator()>
+constexpr std::true_type is_const_callable_with_impl(int);
+
+template<typename T, typename Ret, typename... Args>
+constexpr std::false_type is_const_callable_with_impl(...);
+
+// check whether T can be called with argument types Args... and return type Ret
+template<typename T, typename Ret, typename... Args>
+struct is_const_callable_with : decltype(is_const_callable_with_impl<T, Ret, Args...>(int{})) {};
+
+#pragma clang diagnostic pop
+
+// check whether a compile error would occur becaus ExpectedBehavior argument is not correct
 template<typename TDelegate>
 constexpr bool produces_expected_behavior_error =
     std::is_base_of<rome::detail::invalid_delegate_expected_behavior, TDelegate>::value;
@@ -26,15 +86,19 @@ struct tester;
 template<typename Ret, typename... Args>
 struct tester<Ret(Args...)> {
     static constexpr auto expectedSize = sizeof(void*) + 2 * sizeof(void (*)());
-    // TODO: explicitly test all functions that explicitly arent provided! (Synopsis)
     static constexpr bool testMandatory() {
         using delegate_type = rome::delegate<Ret(Args...), rome::target_is_mandatory>;
-        static_assert(std::is_nothrow_move_constructible<delegate_type>::value, "");
-        static_assert(std::is_nothrow_move_assignable<delegate_type>::value, "");
-        static_assert(std::is_nothrow_destructible<delegate_type>::value, "");
         static_assert(!std::is_default_constructible<delegate_type>::value, "");
         static_assert(!std::is_copy_constructible<delegate_type>::value, "");
         static_assert(!std::is_copy_assignable<delegate_type>::value, "");
+        static_assert(std::is_nothrow_move_constructible<delegate_type>::value, "");
+        static_assert(std::is_nothrow_move_assignable<delegate_type>::value, "");
+        static_assert(std::is_nothrow_destructible<delegate_type>::value, "");
+        static_assert(!is_nothrow_nullptr_constructible<delegate_type>::value, "");
+        static_assert(!is_nothrow_nullptr_assignable<delegate_type>::value, "");
+        static_assert(is_nothrow_bool_castable<delegate_type>::value, "");
+        static_assert(is_nothrow_swappable<delegate_type>::value, "");
+        static_assert(is_const_callable_with<delegate_type, Ret, Args...>::value, "");
         static_assert(!produces_expected_behavior_error<delegate_type>, "");
         static_assert(sizeof(delegate_type) <= expectedSize, "");
         return true;
@@ -42,11 +106,16 @@ struct tester<Ret(Args...)> {
     static constexpr bool testExpected() {
         using delegate_type = rome::delegate<Ret(Args...), rome::target_is_expected>;
         static_assert(std::is_nothrow_default_constructible<delegate_type>::value, "");
+        static_assert(!std::is_copy_constructible<delegate_type>::value, "");
+        static_assert(!std::is_copy_assignable<delegate_type>::value, "");
         static_assert(std::is_nothrow_move_constructible<delegate_type>::value, "");
         static_assert(std::is_nothrow_move_assignable<delegate_type>::value, "");
         static_assert(std::is_nothrow_destructible<delegate_type>::value, "");
-        static_assert(!std::is_copy_constructible<delegate_type>::value, "");
-        static_assert(!std::is_copy_assignable<delegate_type>::value, "");
+        static_assert(is_nothrow_nullptr_constructible<delegate_type>::value, "");
+        static_assert(is_nothrow_nullptr_assignable<delegate_type>::value, "");
+        static_assert(is_nothrow_bool_castable<delegate_type>::value, "");
+        static_assert(is_nothrow_swappable<delegate_type>::value, "");
+        static_assert(is_const_callable_with<delegate_type, Ret, Args...>::value, "");
         static_assert(!produces_expected_behavior_error<delegate_type>, "");
         static_assert(sizeof(delegate_type) <= expectedSize, "");
         return true;
@@ -55,11 +124,16 @@ struct tester<Ret(Args...)> {
     static constexpr bool testOptional() {
         using delegate_type = rome::delegate<Ret(Args...), rome::target_is_optional>;
         static_assert(std::is_nothrow_default_constructible<delegate_type>::value, "");
+        static_assert(!std::is_copy_constructible<delegate_type>::value, "");
+        static_assert(!std::is_copy_assignable<delegate_type>::value, "");
         static_assert(std::is_nothrow_move_constructible<delegate_type>::value, "");
         static_assert(std::is_nothrow_move_assignable<delegate_type>::value, "");
         static_assert(std::is_nothrow_destructible<delegate_type>::value, "");
-        static_assert(!std::is_copy_constructible<delegate_type>::value, "");
-        static_assert(!std::is_copy_assignable<delegate_type>::value, "");
+        static_assert(is_nothrow_nullptr_constructible<delegate_type>::value, "");
+        static_assert(is_nothrow_nullptr_assignable<delegate_type>::value, "");
+        static_assert(is_nothrow_bool_castable<delegate_type>::value, "");
+        static_assert(is_nothrow_swappable<delegate_type>::value, "");
+        static_assert(is_const_callable_with<delegate_type, Ret, Args...>::value, "");
         static_assert(!produces_expected_behavior_error<delegate_type>, "");
         static_assert(sizeof(delegate_type) <= expectedSize, "");
         return true;
@@ -200,7 +274,11 @@ TEST_CASE("rome::delegate - template parameter combinations") {
     CHECK_MESSAGE(true, "check move constructor");
     CHECK_MESSAGE(true, "check move assignment");
     CHECK_MESSAGE(true, "check destructor");
-    CHECK_MESSAGE(false, "TODO test other functions which should be explicitly deleted or be available!");
+    CHECK_MESSAGE(true, "check construction from nullptr");
+    CHECK_MESSAGE(true, "check assigning a nullptr");
+    CHECK_MESSAGE(true, "check casting to bool");
+    CHECK_MESSAGE(true, "check swapping");
+    CHECK_MESSAGE(true, "check calling with arguments");
 }
 
 TEST_SUITE_END();  // rome/delegate.hpp

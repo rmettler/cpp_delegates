@@ -101,6 +101,8 @@ class delegate<Ret(Args...), ExpectedBehavior>
         return false;
     }
 
+    void swap(delegate&) noexcept {}
+
     // TODO: dieser operator macht keinen Sinn mehr, da vergleich wegen Heap pointer nicht
     //       mehr sauber möglich ist und vergleichen ohne kopieren zu können witzlos ist.
     constexpr bool operator==(const delegate&) {
