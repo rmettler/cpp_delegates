@@ -94,25 +94,11 @@ class delegate<Ret(Args...), ExpectedBehavior>
     }
 
     constexpr operator bool() const noexcept {
-        return !!(*this);
-    }
-    constexpr bool operator!() const noexcept {
         // TODO: update this and check target_t! (depending on default)
         return false;
     }
 
     void swap(delegate&) noexcept {}
-
-    // TODO: dieser operator macht keinen Sinn mehr, da vergleich wegen Heap pointer nicht
-    //       mehr sauber möglich ist und vergleichen ohne kopieren zu können witzlos ist.
-    constexpr bool operator==(const delegate&) {
-        // TODO target_ == rhs.target_
-        return false;
-    }
-
-    constexpr bool operator!=(const delegate& rhs) {
-        return !(*this == rhs);
-    }
 
     inline Ret operator()(Args... args) const {
         return (*callee_)(obj_, std::forward<Args>(args)...);
