@@ -43,7 +43,6 @@ The size of a `rome::delegate` is the size of an object pointer plus twice the s
   - `rome::target_is_mandatory`  
     Ensures by design that a `rome::delegate` cannot be _empty_. This has following consequences:
     - Default constructor is deleted. A new instance of `rome::delegate` can only be created by using one of the factory functions [create](delegate/create.md).
-    - Move construction and move assignment only accept delegates which are also declared with `rome::target_is_mandatory`.
     - There is no possibility to drop a currently assigned _target_, though it can be overridden by assigning a new _target_.
 
 ## Member functions

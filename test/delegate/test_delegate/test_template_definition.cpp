@@ -277,7 +277,7 @@ TEST_CASE("rome::delegate - template parameter combinations") {
     CHECK_MESSAGE(true, "check construction from nullptr");
     CHECK_MESSAGE(true, "check assigning a nullptr");
     CHECK_MESSAGE(true, "check casting to bool");
-    CHECK_MESSAGE(true, "check swapping");
+    CHECK_MESSAGE(true, "check swapping with another delegate");
     CHECK_MESSAGE(true, "check calling with arguments");
 }
 

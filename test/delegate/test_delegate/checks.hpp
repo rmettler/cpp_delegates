@@ -18,18 +18,18 @@
 #define ROME_DELEGATE_CHECK_EMPTY(dgt)                                                             \
     static_assert((dgt) == nullptr, "");                                                           \
     static_assert(nullptr == (dgt), "");                                                           \
-    static_assert(!((dgt) != nullptr));                                                            \
-    static_assert(!(nullptr != (dgt)));                                                            \
-    static_assert(!static_cast<bool>(dgt));                                                        \
-    static_assert(!(dgt));
+    static_assert(!((dgt) != nullptr), "");                                                        \
+    static_assert(!(nullptr != (dgt)), "");                                                        \
+    static_assert(!static_cast<bool>(dgt), "");                                                    \
+    static_assert(!(dgt), "");
 
 #define ROME_DELEGATE_CHECK_NOT_EMPTY(dgt)                                                         \
-    CHECK(dgt != nullptr);                                                                         \
-    static_assert(nullptr != (dgt));                                                               \
-    static_assert(!((dgt) == nullptr));                                                            \
-    static_assert(!(nullptr == (dgt)));                                                            \
-    static_assert(static_cast<bool>(dgt));                                                         \
-    static_assert(!!(dgt));
+    static_assert((dgt) != nullptr, "");                                                           \
+    static_assert(nullptr != (dgt), "");                                                           \
+    static_assert(!((dgt) == nullptr), "");                                                        \
+    static_assert(!(nullptr == (dgt)), "");                                                        \
+    static_assert(static_cast<bool>(dgt), "");                                                     \
+    static_assert(!!(dgt), "");
 
 namespace test_rome_delegate {
 

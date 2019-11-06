@@ -11,7 +11,7 @@ struct CommandProcessor {
     rome::delegate<void(const std::vector<int>&), rome::target_is_mandatory> onAddCommandRead;
     rome::delegate<void(const std::vector<int>&), rome::target_is_expected> onSubtractCommandRead;
     rome::delegate<void(const std::vector<int>&), rome::target_is_optional> onProductCommandRead;
-    void processCommand(const std::string& line) {
+    void processCommand(const std::string& line) const {
         std::istringstream iss{line.substr(2)};
         const std::vector<int> args{std::istream_iterator<int>{iss}, std::istream_iterator<int>{}};
         if ('+' == line.at(0)) {
@@ -30,13 +30,13 @@ struct CommandProcessor {
 };
 
 int main() {
-    CommandProcessor cp{decltype(cp.onAddCommandRead)::create([](const std::vector<int>& args) {
+    const CommandProcessor cp{decltype(cp.onAddCommandRead)::create([](const std::vector<int>& args) {
         const auto result = std::accumulate(args.begin(), args.end(), 0);
         std::cout << "sum = " << result << '\n';
     })};
-    std::string cmd1{"+ 1 2 3"};
-    std::string cmd2{"- 1 2 3"};
-    std::string cmd3{"* 1 2 3"};
+    const std::string cmd1{"+ 1 2 3"};
+    const std::string cmd2{"- 1 2 3"};
+    const std::string cmd3{"* 1 2 3"};
     std::cout << "cmd1:" << '\n';
     cp.processCommand(cmd1);  // calls the delegate mandatory to be passed during construction
     try {
