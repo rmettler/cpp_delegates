@@ -83,9 +83,9 @@ The size of a `rome::delegate` is the size of an object pointer plus twice the s
 
 struct CommandProcessor {
     rome::delegate<void(const std::vector<int>&), rome::target_is_mandatory> onAddCommandRead;
-    rome::delegate<void(const std::vector<int>&), rome::target_is_expected> onSubtractCommandRead;
-    rome::delegate<void(const std::vector<int>&), rome::target_is_optional> onProductCommandRead;
-    void processCommand(const std::string& line) {
+    rome::delegate<void(const std::vector<int>&), rome::target_is_expected>  onSubtractCommandRead;
+    rome::delegate<void(const std::string&),      rome::target_is_optional>  onParseError;
+    void processCommand(const std::string& line) const {
         std::istringstream iss{line.substr(2)};
         const std::vector<int> args{std::istream_iterator<int>{iss}, std::istream_iterator<int>{}};
         if ('+' == line.at(0)) {
@@ -94,23 +94,23 @@ struct CommandProcessor {
         else if ('-' == line.at(0)) {
             onSubtractCommandRead(args);
         }
-        else if ('*' == line.at(0)) {
-            onProductCommandRead(args);
+        else {
+            onParseError(line);
         }
     }
-    CommandProcessor(rome::delegate<void(const std::vector<int>&), rome::target_is_mandatory>&& dgt)
+    CommandProcessor(decltype(onAddCommandRead)&& dgt)
         : onAddCommandRead{std::move(dgt)} {
     }
 };
 
 int main() {
-    CommandProcessor cp{decltype(cp.onAddCommandRead)::create([](const std::vector<int>& args) {
+    const CommandProcessor cp{decltype(cp.onAddCommandRead)::create([](const std::vector<int>& args) {
         const auto result = std::accumulate(args.begin(), args.end(), 0);
         std::cout << "sum = " << result << '\n';
     })};
-    std::string cmd1{"+ 1 2 3"};
-    std::string cmd2{"- 1 2 3"};
-    std::string cmd3{"* 1 2 3"};
+    const std::string cmd1{"+ 1 2 3"};
+    const std::string cmd2{"- 1 2 3"};
+    const std::string cmd3{"error"};
     std::cout << "cmd1:" << '\n';
     cp.processCommand(cmd1);  // calls the delegate mandatory to be passed during construction
     try {
@@ -121,7 +121,7 @@ int main() {
         std::cout << ex.what() << '\n';
     }
     std::cout << "cmd3:" << '\n';
-    cp.processCommand(cmd3);  // calls optional and unassigned delegate
+    cp.processCommand(cmd3);  // calls unassigned optional delegate
 }
 ```
 
