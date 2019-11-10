@@ -95,7 +95,7 @@ class delegate<Ret(Args...), ExpectedBehavior>
 
     constexpr operator bool() const noexcept {
         // TODO: update this and check target_t! (depending on default)
-        return false;
+        return callee_ != null_callee;
     }
 
     void swap(delegate&) noexcept {}
@@ -106,26 +106,17 @@ class delegate<Ret(Args...), ExpectedBehavior>
 
     template<Ret (*pFunction)(Args...)>
     static constexpr delegate create() {
-        delegate d;
-        d.obj_    = nullptr;
-        d.callee_ = &function_call<pFunction>;
-        return d;
+        return delegate{nullptr, &function_call<pFunction>};
     }
 
     template<typename C, Ret (C::*pMethod)(Args...)>
-    static constexpr delegate create(C& obj) {
-        delegate d;
-        d.obj_    = &obj;
-        d.callee_ = &method_call<C, pMethod>;
-        return d;
+    static delegate create(C& obj) {
+        return delegate{&obj, &method_call<C, pMethod>};
     }
 
     template<typename C, Ret (C::*pMethod)(Args...) const>
-    static constexpr delegate create(const C& obj) {
-        delegate d;
-        d.obj_    = const_cast<C*>(&obj);
-        d.callee_ = &const_method_call<C, pMethod>;
-        return d;
+    static delegate create(const C& obj) {
+        return delegate{const_cast<C*>(&obj), &const_method_call<C, pMethod>};
     }
 
     template<typename T>

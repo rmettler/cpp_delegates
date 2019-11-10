@@ -14,7 +14,7 @@ CXXFLAGS_GNU = -std=c++14 -Wall -Werror -Wextra -pedantic -O3
 LDFLAGS_GNU = 
 
 CXX_CLANG = clang++
-CXXFLAGS_CLANG = -std=c++14 -O3 -Weverything -Wno-c++98-compat -Wno-padded -Wno-missing-prototypes -Wno-weak-vtables
+CXXFLAGS_CLANG = -std=c++14 -O3 -Weverything -Wno-c++98-compat -Wno-missing-prototypes -Wno-weak-vtables
 LDFLAGS_CLANG = 
 
 CXX = $(CXX_$(COMPILER_KIT))
@@ -34,9 +34,9 @@ SRCS = \
 	test/delegate/test_delegate.cpp \
 	test/delegate/test_delegate/test_template_definition.cpp \
 	test/delegate/test_delegate/test_template_param_ExpectedBehavior.cpp \
-	test/delegate/test_delegate/test_default_construction.cpp \
+	test/delegate/test_delegate/test_create.cpp \
+	test/delegate/test_delegate/test_construction.cpp \
 	test/delegate/test_delegate/test_delegate_base.cpp \
-	#test/delegate/test_delegate/test_create.cpp
 
 MAIN_OBJ = $(MAIN_SRC:%.cpp=$(BUILD_DIR)/%.o)
 OBJS = $(SRCS:%.cpp=$(BUILD_DIR)/%.o)
