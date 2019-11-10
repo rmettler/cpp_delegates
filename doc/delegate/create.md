@@ -2,20 +2,20 @@
 
 ```cpp
 template<Ret (*pTarget)(Args...)>
-static constexpr delegate create() noexcept;             // (1)
+static constexpr delegate create() noexcept;        // (1)
 
 template<typename C, Ret (C::*pTarget)(Args...)>
-static constexpr delegate create(C& obj) noexcept;       // (2)
+static delegate create(C& obj) noexcept;            // (2)
 
 template<typename C, Ret (C::*pTarget)(Args...) const>
-static constexpr delegate create(const C& obj) noexcept; // (3)
+static delegate create(const C& obj) noexcept;      // (3)
 
 template<typename T>
 static delegate create(T target) noexcept(
-    std::is_nothrow_move_constructible<T>::value);       // (4)
+    std::is_nothrow_move_constructible<T>::value);  // (4)
 
 template<typename T>
-static delegate create(T target);                        // (5)
+static delegate create(T target);                   // (5)
 ```
 
 Factory method which creates a `rome::delegate` instance from a variety of _target_ sources. The passed _target_ must be callable with the argument types `Args...` and return type `Ret`.

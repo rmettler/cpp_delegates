@@ -105,27 +105,27 @@ class delegate<Ret(Args...), ExpectedBehavior>
     }
 
     template<Ret (*pFunction)(Args...)>
-    static constexpr delegate create() {
+    static constexpr delegate create() noexcept {
         return delegate{nullptr, &function_call<pFunction>};
     }
 
     template<typename C, Ret (C::*pMethod)(Args...)>
-    static delegate create(C& obj) {
+    static delegate create(C& obj) noexcept {
         return delegate{&obj, &method_call<C, pMethod>};
     }
 
     template<typename C, Ret (C::*pMethod)(Args...) const>
-    static delegate create(const C& obj) {
+    static delegate create(const C& obj) noexcept {
         return delegate{const_cast<C*>(&obj), &const_method_call<C, pMethod>};
     }
 
     template<typename T>
-    static constexpr delegate create(T& functor) {
+    static constexpr delegate create(T& functor) noexcept {
         return delegate{&functor, &functor_call<T>};
     }
 
     template<typename T>
-    static constexpr delegate create(const T& functor) {
+    static constexpr delegate create(const T& functor) noexcept {
         return delegate{const_cast<T*>(&functor), &const_functor_call<T>};
     }
 

@@ -7,7 +7,6 @@
 // https://www.boost.org/LICENSE_1_0.txt)
 //
 
-
 #include <doctest.h>
 
 #include <rome/delegate.hpp>
@@ -16,25 +15,156 @@
 #include "checks.hpp"
 #include "mocks.hpp"
 
-namespace test_rome_delegate {
-
 TEST_SUITE_BEGIN("header file: rome/delegate.hpp");
 
-TEST_CASE("rome::delegate - create") {
-    using rome::delegate;
-    using signature_type       = bool(int);
-    using mock_type            = FunctionMock<signature_type>;
-    mock_type::behavior        = [](int i) { return i > 0; };
-    const auto& performedCalls = mock_type::init();
-    auto expectedCalls         = performedCalls;
-    auto d = delegate<signature_type>::create<&FunctionMock<signature_type>::mockedCall>();
-    test_rome_delegate::checkNotEmpty(d);
-    CHECK(d(1) == true);
-    CHECK(d(-1) == false);
-    expectedCalls += 2;
-    CHECK(performedCalls == expectedCalls);
+TYPE_TO_STRING(rome::target_is_mandatory);
+TYPE_TO_STRING(rome::target_is_expected);
+TYPE_TO_STRING(rome::target_is_optional);
+
+TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TExpectedBehavior,
+    rome::target_is_mandatory, rome::target_is_expected, rome::target_is_optional) {
+    using TSignature  = void(int);
+    using TDelegate   = rome::delegate<TSignature, TExpectedBehavior>;
+    auto callBehavior = [](int) {};
+    SUBCASE("create from funciton") {
+        using TMock                = test_rome_delegate::FunctionMock<TSignature>;
+        TMock::behavior            = callBehavior;
+        const auto& performedCalls = TMock::init();
+        auto expectedCalls         = performedCalls;
+
+        static_assert(noexcept(TDelegate::template create<&TMock::mockedCall>()), "");
+        SUBCASE("as non constexpr delegate") {
+            auto dgt = TDelegate::template create<&TMock::mockedCall>();
+            test_rome_delegate::checkNotEmpty(dgt);
+            dgt(0);
+            expectedCalls = 1;
+            CHECK(expectedCalls == performedCalls);
+        }
+        SUBCASE("as constexpr delegate") {
+            constexpr auto dgt = TDelegate::template create<&TMock::mockedCall>();
+            ROME_DELEGATE_CHECK_NOT_EMPTY(dgt);
+            dgt(0);
+            expectedCalls = 1;
+            CHECK(expectedCalls == performedCalls);
+        }
+    }
+    SUBCASE("create from non-const method") {
+        using TMock                = test_rome_delegate::MethodMock<TSignature>;
+        TMock::behavior            = callBehavior;
+        const auto& performedCalls = TMock::init();
+        auto expectedCalls         = performedCalls;
+        TMock mock;
+
+        static_assert(noexcept(TDelegate::template create<TMock, &TMock::mockedCall>(mock)), "");
+        auto dgt = TDelegate::template create<TMock, &TMock::mockedCall>(mock);
+        test_rome_delegate::checkNotEmpty(dgt);
+        dgt(0);
+        expectedCalls = 1;
+        CHECK(expectedCalls == performedCalls);
+    }
+    SUBCASE("create from const method") {
+        using TMock                = test_rome_delegate::ConstMethodMock<TSignature>;
+        TMock::behavior            = callBehavior;
+        const auto& performedCalls = TMock::init();
+        auto expectedCalls         = performedCalls;
+        const TMock mock;
+
+        static_assert(noexcept(TDelegate::template create<TMock, &TMock::mockedCall>(mock)), "");
+        auto dgt = TDelegate::template create<TMock, &TMock::mockedCall>(mock);
+        test_rome_delegate::checkNotEmpty(dgt);
+        dgt(0);
+        expectedCalls = 1;
+        CHECK(expectedCalls == performedCalls);
+    }
+    SUBCASE("create from function object") {
+        using TMock                = test_rome_delegate::SmallFunctorMock<TSignature>;
+        TMock::behavior            = callBehavior;
+        const auto& performedCalls = TMock::init();
+        auto expectedCalls         = performedCalls;
+        TMock mock;
+        expectedCalls.defaultConstruction = 1;
+
+        static_assert(noexcept(TDelegate::create(mock)), "");
+        auto dgt                       = TDelegate::create(mock);
+        expectedCalls.moveConstruction = 1;
+        test_rome_delegate::checkNotEmpty(dgt);
+        dgt(0);
+        expectedCalls.callOperator = 1;
+        CHECK(expectedCalls == performedCalls);
+    }
+}
+
+TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TExpectedBehavior,
+    rome::target_is_mandatory, rome::target_is_expected) {
+    using TSignature  = bool(int);
+    using TDelegate   = rome::delegate<TSignature, TExpectedBehavior>;
+    auto callBehavior = [](int i) { return i > 0; };
+    SUBCASE("create from funciton") {
+        using TMock                = test_rome_delegate::FunctionMock<TSignature>;
+        TMock::behavior            = callBehavior;
+        const auto& performedCalls = TMock::init();
+        auto expectedCalls         = performedCalls;
+        SUBCASE("as non constexpr delegate") {
+            auto dgt = TDelegate::template create<&TMock::mockedCall>();
+            test_rome_delegate::checkNotEmpty(dgt);
+            CHECK(dgt(1) == true);
+            CHECK(dgt(-1) == false);
+            expectedCalls = 2;
+            CHECK(expectedCalls == performedCalls);
+        }
+        SUBCASE("as constexpr delegate") {
+            constexpr auto dgt = TDelegate::template create<&TMock::mockedCall>();
+            ROME_DELEGATE_CHECK_NOT_EMPTY(dgt);
+            CHECK(dgt(1) == true);
+            CHECK(dgt(-1) == false);
+            expectedCalls = 2;
+            CHECK(expectedCalls == performedCalls);
+        }
+    }
+    SUBCASE("create from non-const method") {
+        using TMock                = test_rome_delegate::MethodMock<TSignature>;
+        TMock::behavior            = callBehavior;
+        const auto& performedCalls = TMock::init();
+        auto expectedCalls         = performedCalls;
+        TMock mock;
+
+        auto dgt = TDelegate::template create<TMock, &TMock::mockedCall>(mock);
+        test_rome_delegate::checkNotEmpty(dgt);
+        CHECK(dgt(1) == true);
+        CHECK(dgt(-1) == false);
+        expectedCalls = 2;
+        CHECK(expectedCalls == performedCalls);
+    }
+    SUBCASE("create from const method") {
+        using TMock                = test_rome_delegate::ConstMethodMock<TSignature>;
+        TMock::behavior            = callBehavior;
+        const auto& performedCalls = TMock::init();
+        auto expectedCalls         = performedCalls;
+        const TMock mock;
+
+        auto dgt = TDelegate::template create<TMock, &TMock::mockedCall>(mock);
+        test_rome_delegate::checkNotEmpty(dgt);
+        CHECK(dgt(1) == true);
+        CHECK(dgt(-1) == false);
+        expectedCalls = 2;
+        CHECK(expectedCalls == performedCalls);
+    }
+    SUBCASE("create from function object") {
+        using TMock                = test_rome_delegate::SmallFunctorMock<TSignature>;
+        TMock::behavior            = callBehavior;
+        const auto& performedCalls = TMock::init();
+        auto expectedCalls         = performedCalls;
+        TMock mock;
+        expectedCalls.defaultConstruction = 1;
+
+        auto dgt                       = TDelegate::create(mock);
+        expectedCalls.moveConstruction = 1;
+        test_rome_delegate::checkNotEmpty(dgt);
+        CHECK(dgt(1) == true);
+        CHECK(dgt(-1) == false);
+        expectedCalls.callOperator = 2;
+        CHECK(expectedCalls == performedCalls);
+    }
 }
 
 TEST_SUITE_END();
-
-}  // namespace test_rome_delegate
