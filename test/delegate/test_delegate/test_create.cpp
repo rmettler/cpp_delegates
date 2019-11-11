@@ -76,7 +76,7 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TE
         expectedCalls = 1;
         CHECK(expectedCalls == performedCalls);
     }
-    SUBCASE("create from function object") {
+    SUBCASE("create from small buffer optimizable functor") {
         using TMock                = test_rome_delegate::SmallFunctorMock<TSignature>;
         TMock::behavior            = callBehavior;
         const auto& performedCalls = TMock::init();
@@ -87,6 +87,43 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TE
         static_assert(noexcept(TDelegate::create(mock)), "");
         auto dgt                       = TDelegate::create(mock);
         expectedCalls.moveConstruction = 1;
+        CHECK(expectedCalls == performedCalls);
+        test_rome_delegate::checkNotEmpty(dgt);
+        dgt(0);
+        expectedCalls.callOperator = 1;
+        CHECK(expectedCalls == performedCalls);
+    }
+    SUBCASE("create from too big functor for small buffer optimization") {
+        using TMock                = test_rome_delegate::BiggerFunctorMock<TSignature>;
+        TMock::behavior            = callBehavior;
+        const auto& performedCalls = TMock::init();
+        auto expectedCalls         = performedCalls;
+        TMock mock;
+        expectedCalls.defaultConstruction = 1;
+
+        static_assert(noexcept(TDelegate::create(mock)), "");
+        auto dgt                       = TDelegate::create(mock);
+        expectedCalls.newOperator      = 1;
+        expectedCalls.moveConstruction = 1;
+        CHECK(expectedCalls == performedCalls);
+        test_rome_delegate::checkNotEmpty(dgt);
+        dgt(0);
+        expectedCalls.callOperator = 1;
+        CHECK(expectedCalls == performedCalls);
+    }
+    SUBCASE("create from too badly aligned functor for small buffer optimization") {
+        using TMock                = test_rome_delegate::BiggerFunctorMock<TSignature>;
+        TMock::behavior            = callBehavior;
+        const auto& performedCalls = TMock::init();
+        auto expectedCalls         = performedCalls;
+        TMock mock;
+        expectedCalls.defaultConstruction = 1;
+
+        static_assert(noexcept(TDelegate::create(mock)), "");
+        auto dgt                       = TDelegate::create(mock);
+        expectedCalls.newOperator      = 1;
+        expectedCalls.moveConstruction = 1;
+        CHECK(expectedCalls == performedCalls);
         test_rome_delegate::checkNotEmpty(dgt);
         dgt(0);
         expectedCalls.callOperator = 1;
@@ -149,7 +186,7 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TE
         expectedCalls = 2;
         CHECK(expectedCalls == performedCalls);
     }
-    SUBCASE("create from function object") {
+    SUBCASE("create from small buffer optimizable functor") {
         using TMock                = test_rome_delegate::SmallFunctorMock<TSignature>;
         TMock::behavior            = callBehavior;
         const auto& performedCalls = TMock::init();
@@ -159,6 +196,45 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TE
 
         auto dgt                       = TDelegate::create(mock);
         expectedCalls.moveConstruction = 1;
+        CHECK(expectedCalls == performedCalls);
+        test_rome_delegate::checkNotEmpty(dgt);
+        CHECK(dgt(1) == true);
+        CHECK(dgt(-1) == false);
+        expectedCalls.callOperator = 2;
+        CHECK(expectedCalls == performedCalls);
+    }
+    SUBCASE("create from too big functor for small buffer optimization") {
+        using TMock                = test_rome_delegate::BiggerFunctorMock<TSignature>;
+        TMock::behavior            = callBehavior;
+        const auto& performedCalls = TMock::init();
+        auto expectedCalls         = performedCalls;
+        TMock mock;
+        expectedCalls.defaultConstruction = 1;
+
+        static_assert(noexcept(TDelegate::create(mock)), "");
+        auto dgt                       = TDelegate::create(mock);
+        expectedCalls.newOperator      = 1;
+        expectedCalls.moveConstruction = 1;
+        CHECK(expectedCalls == performedCalls);
+        test_rome_delegate::checkNotEmpty(dgt);
+        CHECK(dgt(1) == true);
+        CHECK(dgt(-1) == false);
+        expectedCalls.callOperator = 2;
+        CHECK(expectedCalls == performedCalls);
+    }
+    SUBCASE("create from too badly aligned functor for small buffer optimization") {
+        using TMock                = test_rome_delegate::BiggerFunctorMock<TSignature>;
+        TMock::behavior            = callBehavior;
+        const auto& performedCalls = TMock::init();
+        auto expectedCalls         = performedCalls;
+        TMock mock;
+        expectedCalls.defaultConstruction = 1;
+
+        static_assert(noexcept(TDelegate::create(mock)), "");
+        auto dgt                       = TDelegate::create(mock);
+        expectedCalls.newOperator      = 1;
+        expectedCalls.moveConstruction = 1;
+        CHECK(expectedCalls == performedCalls);
         test_rome_delegate::checkNotEmpty(dgt);
         CHECK(dgt(1) == true);
         CHECK(dgt(-1) == false);
