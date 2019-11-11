@@ -138,7 +138,8 @@ namespace detail {
             // buffer.
             template<typename Invokable,
                 std::enable_if_t<isSmallBufferOptimizable<Invokable>(), int> = 0>
-            static delegate_base create(Invokable invokable) {
+            static delegate_base create(Invokable invokable) noexcept(
+                std::is_nothrow_move_constructible<Invokable>::value) {
                 // Reason for using const_cast here:
                 // The functor needs be able to change its own members. Here, the functor and
                 // its members are embedded in delegate_base::buffer_ using small buffer

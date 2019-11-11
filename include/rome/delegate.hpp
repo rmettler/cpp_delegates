@@ -98,7 +98,8 @@ class delegate<Ret(Args...), ExpectedBehavior>
         return callee_ != null_callee;
     }
 
-    void swap(delegate&) noexcept {}
+    void swap(delegate&) noexcept {
+    }
 
     inline Ret operator()(Args... args) const {
         return (*callee_)(obj_, std::forward<Args>(args)...);
@@ -120,12 +121,14 @@ class delegate<Ret(Args...), ExpectedBehavior>
     }
 
     template<typename T>
-    static constexpr delegate create(T& functor) noexcept {
+    static constexpr delegate create(T& functor) noexcept(
+        std::is_nothrow_move_constructible<T>::value) {
         return delegate{&functor, &functor_call<T>};
     }
 
     template<typename T>
-    static constexpr delegate create(const T& functor) noexcept {
+    static constexpr delegate create(const T& functor) noexcept(
+        std::is_nothrow_move_constructible<T>::value) {
         return delegate{const_cast<T*>(&functor), &const_functor_call<T>};
     }
 

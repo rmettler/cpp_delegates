@@ -25,7 +25,7 @@ Factory method which creates a `rome::delegate` instance from a variety of _targ
 - **3** -- Initializes the _target_ with a const, non-static member function and its object's reference.
 - **4** -- Initializes the _target_ with `std::move(target)` and stores it in the local buffer of the `rome::delegate` instance.  
   The _target_ needs to be invokable using `target.operator()(args...)`.  
-  Is used if `sizeof(T) <= sizeof(void*)` and `alignof(T) <= sizeof(void*)`.
+  Is used if `sizeof(T) <= sizeof(void*)`, `alignof(T) <= alignof(void*)` and `alignof(T) <= sizeof(void*)`.
 - **5** -- Allocates new memory for the _target_ on the heap and initializes it with `std::move(target)`.  
   The _target_ needs to be invokable using `target.operator()(args...)`.  
   Is used instead of **4** if `sizeof(T) > sizeof(void*)` or `alignof(T) > alignof(void*)` or `alignof(T) > sizeof(void*)`.

@@ -134,35 +134,35 @@ class SmallFunctorMock<Ret(Args...), N> : public detail::MockBase<SmallFunctorMo
 
   public:
     // Mocked functions from here!
-    SmallFunctorMock() {
+    SmallFunctorMock() noexcept {
         ++base::performedCalls.defaultConstruction;
     }
-    ~SmallFunctorMock() {
+    ~SmallFunctorMock() noexcept {
         ++base::performedCalls.destruction;
     }
-    SmallFunctorMock(const SmallFunctorMock&) {
+    SmallFunctorMock(const SmallFunctorMock&) noexcept {
         ++base::performedCalls.copyConstruction;
     }
-    SmallFunctorMock(SmallFunctorMock&&) {
+    SmallFunctorMock(SmallFunctorMock&&) noexcept {
         ++base::performedCalls.moveConstruction;
     }
-    SmallFunctorMock& operator=(const SmallFunctorMock&) {
+    SmallFunctorMock& operator=(const SmallFunctorMock&) noexcept {
         ++base::performedCalls.copyAssignment;
         return *this;
     }
-    SmallFunctorMock& operator=(SmallFunctorMock&&) {
+    SmallFunctorMock& operator=(SmallFunctorMock&&) noexcept {
         ++base::performedCalls.moveAssignment;
         return *this;
     }
-    Ret operator()(Args... args) {
+    Ret operator()(Args... args) noexcept {
         ++base::performedCalls.callOperator;
         return (*base::behavior)(std::forward<Args>(args)...);
     }
-    static void* operator new(std::size_t sz) {
+    static void* operator new(std::size_t sz) noexcept {
         ++base::performedCalls.newOperator;
         return ::operator new(sz);
     }
-    static void operator delete(void* ptr) {
+    static void operator delete(void* ptr) noexcept {
         ++base::performedCalls.deleteOperator;
         ::operator delete(ptr);
     }
@@ -186,35 +186,35 @@ class BiggerFunctorMock<Ret(Args...), N>
 
   public:
     // Mocked functions from here!
-    BiggerFunctorMock() {
+    BiggerFunctorMock() noexcept {
         ++base::performedCalls.defaultConstruction;
     }
-    ~BiggerFunctorMock() {
+    ~BiggerFunctorMock() noexcept {
         ++base::performedCalls.destruction;
     }
-    BiggerFunctorMock(const BiggerFunctorMock&) {
+    BiggerFunctorMock(const BiggerFunctorMock&) noexcept {
         ++base::performedCalls.copyConstruction;
     }
-    BiggerFunctorMock(BiggerFunctorMock&&) {
+    BiggerFunctorMock(BiggerFunctorMock&&) noexcept {
         ++base::performedCalls.moveConstruction;
     }
-    BiggerFunctorMock& operator=(const BiggerFunctorMock&) {
+    BiggerFunctorMock& operator=(const BiggerFunctorMock&) noexcept {
         ++base::performedCalls.copyAssignment;
         return *this;
     }
-    BiggerFunctorMock& operator=(BiggerFunctorMock&&) {
+    BiggerFunctorMock& operator=(BiggerFunctorMock&&) noexcept {
         ++base::performedCalls.moveAssignment;
         return *this;
     }
-    Ret operator()(Args... args) {
+    Ret operator()(Args... args) noexcept {
         ++base::performedCalls.callOperator;
         return (*base::behavior)(std::forward<Args>(args)...);
     }
-    static void* operator new(std::size_t sz) {
+    static void* operator new(std::size_t sz) noexcept {
         ++base::performedCalls.newOperator;
         return ::operator new(sz);
     }
-    static void operator delete(void* ptr) {
+    static void operator delete(void* ptr) noexcept {
         ++base::performedCalls.deleteOperator;
         ::operator delete(ptr);
     }
@@ -234,35 +234,35 @@ class BadAlignedFunctorMock<Ret(Args...), N>
 
   public:
     // Mocked functions from here!
-    BadAlignedFunctorMock() {
+    BadAlignedFunctorMock() noexcept {
         ++base::performedCalls.defaultConstruction;
     }
-    ~BadAlignedFunctorMock() {
+    ~BadAlignedFunctorMock() noexcept {
         ++base::performedCalls.destruction;
     }
-    BadAlignedFunctorMock(const BadAlignedFunctorMock&) {
+    BadAlignedFunctorMock(const BadAlignedFunctorMock&) noexcept {
         ++base::performedCalls.copyConstruction;
     }
-    BadAlignedFunctorMock(BadAlignedFunctorMock&&) {
+    BadAlignedFunctorMock(BadAlignedFunctorMock&&) noexcept {
         ++base::performedCalls.moveConstruction;
     }
-    BadAlignedFunctorMock& operator=(const BadAlignedFunctorMock&) {
+    BadAlignedFunctorMock& operator=(const BadAlignedFunctorMock&) noexcept {
         ++base::performedCalls.copyAssignment;
         return *this;
     }
-    BadAlignedFunctorMock& operator=(BadAlignedFunctorMock&&) {
+    BadAlignedFunctorMock& operator=(BadAlignedFunctorMock&&) noexcept {
         ++base::performedCalls.moveAssignment;
         return *this;
     }
-    Ret operator()(Args... args) {
+    Ret operator()(Args... args) noexcept {
         ++base::performedCalls.callOperator;
         return (*base::behavior)(std::forward<Args>(args)...);
     }
-    static void* operator new(std::size_t sz) {
+    static void* operator new(std::size_t sz) noexcept {
         ++base::performedCalls.newOperator;
         return ::operator new(sz);
     }
-    static void operator delete(void* ptr) {
+    static void operator delete(void* ptr) noexcept {
         ++base::performedCalls.deleteOperator;
         ::operator delete(ptr);
     }
