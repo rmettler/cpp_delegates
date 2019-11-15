@@ -24,7 +24,7 @@ TEST_SUITE_BEGIN(
                            " - instance is created as expected\n"
                            " - instance is destroyed as expected\n"
                            " - 'Ret operator()(Args...)' works as expected for empty delegates\n"
-                           " - 'operator bool()' returns true\n"
+                           " - 'operator bool()' returns false\n"
                            " - 'operator==' with nullptr returns true\n"
                            " - 'operator!=' with nullptr returns false"));
 
