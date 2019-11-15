@@ -26,7 +26,7 @@ Factory method which creates a `rome::delegate` instance from a variety of _targ
 - **4** -- Initializes the _target_ with `std::move(target)` and stores it in the local buffer of the `rome::delegate` instance.  
   The _target_ needs to be invokable using `target.operator()(args...)`.  
   Is used if `sizeof(T) <= sizeof(void*)`, `alignof(T) <= alignof(void*)` and `alignof(T) <= sizeof(void*)`.
-- **5** -- Allocates new memory for the _target_ on the heap and initializes it with `std::move(target)`.  
+- **5** -- Allocates new memory for the _target_ and initializes it with `std::move(target)`.  
   The _target_ needs to be invokable using `target.operator()(args...)`.  
   Is used instead of **4** if `sizeof(T) > sizeof(void*)` or `alignof(T) > alignof(void*)` or `alignof(T) > sizeof(void*)`.
 
@@ -35,11 +35,11 @@ Factory method which creates a `rome::delegate` instance from a variety of _targ
 - `pTarget` - _template parameter_  
   The function pointer or member function pointer used to initialize the `rome::delegate` instance.
 - `C` - _template parameter_  
-  The class type of the non-static member function.
+  The class providing the non-static member function.
 - `obj`  
   A reference of the object used to initialize the `rome::delegate` instance together with a member function pointer.
 - `T` - _template parameter_  
-  Type of the function object used to initialize the `rome::delegate` instance.
+  The type of the function object used to initialize the `rome::delegate` instance.
 - `target`  
   A function object used to initialize the `rome::delegate` instance.
 
