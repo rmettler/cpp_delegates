@@ -10,7 +10,7 @@ stages:
 # Build docker
 #############################
 
-.build:docker: &build_docker
+.build:docker:
   stage: docker_build
   image:
     name: gcr.io/kaniko-project/executor:debug
@@ -20,8 +20,8 @@ stages:
   only:
     - docker
 
-.build:docker:clang6: &build_docker_clang6
-  <<: *build_docker
+.build:docker:clang6:
+  extends: .build:docker
   script:
       - /kaniko/executor \
         --context $CI_PROJECT_DIR \
@@ -30,45 +30,57 @@ stages:
   when: manual
 
 build:docker:clang6:testing:
-  <<: *build_docker_clang6
+  extends: .build:docker:clang6
   variables:
     CI_COMMIT_TAG: "testing"
 
 build:docker:clang6:latest:
-  <<: *build_docker_clang6
+  extends: .build:docker:clang6
   variables:
     CI_COMMIT_TAG: "latest"
 
-# #############################
-# # Build delegates
-# #############################
+#############################
+# Build delegates
+#############################
 
-# .build:linux:
-#   stage: build
-#   script:
-#     - make all
-#   tags:
-#     - docker
-#   artifacts:
-#     paths:
-#       - ${CI_PROJECT_DIR}/build/
-#     expire_in: 1 hrs
+.build:linux:
+  stage: build
+  script:
+    - make all
+  tags:
+    - docker
+  artifacts:
+    paths:
+      - ${CI_PROJECT_DIR}/build/
+    expire_in: 1 hrs
+  # TODO: Workaround until container registry is activated for the project
+  image: ubuntu:18.04
+  before_script:
+    - apt update
+    - apt install -y make clang
 
-# build:linux:clang6:
-#   extends: .build:linux
-#   image: registry.gitlab.com/rmettler/cpp_delegates/ci_clang6:latest
+build:linux:clang6:
+  extends: .build:linux
+  # TODO: Workaround until container registry is activated for the project
+  # image: registry.gitlab.com/rmettler/cpp_delegates/ci_clang6:latest
 
-# #############################
-# # Test delegates
-# #############################
+#############################
+# Test delegates
+#############################
 
-# .test:linux:
-#   stage: build
-#   script:
-#     - make test
-#   tags:
-#     - docker
+.test:linux:
+  stage: test
+  script:
+    - make test
+  tags:
+    - docker
+  # TODO: Workaround until container registry is activated for the project
+  image: ubuntu:18.04
+  before_script:
+    - apt update
+    - apt install -y make clang
 
-# build:linux:clang6:
-#   extends: .build:linux
-#   image: registry.gitlab.com/rmettler/cpp_delegates/ci_clang6:latest
+test:linux:clang6:
+  extends: .build:linux
+  # TODO: Workaround until container registry is activated for the project
+  # image: registry.gitlab.com/rmettler/cpp_delegates/ci_clang6:latest
