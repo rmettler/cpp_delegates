@@ -10,7 +10,7 @@ stages:
 # Build docker
 #############################
 
-.build:docker:
+.build:docker: &build_docker
   stage: build_docker
   image:
     name: gcr.io/kaniko-project/executor:debug
@@ -20,29 +20,24 @@ stages:
   only:
     - docker
 
-.build:docker:clang6:
-  extends: .build:docker
+.build:docker:clang6: &build_docker_clang6
+  <<: *build_docker
   script:
       - /kaniko/executor \
         --context $CI_PROJECT_DIR \
         --dockerfile $CI_PROJECT_DIR/docker/ci_clang6/Dockerfile \
         --destination $CI_REGISTRY_IMAGE/clang6:$CI_COMMIT_TAG
-  when: always
+  when: manual
 
 build:docker:clang6:testing:
-  extends: .build:docker:clang6
+  <<: *build_docker_clang6
   variables:
     CI_COMMIT_TAG: "testing"
 
 build:docker:clang6:latest:
-  extends: .build:docker:clang6
+  <<: *build_docker_clang6
   variables:
     CI_COMMIT_TAG: "latest"
-
-
-#############################
-# Build delegates
-#############################
 
 test:
   stage: build_docker
@@ -51,6 +46,10 @@ test:
     - echo "Test"
   tags:
     - docker
+
+#############################
+# Build delegates
+#############################
 
 # .build:linux:
 #   stage: build
