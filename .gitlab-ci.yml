@@ -44,6 +44,14 @@ build:docker:clang6:latest:
 # Build delegates
 #############################
 
+test:
+  stage: build
+  image: ubuntu:18.04
+  script:
+    - echo "Test"
+  tags:
+    - DOCKER
+
 # .build:linux:
 #   stage: build
 #   script:
