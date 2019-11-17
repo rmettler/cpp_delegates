@@ -1,3 +1,4 @@
 build
+_build
 
-test.exe
+*.exe
