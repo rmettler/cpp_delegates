@@ -28,7 +28,7 @@ stages:
       /kaniko/executor \
       --context $CI_PROJECT_DIR \
       --dockerfile $CI_PROJECT_DIR/docker/ci_clang6/Dockerfile \
-      --destination $CI_REGISTRY_IMAGE/clang6:$CI_COMMIT_TAG
+      --destination $CI_REGISTRY_IMAGE/ci_clang6:$CI_COMMIT_TAG
 
 build:docker:clang6:testing:
   extends: .build:docker:clang6
@@ -54,16 +54,10 @@ build:docker:clang6:latest:
     paths:
       - ${CI_PROJECT_DIR}/build/
     expire_in: 1 hrs
-  # TODO: Workaround until container registry is activated for the project
-  image: ubuntu:18.04
-  before_script:
-    - apt update
-    - apt install -y make clang
 
 build:linux:clang6:
   extends: .build:linux
-  # TODO: Workaround until container registry is activated for the project
-  # image: registry.gitlab.com/rmettler/cpp_delegates/ci_clang6:latest
+  image: registry.gitlab.com/rmettler/cpp_delegates/ci_clang6:latest
 
 #############################
 # Test delegates
@@ -75,13 +69,7 @@ build:linux:clang6:
     - make test
   tags:
     - docker
-  # TODO: Workaround until container registry is activated for the project
-  image: ubuntu:18.04
-  before_script:
-    - apt update
-    - apt install -y make clang
 
 test:linux:clang6:
   extends: .test:linux
-  # TODO: Workaround until container registry is activated for the project
-  # image: registry.gitlab.com/rmettler/cpp_delegates/ci_clang6:latest
+  image: registry.gitlab.com/rmettler/cpp_delegates/ci_clang6:latest
