@@ -1,7 +1,7 @@
 stages:
-  - dockerbuild
   - build
   - test
+  - dockerbuild
   - analysis
   - deploy
   - pages
@@ -39,7 +39,7 @@ build:docker:clang6:latest:
   variables:
     CI_COMMIT_TAG: "latest"
 
-build:docker:clang6:blabla:
+blabla:
   stage: dockerbuild
   extends: .build:docker:clang6
   variables:
