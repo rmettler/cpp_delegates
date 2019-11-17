@@ -41,7 +41,6 @@ build:docker:clang6:latest:
 
 blabla:
   stage: build
-  extends: .build:docker:clang6
   variables:
     CI_COMMIT_TAG: "latest"
   script:
