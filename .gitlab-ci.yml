@@ -39,6 +39,24 @@ build:docker:clang6:latest:
   variables:
     CI_COMMIT_TAG: "latest"
 
+build:docker:clang6:blabla:
+  extends: .build:docker:clang6
+  variables:
+    CI_COMMIT_TAG: "latest"
+  script:
+    - /kaniko/executor \
+      --context $CI_PROJECT_DIR \
+      --dockerfile $CI_PROJECT_DIR/docker/ci_clang6/Dockerfile \
+      --destination $CI_REGISTRY_IMAGE/clang6:$CI_COMMIT_TAG
+  when: manual
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  before_script:
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+  only:
+    - docker
+
 #############################
 # Build delegates
 #############################
