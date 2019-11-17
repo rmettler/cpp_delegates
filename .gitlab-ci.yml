@@ -1,0 +1,74 @@
+stages:
+  - build_docker
+  - build
+  - test
+  - analysis
+  - deploy
+  - pages
+
+#############################
+# Build docker
+#############################
+
+.build:docker:
+  stage: build_docker
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  before_script:
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+  only:
+    - DOCKER
+
+.build:docker:clang6:
+  extends: .build:docker
+  script:
+      - /kaniko/executor \
+        --context $CI_PROJECT_DIR \
+        --dockerfile $CI_PROJECT_DIR/docker/ci_clang6/Dockerfile \
+        --destination $CI_REGISTRY_IMAGE/clang8:$CI_COMMIT_TAG
+  when: manual
+
+build:docker:clang6:testing:
+  extends: .build:docker:clang6
+  variables:
+    CI_COMMIT_TAG: "testing"
+
+build:docker:clang6:latest:
+  extends: .build:docker:clang6
+  variables:
+    CI_COMMIT_TAG: "latest"
+
+
+#############################
+# Build delegates
+#############################
+
+# .build:linux:
+#   stage: build
+#   script:
+#     - rm -rf build
+#     - mkdir -p build
+#     - cd build
+#     - |
+#       cmake .. \
+#       -DEXPRESSCPP_USE_CONAN_DEPENDENCIES=ON \
+#       -DEXPRESSCPP_ENABLE_COVERAGE=ON \
+#       -DEXPRESSCPP_BUILD_EXAMPLES=ON \
+#       -DEXPRESSCPP_BUILD_TESTS=ON
+#     - make -j2
+#     - |
+#       find . \
+#       -type f \
+#       -not \( -name 'test_expresscpp' -or -name '*.gcno' \) -delete
+#     - find . -type d -empty -delete
+#   tags:
+#     - docker
+#   artifacts:
+#     paths:
+#       - ${CI_PROJECT_DIR}/build/
+#     expire_in: 10 hrs
+
+# build:linux:clang:
+#   extends: .build:linux
+#   image: ubuntu:18
