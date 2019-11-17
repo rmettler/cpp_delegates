@@ -50,7 +50,7 @@ test:
   script:
     - echo "Test"
   tags:
-    - DOCKER
+    - docker
 
 # .build:linux:
 #   stage: build
