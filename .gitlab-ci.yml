@@ -73,3 +73,6 @@ build:linux:clang6:
 test:linux:clang6:
   extends: .test:linux
   image: registry.gitlab.com/rmettler/cpp_delegates/ci_clang6:latest
+  dependencies: build:linux:clang6
+  needs: ["build:linux:clang6"]
+  
