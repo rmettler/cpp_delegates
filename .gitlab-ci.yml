@@ -18,7 +18,7 @@ stages:
   before_script:
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
   only:
-    - DOCKER
+    - docker
 
 .build:docker:clang6:
   extends: .build:docker
@@ -26,7 +26,7 @@ stages:
       - /kaniko/executor \
         --context $CI_PROJECT_DIR \
         --dockerfile $CI_PROJECT_DIR/docker/ci_clang6/Dockerfile \
-        --destination $CI_REGISTRY_IMAGE/clang8:$CI_COMMIT_TAG
+        --destination $CI_REGISTRY_IMAGE/clang6:$CI_COMMIT_TAG
   when: always
 
 build:docker:clang6:testing:
@@ -45,7 +45,7 @@ build:docker:clang6:latest:
 #############################
 
 test:
-  stage: build
+  stage: build_docker
   image: ubuntu:18.04
   script:
     - echo "Test"
