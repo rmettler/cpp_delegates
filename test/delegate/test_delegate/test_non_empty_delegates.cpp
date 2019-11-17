@@ -130,14 +130,16 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TE
 
         {
             static_assert(noexcept(TDelegate::create(mock)), "");
-            auto dgt                       = TDelegate::create(mock);
-            expectedCalls.moveConstruction = 1;
+            auto dgt = TDelegate::create(std::move(mock));
+            ++expectedCalls.moveConstruction;
+            ++expectedCalls.destruction;
+            ++expectedCalls.moveConstruction;
             test_rome_delegate::checkNotEmpty(dgt);
             dgt(0);
-            expectedCalls.callOperator = 1;
+            ++expectedCalls.callOperator;
             CHECK(expectedCalls == performedCalls);
         }
-        expectedCalls.destruction = 1;
+        ++expectedCalls.destruction;
         CHECK(expectedCalls == performedCalls);
 
         struct SmallExceptFunctor {
@@ -150,7 +152,7 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TE
             }
         };
         SmallExceptFunctor mock2;
-        static_assert(!noexcept(TDelegate::create(mock2)), "");
+        static_assert(!noexcept(TDelegate::create(std::move(mock2))), "");
     }
     SUBCASE("create from too big functor for small buffer optimization") {
         using TMock                = test_rome_delegate::BiggerFunctorMock<TSignature>;
@@ -164,17 +166,19 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TE
         TMock mock;
         expectedCalls.defaultConstruction = 1;
         {
-            auto dgt                       = TDelegate::create(mock);
-            expectedCalls.newOperator      = 1;
-            expectedCalls.moveConstruction = 1;
+            auto dgt = TDelegate::create(std::move(mock));
+            ++expectedCalls.moveConstruction;
+            ++expectedCalls.destruction;
+            ++expectedCalls.newOperator;
+            ++expectedCalls.moveConstruction;
             CHECK(expectedCalls == performedCalls);
             test_rome_delegate::checkNotEmpty(dgt);
             dgt(0);
-            expectedCalls.callOperator = 1;
+            ++expectedCalls.callOperator;
             CHECK(expectedCalls == performedCalls);
         }
-        expectedCalls.deleteOperator = 1;
-        expectedCalls.destruction    = 1;
+        ++expectedCalls.deleteOperator;
+        ++expectedCalls.destruction;
         CHECK(expectedCalls == performedCalls);
     }
     SUBCASE("create from too badly aligned functor for small buffer optimization") {
@@ -189,17 +193,19 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TE
         expectedCalls.defaultConstruction = 1;
 
         {
-            auto dgt                       = TDelegate::create(mock);
-            expectedCalls.newOperator      = 1;
-            expectedCalls.moveConstruction = 1;
+            auto dgt = TDelegate::create(std::move(mock));
+            ++expectedCalls.moveConstruction;
+            ++expectedCalls.destruction;
+            ++expectedCalls.newOperator;
+            ++expectedCalls.moveConstruction;
             CHECK(expectedCalls == performedCalls);
             test_rome_delegate::checkNotEmpty(dgt);
             dgt(0);
-            expectedCalls.callOperator = 1;
+            ++expectedCalls.callOperator;
             CHECK(expectedCalls == performedCalls);
         }
-        expectedCalls.deleteOperator = 1;
-        expectedCalls.destruction    = 1;
+        ++expectedCalls.deleteOperator;
+        ++expectedCalls.destruction;
         CHECK(expectedCalls == performedCalls);
     }
 }
@@ -280,7 +286,7 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <bool(int)> and ", TE
         using TMock                = test_rome_delegate::SmallFunctorMock<TSignature>;
         TMock::behavior            = callBehavior;
         const auto& performedCalls = TMock::init();
-        auto expectedCalls         = performedCalls;
+        auto expectedCalls         = performedCalls;W
         CHECK(sizeof(TMock) <= sizeof(void*));
         CHECK(alignof(TMock) <= alignof(void*));
         CHECK(alignof(TMock) <= sizeof(void*));
