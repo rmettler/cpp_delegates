@@ -23,7 +23,8 @@ stages:
 .build:docker:clang6:
   extends: .build:docker
   script:
-    - /kaniko/executor \
+    - |
+      /kaniko/executor \
       --context $CI_PROJECT_DIR \
       --dockerfile $CI_PROJECT_DIR/docker/ci_clang6/Dockerfile \
       --destination $CI_REGISTRY_IMAGE/clang6:$CI_COMMIT_TAG
@@ -44,7 +45,8 @@ blabla:
   variables:
     CI_COMMIT_TAG: "latest"
   script:
-    - /kaniko/executor \
+    - |
+      /kaniko/executor \
       --context $CI_PROJECT_DIR \
       --dockerfile $CI_PROJECT_DIR/docker/ci_clang6/Dockerfile \
       --destination $CI_REGISTRY_IMAGE/clang6:$CI_COMMIT_TAG
