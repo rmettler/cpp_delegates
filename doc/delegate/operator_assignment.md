@@ -3,8 +3,8 @@
 If `ExpectedBehavior` != `rome::target_is_mandatory`:
 
 ```cpp
-delegate& operator=(delegate&& other) noexcept;          // (1)
-constexpr delegate& operator=(std::nullptr_t) noexcept;  // (2)
+delegate& operator=(delegate&& other) noexcept;  // (1)
+delegate& operator=(std::nullptr_t) noexcept;    // (2)
 ```
 
 If `ExpectedBehavior` == `rome::target_is_mandatory`:

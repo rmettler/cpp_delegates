@@ -26,6 +26,7 @@
 
 #include "bad_delegate_call.hpp"
 #include "detail/assertions.hpp"
+#include "detail/delegate_base.hpp"
 
 namespace rome {
 
@@ -60,6 +61,19 @@ namespace detail {
                 "'rome::target_is_optional' is only valid if the return type 'Ret' is 'void'.");
         }
     };
+
+    template<typename ExpectedBehavior>
+    struct select_empty_invoker_for;
+
+    template<>
+    struct select_empty_invoker_for<target_is_optional> {
+        using type = detail::delegate_base::no_call_invoker;
+    };
+
+    template<>
+    struct select_empty_invoker_for<target_is_expected> {
+        using type = detail::delegate_base::exception_call_invoker;
+    };
 }  // namespace detail
 
 template<typename Signature, typename ExpectedBehavior = target_is_expected>
@@ -69,118 +83,120 @@ template<typename Ret, typename... Args, typename ExpectedBehavior>
 class delegate<Ret(Args...), ExpectedBehavior>
     : std::conditional<detail::delegateHasValidExpectedBehavior<Ret, ExpectedBehavior>(),
           detail::ok, detail::invalid_delegate_expected_behavior_<Ret, ExpectedBehavior>>::type {
-  public:
-    // TODO: ev ist es einfacher, für target_is_mandatory ganz zu spezialisieren
-    template<typename C                                                     = ExpectedBehavior,
-        std::enable_if_t<!std::is_same<C, target_is_mandatory>::value, int> = 0>
-    constexpr delegate() noexcept {
-    }
-    constexpr delegate(const delegate&) noexcept = delete;
-    constexpr delegate(delegate&& orig) noexcept = default;
+  private:
+    using base_delegate_type = detail::delegate_base::delegate_base<Ret(Args...),
+        typename detail::select_empty_invoker_for<ExpectedBehavior>::type>;
 
-    template<typename C                                                     = ExpectedBehavior,
-        std::enable_if_t<!std::is_same<C, target_is_mandatory>::value, int> = 0>
+    base_delegate_type target_ = {};
+
+    delegate(decltype(target_)&& target) noexcept : target_{std::move(target)} {
+    }
+
+  public:
+    constexpr delegate() noexcept      = default;
+    delegate(const delegate&) noexcept = delete;
+    delegate(delegate&& orig) noexcept = default;
+    ~delegate()                        = default;
+
     constexpr delegate(std::nullptr_t) noexcept : delegate{} {
     }
 
-    constexpr delegate& operator=(const delegate&) = delete;
-    constexpr delegate& operator=(delegate&& orig) = default;
+    delegate& operator=(const delegate&) noexcept = delete;
+    delegate& operator=(delegate&& orig) noexcept = default;
 
-    template<typename C                                                     = ExpectedBehavior,
-        std::enable_if_t<!std::is_same<C, target_is_mandatory>::value, int> = 0>
     constexpr delegate& operator=(std::nullptr_t) noexcept {
-        *this = delegate{};
+        target_ = nullptr;
         return *this;
     }
 
-    constexpr operator bool() const noexcept {
-        // TODO: update this and check target_t! (depending on default)
-        return callee_ != null_callee;
+    constexpr explicit operator bool() const noexcept {
+        return target_;
     }
 
-    void swap(delegate&) noexcept {
+    void swap(delegate& other) noexcept {
+        target_.swap(other.target_);
     }
 
     inline Ret operator()(Args... args) const {
-        return (*callee_)(obj_, std::forward<Args>(args)...);
+        return target_.operator()(std::forward<Args>(args)...);
     }
 
     template<Ret (*pFunction)(Args...)>
     static constexpr delegate create() noexcept {
-        return delegate{nullptr, &function_call<pFunction>};
+        return delegate{decltype(target_)::create<pFunction>()};
     }
 
     template<typename C, Ret (C::*pMethod)(Args...)>
     static delegate create(C& obj) noexcept {
-        return delegate{&obj, &method_call<C, pMethod>};
+        return delegate{decltype(target_)::create<C, pMethod>(obj)};
     }
 
     template<typename C, Ret (C::*pMethod)(Args...) const>
     static delegate create(const C& obj) noexcept {
-        return delegate{const_cast<C*>(&obj), &const_method_call<C, pMethod>};
+        return delegate{decltype(target_)::create<C, pMethod>(obj)};
     }
 
     template<typename T>
-    static constexpr delegate create(T& functor) noexcept(
-        std::is_nothrow_move_constructible<T>::value) {
-        return delegate{&functor, &functor_call<T>};
+    static delegate create(T functor) noexcept(noexcept(decltype(target_)::create(functor))) {
+        return delegate{decltype(target_)::create(functor))};
     }
+};
 
-    template<typename T>
-    static constexpr delegate create(const T& functor) noexcept(
-        std::is_nothrow_move_constructible<T>::value) {
-        return delegate{const_cast<T*>(&functor), &const_functor_call<T>};
-    }
-
+template<typename Ret, typename... Args>
+class delegate<Ret(Args...), target_is_mandatory>
+    : std::conditional<detail::delegateHasValidExpectedBehavior<Ret, ExpectedBehavior>(),
+          detail::ok, detail::invalid_delegate_expected_behavior_<Ret, ExpectedBehavior>>::type {
   private:
-    constexpr delegate(void* obj, Ret (*callee)(void*, Args...)) noexcept
-        : obj_{obj}, callee_{callee} {
+    using base_delegate_type = detail::delegate_base::delegate_base<Ret(Args...),
+        detail::delegate_base::exception_call_invoker>;
+
+    base_delegate_type target_ = {};
+
+    delegate(decltype(target_)&& target) noexcept : target_{std::move(target)} {
     }
 
-    template<typename C, Ret (C::*pMethod)(Args...)>
-    static Ret method_call(void* obj, Args... args) {
-        return (static_cast<C*>(obj)->*pMethod)(args...);
+  public:
+    constexpr delegate() noexcept      = delete;
+    delegate(const delegate&) noexcept = delete;
+    delegate(delegate&& orig) noexcept = default;
+    // TODO: orig should be emptied (might do it automatically?)
+    ~delegate() = default;
+
+    delegate& operator=(const delegate&) noexcept = delete;
+    delegate& operator=(delegate&& orig) noexcept = default;
+    // TODO: orig should be emptied (might do it automatically?)
+
+    constexpr explicit operator bool() const noexcept {
+        return target_;
     }
 
-    template<typename C, Ret (C::*pMethod)(Args...) const>
-    static Ret const_method_call(void* obj, Args... args) {
-        return (static_cast<const C*>(obj)->*pMethod)(args...);
+    void swap(delegate& other) noexcept {
+        target_.swap(other.target_);
+    }
+
+    inline Ret operator()(Args... args) const {
+        return target_.operator()(std::forward<Args>(args)...);
     }
 
     template<Ret (*pFunction)(Args...)>
-    static constexpr Ret function_call(void*, Args... args) {
-        return (*pFunction)(args...);
+    static constexpr delegate create() noexcept {
+        return delegate{decltype(target_)::create<pFunction>()};
+    }
+
+    template<typename C, Ret (C::*pMethod)(Args...)>
+    static delegate create(C& obj) noexcept {
+        return delegate{decltype(target_)::create<C, pMethod>(obj)};
+    }
+
+    template<typename C, Ret (C::*pMethod)(Args...) const>
+    static delegate create(const C& obj) noexcept {
+        return delegate{decltype(target_)::create<C, pMethod>(obj)};
     }
 
     template<typename T>
-    static constexpr Ret functor_call(void* obj, Args... args) {
-        return static_cast<T*>(obj)->operator()(args...);
+    static delegate create(T functor) noexcept(noexcept(decltype(target_)::create(functor))) {
+        return delegate{decltype(target_)::create(functor))};
     }
-
-    template<typename T>
-    static constexpr Ret const_functor_call(void* obj, Args... args) {
-        return static_cast<const T*>(obj)->operator()(args...);
-    }
-
-    static constexpr void null_call(void*, Args...) {
-    }
-
-    template<typename T, typename std::enable_if_t<!std::is_same<T, void>::value, int> = 0>
-    static constexpr auto get_null_callee() {
-        return nullptr;
-    }
-
-    template<typename T, typename std::enable_if_t<std::is_same<T, void>::value, int> = 0>
-    static constexpr auto get_null_callee() {
-        return null_call;
-    }
-
-    static constexpr auto null_callee = get_null_callee<Ret>();
-
-    using caller_type = Ret (*)(void*, Args...);
-
-    alignas(sizeof(void*)) void* obj_ = nullptr;
-    caller_type callee_               = null_callee;
 };
 
 template<typename Sig, typename ExpectedBehavior>

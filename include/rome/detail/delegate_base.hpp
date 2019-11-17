@@ -67,9 +67,11 @@ namespace detail {
         class delegate_base<Ret(Args...), EmptyInvoker> {
           private:
             // TODO: update types to be big enough for all used pointers!
-            alignas(bufferAlignment()) buffer_type buffer_ = nullptr;
-            invoker_type<Ret, Args...> callee_             = EmptyInvoker::invoke;
-            deleter_type deleter_                          = no_delete;
+            // buffer_ needs to be writable by 'operator()(Args...) const' if small buffer
+            // optimization is used
+            alignas(bufferAlignment()) mutable buffer_type buffer_ = nullptr;
+            invoker_type<Ret, Args...> callee_                     = EmptyInvoker::invoke;
+            deleter_type deleter_                                  = no_delete;
 
           public:
             constexpr delegate_base() noexcept           = default;
@@ -88,7 +90,7 @@ namespace detail {
                 return *this;
             }
             delegate_base& operator=(std::nullptr_t) noexcept {
-                *this = delegate_base{};
+                delegate_base{}.swap(*this);
                 return *this;
             }
 
@@ -103,7 +105,6 @@ namespace detail {
                 return callee_ != static_cast<decltype(callee_)>(EmptyInvoker::invoke);
             }
 
-            // TODO: use perfect forwarding here!
             Ret operator()(Args... args) const {
                 (*callee_)(buffer_, std::forward<Args>(args)...);
             }
@@ -111,7 +112,7 @@ namespace detail {
             // Creates a new delegate_base and stores the passed non-static member function inside
             // its local buffer.
             template<Ret (*function)(Args...)>
-            static delegate_base create() {
+            constexpr static delegate_base create() noexcept {
                 delegate_base d;
                 d.buffer_ = nullptr;
                 d.callee_ = [](buffer_type const&, Args&&... args) -> Ret {
@@ -124,11 +125,24 @@ namespace detail {
             // Creates a new delegate_base and stores the passed non-static member function inside
             // its local buffer.
             template<typename C, Ret (C::*method)(Args...)>
-            static delegate_base create(C& obj) {
+            static delegate_base create(C& obj) noexcept {
                 delegate_base d;
                 d.buffer_ = &obj;
                 d.callee_ = [](buffer_type const& buffer, Args&&... args) -> Ret {
                     return (static_cast<C*>(buffer)->*method)(std::forward<Args>(args)...);
+                };
+                d.deleter_ = no_delete;
+                return d;
+            }
+
+            // Creates a new delegate_base and stores the passed non-static const member function
+            // inside its local buffer.
+            template<typename C, Ret (C::*method)(Args...) const>
+            static delegate_base create(const C& obj) noexcept {
+                delegate_base d;
+                d.buffer_ = const_cast<C*>(&obj);  // const will be added again before used
+                d.callee_ = [](buffer_type const& buffer, Args&&... args) -> Ret {
+                    return (static_cast<const C*>(buffer)->*method)(std::forward<Args>(args)...);
                 };
                 d.deleter_ = no_delete;
                 return d;
@@ -145,6 +159,11 @@ namespace detail {
                 // its members are embedded in delegate_base::buffer_ using small buffer
                 // optimization. Thus the functor needs to be able to change buffer_, even so
                 // the delegate_base doesn't change its behavior.
+                //! TODO: might lead to an error! when:
+                //!   static const delegate d{delegate::create(bla)};
+                //!   d(); // and this changes the delegate, which might be in RO memory!
+                //! maybe set buffer_ mutable?
+                //! maybe buffer_type const& can be replaced too with buffer_type&!
                 delegate_base d;
                 const auto ptr = ::new (&d.buffer_) Invokable(std::move(invokable));
                 assert(ptr == static_cast<Invokable*>(static_cast<void*>(&d.buffer_)));
