@@ -39,43 +39,36 @@ build:docker:clang6:latest:
   variables:
     CI_COMMIT_TAG: "latest"
 
-test:
-  stage: docker_build
-  image: ubuntu:18.04
-  script:
-    - echo "Test"
-  tags:
-    - docker
-
-#############################
-# Build delegates
-#############################
+# #############################
+# # Build delegates
+# #############################
 
 # .build:linux:
 #   stage: build
 #   script:
-#     - rm -rf build
-#     - mkdir -p build
-#     - cd build
-#     - |
-#       cmake .. \
-#       -DEXPRESSCPP_USE_CONAN_DEPENDENCIES=ON \
-#       -DEXPRESSCPP_ENABLE_COVERAGE=ON \
-#       -DEXPRESSCPP_BUILD_EXAMPLES=ON \
-#       -DEXPRESSCPP_BUILD_TESTS=ON
-#     - make -j2
-#     - |
-#       find . \
-#       -type f \
-#       -not \( -name 'test_expresscpp' -or -name '*.gcno' \) -delete
-#     - find . -type d -empty -delete
+#     - make all
 #   tags:
 #     - docker
 #   artifacts:
 #     paths:
 #       - ${CI_PROJECT_DIR}/build/
-#     expire_in: 10 hrs
+#     expire_in: 1 hrs
 
-# build:linux:clang:
+# build:linux:clang6:
 #   extends: .build:linux
-#   image: ubuntu:18
+#   image: registry.gitlab.com/rmettler/cpp_delegates/ci_clang6:latest
+
+# #############################
+# # Test delegates
+# #############################
+
+# .test:linux:
+#   stage: build
+#   script:
+#     - make test
+#   tags:
+#     - docker
+
+# build:linux:clang6:
+#   extends: .build:linux
+#   image: registry.gitlab.com/rmettler/cpp_delegates/ci_clang6:latest
