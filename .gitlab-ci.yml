@@ -81,6 +81,6 @@ build:linux:clang6:
     - apt install -y make clang
 
 test:linux:clang6:
-  extends: .build:linux
+  extends: .test:linux
   # TODO: Workaround until container registry is activated for the project
   # image: registry.gitlab.com/rmettler/cpp_delegates/ci_clang6:latest
