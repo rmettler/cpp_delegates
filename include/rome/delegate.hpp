@@ -144,8 +144,8 @@ class delegate<Ret(Args...), ExpectedBehavior>
     }
 
     template<typename T>
-    static delegate create(T functor) noexcept(noexcept(base_delegate_type::create(functor))) {
-        return delegate{base_delegate_type::template create(functor)};
+    static delegate create(T functor) noexcept(noexcept(base_delegate_type::create(std::move(functor)))) {
+        return delegate{base_delegate_type::template create(std::move(functor))};
     }
 };
 
@@ -199,8 +199,8 @@ class delegate<Ret(Args...), target_is_mandatory> {
     }
 
     template<typename T>
-    static delegate create(T functor) noexcept(noexcept(base_delegate_type::create(functor))) {
-        return delegate{base_delegate_type::template create(functor)};
+    static delegate create(T functor) noexcept(noexcept(base_delegate_type::create(std::move(functor)))) {
+        return delegate{base_delegate_type::template create(std::move(functor))};
     }
 };
 

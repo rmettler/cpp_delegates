@@ -36,7 +36,7 @@ SRCS = \
 	test/delegate/test_delegate/test_delegate_base.cpp \
 	test/delegate/test_delegate/test_template_param_ExpectedBehavior.cpp \
 	test/delegate/test_delegate/test_empty_delegates.cpp \
-	# test/delegate/test_delegate/test_non_empty_delegates.cpp \
+	test/delegate/test_delegate/test_non_empty_delegates.cpp \
 	# test/delegate/test_delegate/test_assign_nullptr.cpp \
 	# test/delegate/test_delegate/test_swap.cpp \
 	# test/delegate/test_delegate/test_move.cpp \
