@@ -16,8 +16,8 @@ TEST_SUITE_BEGIN("header file: rome/delegate.hpp");
 
 namespace {
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-template"
+DOCTEST_CLANG_SUPPRESS_WARNING_WITH_PUSH("-Wunused-template")
+
 template<typename T, decltype(T{nullptr}, int{}) = 0,
     std::enable_if_t<noexcept(std::declval<T>().operator=(nullptr)), int> = 0>
 constexpr std::true_type is_nothrow_nullptr_constructible_impl(int);
@@ -73,7 +73,7 @@ constexpr std::false_type is_const_callable_with_impl(...);
 template<typename T, typename Ret, typename... Args>
 struct is_const_callable_with : decltype(is_const_callable_with_impl<T, Ret, Args...>(int{})) {};
 
-#pragma clang diagnostic pop
+DOCTEST_CLANG_SUPPRESS_WARNING_POP
 
 // check whether a compile error would occur becaus ExpectedBehavior argument is not correct
 template<typename TDelegate>
@@ -170,6 +170,7 @@ struct tester<Ret(Args...)> {
 
 TEST_WITH_VOID_RETURN_AND_ARGS(());
 TEST_WITH_RETURN_AND_ARGS(int, ());
+
 TEST_WITH_VOID_RETURN_AND_ARGS((int));
 TEST_WITH_RETURN_AND_ARGS(int, (int));
 

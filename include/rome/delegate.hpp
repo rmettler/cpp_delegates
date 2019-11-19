@@ -62,17 +62,24 @@ namespace detail {
         }
     };
 
-    template<typename ExpectedBehavior>
-    struct select_empty_invoker_for;
-
-    template<>
-    struct select_empty_invoker_for<target_is_optional> {
-        using type = detail::delegate_base::no_call_invoker;
+    // TODO: change name!
+    // TODO: cleanup unused stuff!
+    template<typename ExpectedBehavior, typename Ret>
+    struct select_empty_invoker_for {
+        using invoker_type = delegate_base::nullptr_invoker;
+        using assertion_type = invalid_delegate_expected_behavior_<Ret, ExpectedBehavior>;
     };
 
     template<>
-    struct select_empty_invoker_for<target_is_expected> {
-        using type = detail::delegate_base::exception_call_invoker;
+    struct select_empty_invoker_for<target_is_optional, void> {
+        using invoker_type = delegate_base::no_call_invoker;
+        using assertion_type = ok;
+    };
+
+    template<typename Ret>
+    struct select_empty_invoker_for<target_is_expected, Ret> {
+        using invoker_type = delegate_base::exception_call_invoker;
+        using assertion_type = ok;
     };
 }  // namespace detail
 
@@ -85,11 +92,11 @@ class delegate<Ret(Args...), ExpectedBehavior>
           detail::ok, detail::invalid_delegate_expected_behavior_<Ret, ExpectedBehavior>>::type {
   private:
     using base_delegate_type = detail::delegate_base::delegate_base<Ret(Args...),
-        typename detail::select_empty_invoker_for<ExpectedBehavior>::type>;
+        typename detail::select_empty_invoker_for<ExpectedBehavior, Ret>::invoker_type>;
 
     base_delegate_type target_ = {};
 
-    delegate(decltype(target_)&& target) noexcept : target_{std::move(target)} {
+    delegate(base_delegate_type&& target) noexcept : target_{std::move(target)} {
     }
 
   public:
@@ -110,7 +117,7 @@ class delegate<Ret(Args...), ExpectedBehavior>
     }
 
     constexpr explicit operator bool() const noexcept {
-        return target_;
+        return target_.operator bool();
     }
 
     void swap(delegate& other) noexcept {
@@ -123,36 +130,34 @@ class delegate<Ret(Args...), ExpectedBehavior>
 
     template<Ret (*pFunction)(Args...)>
     static constexpr delegate create() noexcept {
-        return delegate{decltype(target_)::create<pFunction>()};
+        return delegate{base_delegate_type::template create<pFunction>()};
     }
 
     template<typename C, Ret (C::*pMethod)(Args...)>
     static delegate create(C& obj) noexcept {
-        return delegate{decltype(target_)::create<C, pMethod>(obj)};
+        return delegate{base_delegate_type::template create<C, pMethod>(obj)};
     }
 
     template<typename C, Ret (C::*pMethod)(Args...) const>
     static delegate create(const C& obj) noexcept {
-        return delegate{decltype(target_)::create<C, pMethod>(obj)};
+        return delegate{base_delegate_type::template create<C, pMethod>(obj)};
     }
 
     template<typename T>
-    static delegate create(T functor) noexcept(noexcept(decltype(target_)::create(functor))) {
-        return delegate{decltype(target_)::create(functor))};
+    static delegate create(T functor) noexcept(noexcept(base_delegate_type::create(functor))) {
+        return delegate{base_delegate_type::template create(functor)};
     }
 };
 
 template<typename Ret, typename... Args>
-class delegate<Ret(Args...), target_is_mandatory>
-    : std::conditional<detail::delegateHasValidExpectedBehavior<Ret, ExpectedBehavior>(),
-          detail::ok, detail::invalid_delegate_expected_behavior_<Ret, ExpectedBehavior>>::type {
+class delegate<Ret(Args...), target_is_mandatory> {
   private:
     using base_delegate_type = detail::delegate_base::delegate_base<Ret(Args...),
         detail::delegate_base::exception_call_invoker>;
 
     base_delegate_type target_ = {};
 
-    delegate(decltype(target_)&& target) noexcept : target_{std::move(target)} {
+    delegate(base_delegate_type&& target) noexcept : target_{std::move(target)} {
     }
 
   public:
@@ -167,7 +172,7 @@ class delegate<Ret(Args...), target_is_mandatory>
     // TODO: orig should be emptied (might do it automatically?)
 
     constexpr explicit operator bool() const noexcept {
-        return target_;
+        return target_.operator bool();
     }
 
     void swap(delegate& other) noexcept {
@@ -180,22 +185,22 @@ class delegate<Ret(Args...), target_is_mandatory>
 
     template<Ret (*pFunction)(Args...)>
     static constexpr delegate create() noexcept {
-        return delegate{decltype(target_)::create<pFunction>()};
+        return delegate{base_delegate_type::template create<pFunction>()};
     }
 
     template<typename C, Ret (C::*pMethod)(Args...)>
     static delegate create(C& obj) noexcept {
-        return delegate{decltype(target_)::create<C, pMethod>(obj)};
+        return delegate{base_delegate_type::template create<C, pMethod>(obj)};
     }
 
     template<typename C, Ret (C::*pMethod)(Args...) const>
     static delegate create(const C& obj) noexcept {
-        return delegate{decltype(target_)::create<C, pMethod>(obj)};
+        return delegate{base_delegate_type::template create<C, pMethod>(obj)};
     }
 
     template<typename T>
-    static delegate create(T functor) noexcept(noexcept(decltype(target_)::create(functor))) {
-        return delegate{decltype(target_)::create(functor))};
+    static delegate create(T functor) noexcept(noexcept(base_delegate_type::create(functor))) {
+        return delegate{base_delegate_type::template create(functor)};
     }
 };
 
@@ -211,12 +216,12 @@ constexpr bool operator==(std::nullptr_t, const delegate<Sig, ExpectedBehavior>&
 
 template<typename Sig, typename ExpectedBehavior>
 constexpr bool operator!=(const delegate<Sig, ExpectedBehavior>& lhs, std::nullptr_t) {
-    return lhs;
+    return static_cast<bool>(lhs);
 }
 
 template<typename Sig, typename ExpectedBehavior>
 constexpr bool operator!=(std::nullptr_t, const delegate<Sig, ExpectedBehavior>& rhs) {
-    return rhs;
+    return static_cast<bool>(rhs);
 }
 
 }  // namespace rome

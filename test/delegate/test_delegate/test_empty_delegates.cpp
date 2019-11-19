@@ -31,16 +31,6 @@ TEST_SUITE_BEGIN(
 template<typename TDelegate, typename... Args>
 static bool test_default_constructed_no_throw_on_call(Args&&... args) {
     {
-        constexpr TDelegate dgt;
-        ROME_DELEGATE_CHECK_EMPTY(dgt);
-        CHECK_NOTHROW(dgt(std::forward<Args...>(args...)));
-    }
-    {
-        constexpr TDelegate dgt{};
-        ROME_DELEGATE_CHECK_EMPTY(dgt);
-        CHECK_NOTHROW(dgt(std::forward<Args...>(args...)));
-    }
-    {
         TDelegate dgt;
         test_rome_delegate::checkEmpty(dgt);
         CHECK_NOTHROW(dgt(std::forward<Args...>(args...)));
@@ -55,18 +45,6 @@ static bool test_default_constructed_no_throw_on_call(Args&&... args) {
 
 template<typename TDelegate, typename... Args>
 static bool test_default_constructed_throws_on_call(Args&&... args) {
-    {
-        constexpr TDelegate dgt;
-        ROME_DELEGATE_CHECK_EMPTY(dgt);
-        CHECK_THROWS_WITH_AS(dgt(std::forward<Args...>(args...)), "rome::bad_delegate_call",
-            rome::bad_delegate_call);
-    }
-    {
-        constexpr TDelegate dgt{};
-        ROME_DELEGATE_CHECK_EMPTY(dgt);
-        CHECK_THROWS_WITH_AS(dgt(std::forward<Args...>(args...)), "rome::bad_delegate_call",
-            rome::bad_delegate_call);
-    }
     {
         TDelegate dgt;
         test_rome_delegate::checkEmpty(dgt);
@@ -85,16 +63,6 @@ static bool test_default_constructed_throws_on_call(Args&&... args) {
 template<typename TDelegate, typename... Args>
 static bool test_nullptr_constructed_no_throw_on_call(Args&&... args) {
     {
-        constexpr TDelegate dgt(nullptr);
-        ROME_DELEGATE_CHECK_EMPTY(dgt);
-        CHECK_NOTHROW(dgt(std::forward<Args...>(args...)));
-    }
-    {
-        constexpr TDelegate dgt{nullptr};
-        ROME_DELEGATE_CHECK_EMPTY(dgt);
-        CHECK_NOTHROW(dgt(std::forward<Args...>(args...)));
-    }
-    {
         TDelegate dgt(nullptr);
         test_rome_delegate::checkEmpty(dgt);
         CHECK_NOTHROW(dgt(std::forward<Args...>(args...)));
@@ -109,18 +77,6 @@ static bool test_nullptr_constructed_no_throw_on_call(Args&&... args) {
 
 template<typename TDelegate, typename... Args>
 static bool test_nullptr_constructed_throws_on_call(Args&&... args) {
-    {
-        constexpr TDelegate dgt(nullptr);
-        ROME_DELEGATE_CHECK_EMPTY(dgt);
-        CHECK_THROWS_WITH_AS(dgt(std::forward<Args...>(args...)), "rome::bad_delegate_call",
-            rome::bad_delegate_call);
-    }
-    {
-        constexpr TDelegate dgt{nullptr};
-        ROME_DELEGATE_CHECK_EMPTY(dgt);
-        CHECK_THROWS_WITH_AS(dgt(std::forward<Args...>(args...)), "rome::bad_delegate_call",
-            rome::bad_delegate_call);
-    }
     {
         TDelegate dgt(nullptr);
         test_rome_delegate::checkEmpty(dgt);
@@ -144,7 +100,7 @@ static_assert(std::is_same<rome::delegate<bool(int)>,
                   rome::delegate<bool(int), rome::target_is_expected>>::value,
     "");
 
-TEST_CASE("rome::delegate - test default constructed delegates" * doctest::skip()) {
+TEST_CASE("rome::delegate - test default constructed delegates") {
     CHECK(test_default_constructed_no_throw_on_call<
         rome::delegate<void(int), rome::target_is_optional>>(1));
     CHECK(test_default_constructed_throws_on_call<
@@ -153,7 +109,7 @@ TEST_CASE("rome::delegate - test default constructed delegates" * doctest::skip(
         rome::delegate<bool(int), rome::target_is_expected>>(3));
 }
 
-TEST_CASE("rome::delegate - test nullptr initialized delegates" * doctest::skip()) {
+TEST_CASE("rome::delegate - test nullptr initialized delegates") {
     CHECK(test_nullptr_constructed_no_throw_on_call<
         rome::delegate<void(int), rome::target_is_optional>>(1));
     CHECK(test_nullptr_constructed_throws_on_call<

@@ -168,8 +168,7 @@ class SmallFunctorMock<Ret(Args...), N> : public detail::MockBase<SmallFunctorMo
     }
 };
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpadded"
+DOCTEST_CLANG_SUPPRESS_WARNING_WITH_PUSH("-Wpadded")
 
 template<typename Signature, size_t N = 0>
 class BiggerFunctorMock;
@@ -268,6 +267,6 @@ class BadAlignedFunctorMock<Ret(Args...), N>
     }
 };
 
-#pragma clang diagnostic pop
+DOCTEST_CLANG_SUPPRESS_WARNING_POP
 
 }  // namespace test_rome_delegate

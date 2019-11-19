@@ -37,16 +37,23 @@ namespace detail {
         // Used as template parameter for delegate_base. Calls the provided invoke function when
         // empty.
         struct no_call_invoker {
-            template<typename Ret, typename... Args,
-                typename = std::enable_if_t<std::is_same<Ret, void>::value>>
-            static Ret invoke(buffer_type const&, Args&&...) {
+            template<typename Ret, typename... Args/*,
+                std::enable_if_t<std::is_same<Ret, void>::value, int> = 0*/>
+            static inline Ret invoke(buffer_type const&, Args&&...) {
             }
+            /*template<typename Ret, typename... Args,
+                std::enable_if_t<!std::is_same<Ret, void>::value, int> = 0>
+            static Ret invoke(buffer_type const&, Args&&...);*/
+            // TODO: fix this! find a workaround for when optional is used with Ret != void and all
+            // the templates are instatiated...
+            //! probably at best replace std::is_base_of since it seems to instantiate the whole
+            //! template!
         };
         // Used as template parameter for delegate_base. Calls the provided invoke function when
         // empty.
         struct exception_call_invoker {
             template<typename Ret, typename... Args>
-            [[noreturn]] static Ret invoke(buffer_type const&, Args&&...) {
+            [[noreturn]] static inline Ret invoke(buffer_type const&, Args&&...) {
 #if (defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND))
                 throw rome::bad_delegate_call{};
 #else
@@ -54,11 +61,13 @@ namespace detail {
 #endif
             }
         };
+        struct nullptr_invoker {
+            static constexpr auto invoke = nullptr;
+        };
 
         // Used as deleter in delegate_base when no destruction of buffer is needed.
-        void no_delete(buffer_type const&) {
+        inline void no_delete(buffer_type const&) {
         }
-
 
         template<typename Signature, typename EmptyInvoker>
         class delegate_base;
@@ -67,9 +76,10 @@ namespace detail {
         class delegate_base<Ret(Args...), EmptyInvoker> {
           private:
             // TODO: update types to be big enough for all used pointers!
+            // TODO: remove const_cast and replace it with mutable buffer! (add const later)
             // buffer_ needs to be writable by 'operator()(Args...) const' if small buffer
             // optimization is used
-            alignas(bufferAlignment()) mutable buffer_type buffer_ = nullptr;
+            alignas(bufferAlignment()) buffer_type buffer_ = nullptr;
             invoker_type<Ret, Args...> callee_                     = EmptyInvoker::invoke;
             deleter_type deleter_                                  = no_delete;
 
@@ -101,12 +111,12 @@ namespace detail {
                 swap(deleter_, other.deleter_);
             }
 
-            constexpr operator bool() noexcept {
+            constexpr explicit operator bool() const noexcept {
                 return callee_ != static_cast<decltype(callee_)>(EmptyInvoker::invoke);
             }
 
             Ret operator()(Args... args) const {
-                (*callee_)(buffer_, std::forward<Args>(args)...);
+                return (*callee_)(buffer_, std::forward<Args>(args)...);
             }
 
             // Creates a new delegate_base and stores the passed non-static member function inside
