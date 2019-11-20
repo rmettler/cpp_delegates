@@ -18,7 +18,8 @@
 namespace rome {
 namespace detail {
     namespace delegate_base {
-
+        // TODO: instead of passing the Invoker by class, invoke the ptr as 'initialTarget'
+        // TODO: inline these types into delegate_base and remove delegate_base namespace
         using buffer_type = void*;
         template<typename Ret, typename... Args>
         using invoker_type = Ret (*)(buffer_type&, Args&&...);
@@ -113,8 +114,8 @@ namespace detail {
                 return (*callee_)(buffer_, std::forward<Args>(args)...);
             }
 
-            // Creates a new delegate_base and stores the passed non-static member function inside
-            // its local buffer.
+            // Creates a new delegate_base and stores the passed function or static member function
+            // inside its local buffer.
             template<Ret (*function)(Args...)>
             constexpr static delegate_base create() noexcept {
                 delegate_base d;
@@ -160,7 +161,6 @@ namespace detail {
                 std::is_nothrow_move_constructible<Invokable>::value) {
                 delegate_base d;
                 const auto ptr = ::new (&d.buffer_) Invokable(std::move(invokable));
-                assert(ptr == static_cast<Invokable*>(static_cast<void*>(&d.buffer_)));
                 d.callee_ = [](buffer_type& buffer, Args&&... args) -> Ret {
                     auto pFunctor = static_cast<void*>(&buffer);
                     return static_cast<Invokable*>(pFunctor)->operator()(

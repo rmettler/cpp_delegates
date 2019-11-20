@@ -41,14 +41,6 @@ struct target_is_expected;
 struct target_is_mandatory;
 
 namespace detail {
-    template<typename Ret, typename ExpectedBehavior>
-    constexpr bool delegateHasValidExpectedBehavior() {
-        return std::is_same<ExpectedBehavior, rome::target_is_expected>::value
-               || std::is_same<ExpectedBehavior, rome::target_is_mandatory>::value
-               || (std::is_same<ExpectedBehavior, rome::target_is_optional>::value
-                   && std::is_same<Ret, void>::value);
-    }
-
     struct invalid_delegate_expected_behavior {};
 
     template<typename Ret, typename ExpectedBehavior>
@@ -62,24 +54,30 @@ namespace detail {
         }
     };
 
-    // TODO: change name!
-    // TODO: cleanup unused stuff!
-    template<typename ExpectedBehavior, typename Ret>
-    struct select_empty_invoker_for {
-        using invoker_type = delegate_base::nullptr_invoker;
-        using assertion_type = invalid_delegate_expected_behavior_<Ret, ExpectedBehavior>;
+    // TODO: change name to expected_behavior_delegate_param_invalid!
+    // TODO: also cleanup unused helper macros for constexpr stuff
+    template<typename Ret, typename ExpectedBehavior>
+    struct delegate_helper {
+        template<typename... Args>
+        using delegate_base_type =
+            delegate_base::delegate_base<Ret(Args...), delegate_base::nullptr_invoker>;
+        using assert_params = invalid_delegate_expected_behavior_<Ret, ExpectedBehavior>;
     };
 
     template<>
-    struct select_empty_invoker_for<target_is_optional, void> {
-        using invoker_type = delegate_base::no_call_invoker;
-        using assertion_type = ok;
+    struct delegate_helper<void, target_is_optional> {
+        template<typename... Args>
+        using delegate_base_type =
+            delegate_base::delegate_base<void(Args...), delegate_base::no_call_invoker>;
+        using assert_params = ok;
     };
 
     template<typename Ret>
-    struct select_empty_invoker_for<target_is_expected, Ret> {
-        using invoker_type = delegate_base::exception_call_invoker;
-        using assertion_type = ok;
+    struct delegate_helper<Ret, target_is_expected> {
+        template<typename... Args>
+        using delegate_base_type =
+            delegate_base::delegate_base<Ret(Args...), delegate_base::exception_call_invoker>;
+        using assert_params = ok;
     };
 }  // namespace detail
 
@@ -88,15 +86,14 @@ class delegate;
 
 template<typename Ret, typename... Args, typename ExpectedBehavior>
 class delegate<Ret(Args...), ExpectedBehavior>
-    : std::conditional<detail::delegateHasValidExpectedBehavior<Ret, ExpectedBehavior>(),
-          detail::ok, detail::invalid_delegate_expected_behavior_<Ret, ExpectedBehavior>>::type {
+    : detail::delegate_helper<Ret, ExpectedBehavior>::assert_params {
   private:
-    using base_delegate_type = detail::delegate_base::delegate_base<Ret(Args...),
-        typename detail::select_empty_invoker_for<ExpectedBehavior, Ret>::invoker_type>;
+    using delegate_base_type = typename detail::delegate_helper<Ret,
+        ExpectedBehavior>::template delegate_base_type<Args...>;
 
-    base_delegate_type target_ = {};
+    delegate_base_type target_ = {};
 
-    delegate(base_delegate_type&& target) noexcept : target_{std::move(target)} {
+    delegate(delegate_base_type&& target) noexcept : target_{std::move(target)} {
     }
 
   public:
@@ -124,52 +121,55 @@ class delegate<Ret(Args...), ExpectedBehavior>
         target_.swap(other.target_);
     }
 
-    inline Ret operator()(Args... args) const {
+    Ret operator()(Args... args) const {
         return target_.operator()(std::forward<Args>(args)...);
     }
 
+    // Creates a new delegate targeting the passed function or static member function.
     template<Ret (*pFunction)(Args...)>
     static constexpr delegate create() noexcept {
-        return delegate{base_delegate_type::template create<pFunction>()};
+        return delegate{delegate_base_type::template create<pFunction>()};
     }
 
+    // Creates a new delegate targeting the passed non-static member function.
     template<typename C, Ret (C::*pMethod)(Args...)>
     static delegate create(C& obj) noexcept {
-        return delegate{base_delegate_type::template create<C, pMethod>(obj)};
+        return delegate{delegate_base_type::template create<C, pMethod>(obj)};
     }
 
+    // Creates a new delegate targeting the passed non-static const member function.
     template<typename C, Ret (C::*pMethod)(Args...) const>
     static delegate create(const C& obj) noexcept {
-        return delegate{base_delegate_type::template create<C, pMethod>(obj)};
+        return delegate{delegate_base_type::template create<C, pMethod>(obj)};
     }
 
+    // Creates a new delegate targeting the passed functor and taking ownership of it.
     template<typename T>
-    static delegate create(T functor) noexcept(noexcept(base_delegate_type::create(std::move(functor)))) {
-        return delegate{base_delegate_type::template create(std::move(functor))};
+    static delegate create(T functor) noexcept(
+        noexcept(delegate_base_type::create(std::move(functor)))) {
+        return delegate{delegate_base_type::template create(std::move(functor))};
     }
 };
 
 template<typename Ret, typename... Args>
 class delegate<Ret(Args...), target_is_mandatory> {
   private:
-    using base_delegate_type = detail::delegate_base::delegate_base<Ret(Args...),
+    using delegate_base_type = detail::delegate_base::delegate_base<Ret(Args...),
         detail::delegate_base::exception_call_invoker>;
 
-    base_delegate_type target_ = {};
+    delegate_base_type target_ = {};
 
-    delegate(base_delegate_type&& target) noexcept : target_{std::move(target)} {
+    delegate(delegate_base_type&& target) noexcept : target_{std::move(target)} {
     }
 
   public:
     constexpr delegate() noexcept      = delete;
     delegate(const delegate&) noexcept = delete;
     delegate(delegate&& orig) noexcept = default;
-    // TODO: orig should be emptied (might do it automatically?)
-    ~delegate() = default;
+    ~delegate()                        = default;
 
     delegate& operator=(const delegate&) noexcept = delete;
     delegate& operator=(delegate&& orig) noexcept = default;
-    // TODO: orig should be emptied (might do it automatically?)
 
     constexpr explicit operator bool() const noexcept {
         return target_.operator bool();
@@ -179,28 +179,33 @@ class delegate<Ret(Args...), target_is_mandatory> {
         target_.swap(other.target_);
     }
 
-    inline Ret operator()(Args... args) const {
+    Ret operator()(Args... args) const {
         return target_.operator()(std::forward<Args>(args)...);
     }
 
+    // Creates a new delegate targeting the passed function or static member function.
     template<Ret (*pFunction)(Args...)>
     static constexpr delegate create() noexcept {
-        return delegate{base_delegate_type::template create<pFunction>()};
+        return delegate{delegate_base_type::template create<pFunction>()};
     }
 
+    // Creates a new delegate targeting the passed non-static member function.
     template<typename C, Ret (C::*pMethod)(Args...)>
     static delegate create(C& obj) noexcept {
-        return delegate{base_delegate_type::template create<C, pMethod>(obj)};
+        return delegate{delegate_base_type::template create<C, pMethod>(obj)};
     }
 
+    // Creates a new delegate targeting the passed non-static const member function.
     template<typename C, Ret (C::*pMethod)(Args...) const>
     static delegate create(const C& obj) noexcept {
-        return delegate{base_delegate_type::template create<C, pMethod>(obj)};
+        return delegate{delegate_base_type::template create<C, pMethod>(obj)};
     }
 
+    // Creates a new delegate targeting the passed functor and taking ownership of it.
     template<typename T>
-    static delegate create(T functor) noexcept(noexcept(base_delegate_type::create(std::move(functor)))) {
-        return delegate{base_delegate_type::template create(std::move(functor))};
+    static delegate create(T functor) noexcept(
+        noexcept(delegate_base_type::create(std::move(functor)))) {
+        return delegate{delegate_base_type::template create(std::move(functor))};
     }
 };
 
