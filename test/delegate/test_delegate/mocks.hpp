@@ -81,13 +81,15 @@ template<typename Ret, typename... Args, size_t N>
 class FunctionMock<Ret(Args...), N>
     : public detail::MockBase<FunctionMock<Ret(Args...), N>, int, Ret(Args...)> {
     using base     = detail::MockBase<FunctionMock, int, Ret(Args...)>;
-    FunctionMock() = delete;
 
   public:
     using performed_calls_type = typename base::call_counter_type;
     static Ret mockedCall(Args... args) {
         ++base::performedCalls;
         return (*base::behavior)(std::forward<Args>(args)...);
+    }
+    static const char* typeToString() {
+        return "<FunctionMock>";
     }
 };
 
@@ -104,6 +106,9 @@ class MethodMock<Ret(Args...), N>
         ++base::performedCalls;
         return (*base::behavior)(std::forward<Args>(args)...);
     }
+    static const char* typeToString() {
+        return "<MethodMock>";
+    }
 };
 
 template<typename Signature, size_t N = 0>
@@ -118,6 +123,9 @@ class ConstMethodMock<Ret(Args...), N>
     Ret mockedCall(Args... args) const {
         ++base::performedCalls;
         return (*base::behavior)(std::forward<Args>(args)...);
+    }
+    static const char* typeToString() {
+        return "<ConstMethodMock>";
     }
 };
 
@@ -165,6 +173,9 @@ class SmallFunctorMock<Ret(Args...), N> : public detail::MockBase<SmallFunctorMo
     static void operator delete(void* ptr) noexcept {
         ++base::performedCalls.deleteOperator;
         ::operator delete(ptr);
+    }
+    static const char* typeToString() {
+        return "<SmallFunctorMock>";
     }
 };
 
@@ -217,6 +228,9 @@ class BiggerFunctorMock<Ret(Args...), N>
         ++base::performedCalls.deleteOperator;
         ::operator delete(ptr);
     }
+    static const char* typeToString() {
+        return "<BiggerFunctorMock>";
+    }
 };
 
 template<typename Signature, size_t N = 0>
@@ -264,6 +278,9 @@ class BadAlignedFunctorMock<Ret(Args...), N>
     static void operator delete(void* ptr) noexcept {
         ++base::performedCalls.deleteOperator;
         ::operator delete(ptr);
+    }
+    static const char* typeToString() {
+        return "<BadAlignedFunctorMock>";
     }
 };
 

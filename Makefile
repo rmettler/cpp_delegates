@@ -38,8 +38,8 @@ SRCS = \
 	test/delegate/test_delegate/test_empty_delegates.cpp \
 	test/delegate/test_delegate/test_non_empty_delegates.cpp \
 	test/delegate/test_delegate/test_assign_nullptr.cpp \
+	test/delegate/test_delegate/test_move.cpp \
 	# test/delegate/test_delegate/test_swap.cpp \
-	# test/delegate/test_delegate/test_move.cpp \
 
 MAIN_OBJ = $(MAIN_SRC:%.cpp=$(BUILD_DIR)/%.o)
 OBJS = $(SRCS:%.cpp=$(BUILD_DIR)/%.o)
