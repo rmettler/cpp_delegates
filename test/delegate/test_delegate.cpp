@@ -14,27 +14,11 @@
 
 TEST_SUITE_BEGIN("header file: rome/delegate.hpp");
 
-// rome::delegate::create
-//   - global function
-//   - static member function
-//   - non-static, non-const/const member function
-//   - non-static, non-const/const member object which is callable
-//   - function objects
-//   - lambda's
 // rome::delegate non-static members:
 //   - constructors
-//   - destructor
 //   - operator=
 //   - swap
-//   - operator bool
-//   - operator==, operator!=
-//   - operator()
-// operator==, operator!=
 // rome::swap (also use ADL to test it!)
 // rome::make_delegate
-//
-// With:
-//   - different signatures
-//   - TargetRequired = [default, true, false]
 
 TEST_SUITE_END();  // rome/delegate.hpp

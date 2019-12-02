@@ -30,14 +30,14 @@
 
 namespace rome {
 
-// Used as template argument for delegates to declare that it is valid behavior invoking an empty
-// delegate.
+// Used as template argument for delegates to declare that it invoking an empty delegate is valid
+// behavior.
 struct target_is_optional;
 // Used as template argument for delegates to declare that an assigned target is expected when the
 // delegate is invoked and leads to an exception otherwise.
 struct target_is_expected;
 // Used as template argument for delegates to declare that an assigned target is mandatory when the
-// delegate is invoke and thus the design ensures that always a delegate is assigned.
+// delegate is invoked and thus the design ensures that always a delegate is assigned.
 struct target_is_mandatory;
 
 namespace detail {
@@ -60,8 +60,8 @@ namespace detail {
     struct delegate_helper {
         template<typename... Args>
         using delegate_base_type =
-            delegate_base::delegate_base<Ret(Args...), delegate_base::nullptr_invoker>;
-        using assert_params = invalid_delegate_expected_behavior_<Ret, ExpectedBehavior>;
+            delegate_base::delegate_base<Ret(Args...), delegate_base::invalid_invoker>;
+        using assert_template_params = invalid_delegate_expected_behavior_<Ret, ExpectedBehavior>;
     };
 
     template<>
@@ -69,7 +69,7 @@ namespace detail {
         template<typename... Args>
         using delegate_base_type =
             delegate_base::delegate_base<void(Args...), delegate_base::no_call_invoker>;
-        using assert_params = ok;
+        using assert_template_params = ok;
     };
 
     template<typename Ret>
@@ -77,7 +77,7 @@ namespace detail {
         template<typename... Args>
         using delegate_base_type =
             delegate_base::delegate_base<Ret(Args...), delegate_base::exception_call_invoker>;
-        using assert_params = ok;
+        using assert_template_params = ok;
     };
 }  // namespace detail
 
@@ -86,7 +86,7 @@ class delegate;
 
 template<typename Ret, typename... Args, typename ExpectedBehavior>
 class delegate<Ret(Args...), ExpectedBehavior>
-    : detail::delegate_helper<Ret, ExpectedBehavior>::assert_params {
+    : private detail::delegate_helper<Ret, ExpectedBehavior>::assert_template_params {
   private:
     using delegate_base_type = typename detail::delegate_helper<Ret,
         ExpectedBehavior>::template delegate_base_type<Args...>;
