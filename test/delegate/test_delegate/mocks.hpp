@@ -14,6 +14,8 @@
 #include <functional>
 #include <memory>
 
+#include "rome/delegate.hpp"
+
 namespace test_rome_delegate {
 namespace detail {
     struct FunctorCallCounter {
@@ -80,7 +82,7 @@ class FunctionMock;
 template<typename Ret, typename... Args, size_t N>
 class FunctionMock<Ret(Args...), N>
     : public detail::MockBase<FunctionMock<Ret(Args...), N>, int, Ret(Args...)> {
-    using base     = detail::MockBase<FunctionMock, int, Ret(Args...)>;
+    using base = detail::MockBase<FunctionMock, int, Ret(Args...)>;
 
   public:
     using performed_calls_type = typename base::call_counter_type;
@@ -285,5 +287,74 @@ class BadAlignedFunctorMock<Ret(Args...), N>
 };
 
 DOCTEST_CLANG_SUPPRESS_WARNING_POP
+
+namespace detail {
+    template<typename Delegate, typename Mock>
+    struct delegate_creator;
+
+    template<typename Signature, typename ExpectedBehavior, size_t N>
+    struct delegate_creator<rome::delegate<Signature, ExpectedBehavior>,
+        FunctionMock<Signature, N>> {
+        using TMock = FunctionMock<Signature, N>;
+        static auto create(TMock&) {
+            return rome::delegate<Signature,
+                ExpectedBehavior>::template create<&TMock::mockedCall>();
+        }
+    };
+
+    template<typename Signature, typename ExpectedBehavior, size_t N>
+    struct delegate_creator<rome::delegate<Signature, ExpectedBehavior>, MethodMock<Signature, N>> {
+        using TMock = MethodMock<Signature, N>;
+        static auto create(TMock& mock) {
+            return rome::delegate<Signature, ExpectedBehavior>::template create<TMock,
+                &TMock::mockedCall>(mock);
+        }
+    };
+
+    template<typename Signature, typename ExpectedBehavior, size_t N>
+    struct delegate_creator<rome::delegate<Signature, ExpectedBehavior>,
+        ConstMethodMock<Signature, N>> {
+        using TMock = ConstMethodMock<Signature, N>;
+        static auto create(const TMock& mock) {
+            return rome::delegate<Signature, ExpectedBehavior>::template create<TMock,
+                &TMock::mockedCall>(mock);
+        }
+    };
+
+    template<typename Signature, typename ExpectedBehavior, size_t N>
+    struct delegate_creator<rome::delegate<Signature, ExpectedBehavior>,
+        SmallFunctorMock<Signature, N>> {
+        template<typename T>
+        static auto create(T&& mock) {
+            return rome::delegate<Signature, ExpectedBehavior>::template create(
+                std::forward<T>(mock));
+        }
+    };
+
+    template<typename Signature, typename ExpectedBehavior, size_t N>
+    struct delegate_creator<rome::delegate<Signature, ExpectedBehavior>,
+        BiggerFunctorMock<Signature, N>> {
+        template<typename T>
+        static auto create(T&& mock) {
+            return rome::delegate<Signature, ExpectedBehavior>::template create(
+                std::forward<T>(mock));
+        }
+    };
+
+    template<typename Signature, typename ExpectedBehavior, size_t N>
+    struct delegate_creator<rome::delegate<Signature, ExpectedBehavior>,
+        BadAlignedFunctorMock<Signature, N>> {
+        template<typename T>
+        static auto create(T&& mock) {
+            return rome::delegate<Signature, ExpectedBehavior>::template create(
+                std::forward<T>(mock));
+        }
+    };
+}  // namespace detail
+
+template<typename Delegate, size_t N, typename Mock>
+static auto create_delegate_from_mock(Mock&& mock) {
+    return detail::delegate_creator<Delegate, std::decay_t<Mock>>::create(std::forward<Mock>(mock));
+}
 
 }  // namespace test_rome_delegate

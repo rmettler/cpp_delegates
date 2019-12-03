@@ -14,7 +14,7 @@ CXXFLAGS_GNU = -std=c++14 -Wall -Werror -Wextra -pedantic -O3
 LDFLAGS_GNU = 
 
 CXX_CLANG = clang++
-CXXFLAGS_CLANG = -std=c++14 -O3 -Weverything -Wno-c++98-compat -Wno-missing-prototypes -Wno-weak-vtables
+CXXFLAGS_CLANG = -std=c++14 -O3 -Weverything -Wno-c++98-compat -Wno-missing-prototypes -Wno-weak-vtables -Wno-unused-template
 LDFLAGS_CLANG = 
 
 CXX = $(CXX_$(COMPILER_KIT))
