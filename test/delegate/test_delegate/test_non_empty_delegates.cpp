@@ -72,8 +72,8 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TE
         TMock::behavior            = callBehavior;
         const auto& performedCalls = TMock::init();
         auto expectedCalls         = performedCalls;
+        
         TMock mock;
-
         {
             static_assert(
                 noexcept(TDelegate::template create<TMock, &TMock::mockedCall>(mock)), "");
@@ -90,8 +90,8 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TE
         TMock::behavior            = callBehavior;
         const auto& performedCalls = TMock::init();
         auto expectedCalls         = performedCalls;
-        const TMock mock;
 
+        const TMock mock;
         {
             static_assert(
                 noexcept(TDelegate::template create<TMock, &TMock::mockedCall>(mock)), "");
@@ -114,20 +114,17 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TE
 
         TMock mock;
         expectedCalls.defaultConstruction = 1;
-
         {
             static_assert(noexcept(TDelegate::create(mock)), "");
             auto dgt                       = TDelegate::create(std::move(mock));
-            expectedCalls.moveConstruction = 3;
-            // pass to delegate::create, to delegate_base::create and to placement new
-            expectedCalls.destruction = 2;  // destroy temporaries
+            expectedCalls.moveConstruction = 1;
             CHECK(expectedCalls == performedCalls);
             test_rome_delegate::checkNotEmpty(dgt);
             dgt(0);
             expectedCalls.callOperator = 1;
             CHECK(expectedCalls == performedCalls);
         }
-        ++expectedCalls.destruction;
+        expectedCalls.destruction = 1;
         CHECK(expectedCalls == performedCalls);
 
         struct SmallExceptFunctor {
@@ -155,18 +152,16 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TE
         expectedCalls.defaultConstruction = 1;
         {
             auto dgt                       = TDelegate::create(mock);
-            expectedCalls.copyConstruction = 1;  // pass to delegate::create
-            expectedCalls.moveConstruction = 2;  // pass to delegate_base::create and to new
+            expectedCalls.copyConstruction = 1;
             expectedCalls.newOperator      = 1;
-            expectedCalls.destruction      = 2;  // destroy temporaries
             CHECK(expectedCalls == performedCalls);
             test_rome_delegate::checkNotEmpty(dgt);
             dgt(0);
             expectedCalls.callOperator = 1;
             CHECK(expectedCalls == performedCalls);
         }
-        ++expectedCalls.deleteOperator;
-        ++expectedCalls.destruction;
+        expectedCalls.deleteOperator = 1;
+        expectedCalls.destruction    = 1;
         CHECK(expectedCalls == performedCalls);
     }
     SUBCASE("create from too badly aligned functor for small buffer optimization") {
@@ -179,21 +174,18 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TE
 
         TMock mock;
         expectedCalls.defaultConstruction = 1;
-
         {
             auto dgt                       = TDelegate::create(std::move(mock));
-            expectedCalls.moveConstruction = 3;
-            // pass to delegate::create, to delegate_base::create and to new
-            expectedCalls.newOperator = 1;
-            expectedCalls.destruction = 2;  // destroy temporaries
+            expectedCalls.moveConstruction = 1;
+            expectedCalls.newOperator      = 1;
             CHECK(expectedCalls == performedCalls);
             test_rome_delegate::checkNotEmpty(dgt);
             dgt(0);
             expectedCalls.callOperator = 1;
             CHECK(expectedCalls == performedCalls);
         }
-        ++expectedCalls.deleteOperator;
-        ++expectedCalls.destruction;
+        expectedCalls.deleteOperator = 1;
+        expectedCalls.destruction    = 1;
         CHECK(expectedCalls == performedCalls);
     }
 }
@@ -224,8 +216,8 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <bool(int)> and ", TE
         TMock::behavior            = callBehavior;
         const auto& performedCalls = TMock::init();
         auto expectedCalls         = performedCalls;
-        TMock mock;
 
+        TMock mock;
         {
             static_assert(
                 noexcept(TDelegate::template create<TMock, &TMock::mockedCall>(mock)), "");
@@ -243,8 +235,8 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <bool(int)> and ", TE
         TMock::behavior            = callBehavior;
         const auto& performedCalls = TMock::init();
         auto expectedCalls         = performedCalls;
-        const TMock mock;
 
+        const TMock mock;
         {
             static_assert(
                 noexcept(TDelegate::template create<TMock, &TMock::mockedCall>(mock)), "");
@@ -268,14 +260,10 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <bool(int)> and ", TE
 
         TMock mock;
         expectedCalls.defaultConstruction = 1;
-
         {
             static_assert(noexcept(TDelegate::create(mock)), "");
             auto dgt                       = TDelegate::create(mock);
-            expectedCalls.copyConstruction = 1;  // pass to delegate::create
-            expectedCalls.moveConstruction = 2;
-            // pass to delegate_base::create and to placement new
-            expectedCalls.destruction = 2;  // destroy temporaries
+            expectedCalls.copyConstruction = 1;
             CHECK(expectedCalls == performedCalls);
             test_rome_delegate::checkNotEmpty(dgt);
             CHECK(dgt(1) == true);
@@ -283,7 +271,7 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <bool(int)> and ", TE
             expectedCalls.callOperator = 2;
             CHECK(expectedCalls == performedCalls);
         }
-        ++expectedCalls.destruction;
+        expectedCalls.destruction = 1;
         CHECK(expectedCalls == performedCalls);
 
         struct SmallExceptFunctor {
@@ -309,13 +297,10 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <bool(int)> and ", TE
 
         TMock mock;
         expectedCalls.defaultConstruction = 1;
-
         {
             auto dgt                       = TDelegate::create(std::move(mock));
-            expectedCalls.moveConstruction = 3;
-            // pass to delegate::create, to delegate_base::create and to new
-            expectedCalls.newOperator = 1;
-            expectedCalls.destruction = 2;  // destroy temporaries
+            expectedCalls.moveConstruction = 1;
+            expectedCalls.newOperator      = 1;
             CHECK(expectedCalls == performedCalls);
             test_rome_delegate::checkNotEmpty(dgt);
             CHECK(dgt(1) == true);
@@ -323,8 +308,8 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <bool(int)> and ", TE
             expectedCalls.callOperator = 2;
             CHECK(expectedCalls == performedCalls);
         }
-        ++expectedCalls.deleteOperator;
-        ++expectedCalls.destruction;
+        expectedCalls.deleteOperator = 1;
+        expectedCalls.destruction    = 1;
         CHECK(expectedCalls == performedCalls);
     }
     SUBCASE("create from too badly aligned functor for small buffer optimization") {
@@ -337,21 +322,19 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <bool(int)> and ", TE
 
         TMock mock;
         expectedCalls.defaultConstruction = 1;
-
         {
             auto dgt                       = TDelegate::create(std::move(mock));
-            expectedCalls.moveConstruction = 3;
+            expectedCalls.moveConstruction = 1;
             // pass to delegate::create, to delegate_base::create and to new
             expectedCalls.newOperator = 1;
-            expectedCalls.destruction = 2;  // destroy temporaries
             test_rome_delegate::checkNotEmpty(dgt);
             CHECK(dgt(1) == true);
             CHECK(dgt(-1) == false);
             expectedCalls.callOperator = 2;
             CHECK(expectedCalls == performedCalls);
         }
-        ++expectedCalls.deleteOperator;
-        ++expectedCalls.destruction;
+        expectedCalls.deleteOperator = 1;
+        expectedCalls.destruction    = 1;
         CHECK(expectedCalls == performedCalls);
     }
 }

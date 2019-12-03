@@ -152,12 +152,13 @@ namespace detail {
 
             // Creates a new delegate_base and stores the passed invokable inside its local
             // buffer.
-            template<typename Invokable,
-                std::enable_if_t<isSmallBufferOptimizable<Invokable>(), int> = 0>
-            static delegate_base create(Invokable invokable) noexcept(
-                std::is_nothrow_move_constructible<Invokable>::value) {
+            template<typename T,
+                std::enable_if_t<isSmallBufferOptimizable<std::decay_t<T>>(), int> = 0>
+            static delegate_base create(T&& invokable) noexcept(
+                std::is_nothrow_move_constructible<std::decay_t<T>>::value) {
+                using Invokable = std::decay_t<T>;
                 delegate_base d;
-                static_cast<void>(::new (&d.buffer_) Invokable(std::move(invokable)));
+                static_cast<void>(::new (&d.buffer_) Invokable(std::forward<T>(invokable)));
                 d.invoker_ = [](buffer_type& buffer, Args&&... args) -> Ret {
                     auto pFunctor = static_cast<void*>(&buffer);
                     return static_cast<Invokable*>(pFunctor)->operator()(
@@ -172,11 +173,12 @@ namespace detail {
 
             // Creates a new delegate_base and stores the passed invokable at a new location
             // outside its local buffer.
-            template<typename Invokable,
-                std::enable_if_t<!isSmallBufferOptimizable<Invokable>(), int> = 0>
-            static delegate_base create(Invokable invokable) {
+            template<typename T,
+                std::enable_if_t<!isSmallBufferOptimizable<std::decay_t<T>>(), int> = 0>
+            static delegate_base create(T&& invokable) {
+                using Invokable = std::decay_t<T>;
                 delegate_base d;
-                d.buffer_  = new Invokable(std::move(invokable));
+                d.buffer_  = new Invokable(std::forward<T>(invokable));
                 d.invoker_ = [](buffer_type& buffer, Args&&... args) -> Ret {
                     return static_cast<Invokable*>(buffer)->operator()(std::forward<Args>(args)...);
                 };

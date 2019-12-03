@@ -184,8 +184,7 @@ TEST_CASE_TEMPLATE_DEFINE(
     expectedCalls.defaultConstruction = 1;
     {
         auto dgt = test_rome_delegate::create_delegate_from_mock<TDelegate, 1>(std::move(mock));
-        expectedCalls.moveConstruction = 3;
-        expectedCalls.destruction      = 2;
+        expectedCalls.moveConstruction = 1;
         test_rome_delegate::checkNotEmpty(dgt);
         CHECK(expectedCalls == performedCalls);
 
@@ -211,7 +210,7 @@ TEST_CASE_TEMPLATE_DEFINE(
         expectedCalls.callOperator = 2;
         CHECK(expectedCalls == performedCalls);
     }
-    expectedCalls.destruction = 3;
+    expectedCalls.destruction = 1;
     CHECK(expectedCalls == performedCalls);
 }
 TEST_CASE_TEMPLATE_APPLY(small_functor_tests, small_functor_tests);
@@ -234,9 +233,8 @@ TEST_CASE_TEMPLATE_DEFINE(
     expectedCalls.defaultConstruction = 1;
     {
         auto dgt = test_rome_delegate::create_delegate_from_mock<TDelegate, 1>(std::move(mock));
-        expectedCalls.moveConstruction = 3;
+        expectedCalls.moveConstruction = 1;
         expectedCalls.newOperator      = 1;
-        expectedCalls.destruction      = 2;
         test_rome_delegate::checkNotEmpty(dgt);
         CHECK(expectedCalls == performedCalls);
 
@@ -263,7 +261,7 @@ TEST_CASE_TEMPLATE_DEFINE(
         CHECK(expectedCalls == performedCalls);
     }
     expectedCalls.deleteOperator = 1;
-    expectedCalls.destruction    = 3;
+    expectedCalls.destruction    = 1;
     CHECK(expectedCalls == performedCalls);
 }
 TEST_CASE_TEMPLATE_APPLY(big_functor_tests, big_functor_tests);
@@ -292,8 +290,8 @@ TEST_CASE_TEMPLATE_DEFINE(
         dgt = test_rome_delegate::create_delegate_from_mock<TDelegate, 1>(TMock{});
         test_rome_delegate::checkNotEmpty(dgt);
         expectedCalls.defaultConstruction = 1;
-        expectedCalls.moveConstruction    = 3;
-        expectedCalls.destruction         = 3;
+        expectedCalls.destruction         = 1;
+        expectedCalls.moveConstruction    = 1;
         CHECK(expectedCalls == performedCalls);
 
         dgt = std::move(dgt2);
@@ -301,7 +299,7 @@ TEST_CASE_TEMPLATE_DEFINE(
         test_rome_delegate::checkEmpty(dgt);
         helper<TExpectedBehavior>::callEmptyDelegate(dgt2, 2);
         helper<TExpectedBehavior>::callEmptyDelegate(dgt, 1);
-        expectedCalls.destruction = 4;
+        expectedCalls.destruction = 2;
         CHECK(expectedCalls == performedCalls);
     }
     CHECK(expectedCalls == performedCalls);

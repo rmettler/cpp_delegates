@@ -99,14 +99,14 @@ class delegate<Ret(Args...), ExpectedBehavior>
   public:
     constexpr delegate() noexcept      = default;
     delegate(const delegate&) noexcept = delete;
-    delegate(delegate&& orig) noexcept = default;
+    delegate(delegate&&) noexcept      = default;
     ~delegate()                        = default;
 
     constexpr delegate(std::nullptr_t) noexcept : delegate{} {
     }
 
     delegate& operator=(const delegate&) noexcept = delete;
-    delegate& operator=(delegate&& orig) noexcept = default;
+    delegate& operator=(delegate&&) noexcept = default;
 
     constexpr delegate& operator=(std::nullptr_t) noexcept {
         target_ = nullptr;
@@ -145,9 +145,9 @@ class delegate<Ret(Args...), ExpectedBehavior>
 
     // Creates a new delegate targeting the passed functor and taking ownership of it.
     template<typename T>
-    static delegate create(T functor) noexcept(
-        noexcept(delegate_base_type::create(std::move(functor)))) {
-        return delegate{delegate_base_type::template create(std::move(functor))};
+    static delegate create(T&& functor) noexcept(
+        noexcept(delegate_base_type::create(std::forward<T>(functor)))) {
+        return delegate{delegate_base_type::template create(std::forward<T>(functor))};
     }
 };
 
@@ -165,11 +165,11 @@ class delegate<Ret(Args...), target_is_mandatory> {
   public:
     constexpr delegate() noexcept      = delete;
     delegate(const delegate&) noexcept = delete;
-    delegate(delegate&& orig) noexcept = default;
+    delegate(delegate&&) noexcept      = default;
     ~delegate()                        = default;
 
     delegate& operator=(const delegate&) noexcept = delete;
-    delegate& operator=(delegate&& orig) noexcept = default;
+    delegate& operator=(delegate&&) noexcept = default;
 
     constexpr explicit operator bool() const noexcept {
         return target_.operator bool();
@@ -203,9 +203,9 @@ class delegate<Ret(Args...), target_is_mandatory> {
 
     // Creates a new delegate targeting the passed functor and taking ownership of it.
     template<typename T>
-    static delegate create(T functor) noexcept(
-        noexcept(delegate_base_type::create(std::move(functor)))) {
-        return delegate{delegate_base_type::template create(std::move(functor))};
+    static delegate create(T&& functor) noexcept(
+        noexcept(delegate_base_type::create(std::forward<T>(functor)))) {
+        return delegate{delegate_base_type::template create(std::forward<T>(functor))};
     }
 };
 

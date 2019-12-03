@@ -21,7 +21,6 @@ namespace test_rome_delegate {
 TEST_SUITE_BEGIN("header file: rome/detail/delegate_base.hpp");
 
 TEST_CASE("delegate_base") {
-    // TODO: do this with delegate instead!
     using delegate_type = rome::detail::delegate_base::delegate_base<void(),
         rome::detail::delegate_base::no_call_invoker>;
     SUBCASE("static function") {
@@ -59,8 +58,8 @@ TEST_CASE("delegate_base") {
         CHECK((performedCalls == expectedCalls));
     }
     SUBCASE("functor WITH small buffer optimization") {
-        using mock_type         = SmallFunctorMock<void()>;
-        mock_type::behavior     = []() {};
+        using mock_type            = SmallFunctorMock<void()>;
+        mock_type::behavior        = []() {};
         const auto& performedCalls = mock_type::init();
         auto expectedCalls         = performedCalls;
         CHECK(sizeof(mock_type) <= sizeof(void*));
@@ -72,11 +71,7 @@ TEST_CASE("delegate_base") {
             CHECK((performedCalls == expectedCalls));
 
             auto d1 = delegate_type::create(f);
-            // copy construction and destruction during the temporary object f is passed
             ++expectedCalls.copyConstruction;
-            ++expectedCalls.destruction;
-            // move construction used to initialize buffer_
-            ++expectedCalls.moveConstruction;
             CHECK((performedCalls == expectedCalls));
             CHECK(static_cast<bool>(d1));
 
@@ -108,8 +103,8 @@ TEST_CASE("delegate_base") {
         CHECK((performedCalls == expectedCalls));
     }
     SUBCASE("functor too big for small buffer optimization") {
-        using mock_type         = BiggerFunctorMock<void()>;
-        mock_type::behavior     = []() {};
+        using mock_type            = BiggerFunctorMock<void()>;
+        mock_type::behavior        = []() {};
         const auto& performedCalls = mock_type::init();
         auto expectedCalls         = performedCalls;
         // check proper test setup
@@ -122,12 +117,8 @@ TEST_CASE("delegate_base") {
             CHECK((performedCalls == expectedCalls));
 
             auto d1 = delegate_type::create(f);
-            // copy construction and destruction during the temporary object f is passed
             ++expectedCalls.copyConstruction;
-            ++expectedCalls.destruction;
-            // move construction used to initialize buffer_
             ++expectedCalls.newOperator;
-            ++expectedCalls.moveConstruction;
             CHECK((performedCalls == expectedCalls));
 
             d1();
@@ -159,8 +150,8 @@ TEST_CASE("delegate_base") {
         CHECK((performedCalls == expectedCalls));
     }
     SUBCASE("functor too badly aligned for small buffer optimization") {
-        using mock_type         = BadAlignedFunctorMock<void()>;
-        mock_type::behavior     = []() {};
+        using mock_type            = BadAlignedFunctorMock<void()>;
+        mock_type::behavior        = []() {};
         const auto& performedCalls = mock_type::init();
         auto expectedCalls         = performedCalls;
         // check proper test setup
@@ -172,12 +163,8 @@ TEST_CASE("delegate_base") {
             CHECK((performedCalls == expectedCalls));
 
             auto d1 = delegate_type::create(f);
-            // copy construction and destruction during the temporary object f is passed
             ++expectedCalls.copyConstruction;
-            ++expectedCalls.destruction;
-            // move construction used to initialize buffer_
             ++expectedCalls.newOperator;
-            ++expectedCalls.moveConstruction;
             CHECK((performedCalls == expectedCalls));
 
             d1();

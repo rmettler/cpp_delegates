@@ -130,14 +130,12 @@ void assign_to_non_empty_delegate_and_expect_throwing(TSignature* callBehavior, 
         expectedCalls.defaultConstruction = 1;
         {
             auto dgt                       = TDelegate::create(std::move(mock));
-            expectedCalls.moveConstruction = 3;
-            // pass to delegate::create, to delegate_base::create and to placement new
-            expectedCalls.destruction = 2;  // destroy temporaries
+            expectedCalls.moveConstruction = 1;
             static_cast<void>(dgt(std::forward<Args...>(args...)));
             expectedCalls.callOperator = 1;
             CHECK(expectedCalls == performedCalls);
 
-            dgt                       = nullptr;
+            dgt = nullptr;
             ++expectedCalls.destruction;
             test_rome_delegate::checkEmpty(dgt);
             CHECK_CALLING_EMPTY_THROWS(shouldThrow, dgt(std::forward<Args...>(args...)));
@@ -155,15 +153,13 @@ void assign_to_non_empty_delegate_and_expect_throwing(TSignature* callBehavior, 
         expectedCalls.defaultConstruction = 1;
         {
             auto dgt                       = TDelegate::create(std::move(mock));
-            expectedCalls.moveConstruction = 3;
-            // pass to delegate::create, to delegate_base::create and to new
+            expectedCalls.moveConstruction = 1;
             expectedCalls.newOperator = 1;
-            expectedCalls.destruction = 2;  // destroy temporaries
             static_cast<void>(dgt(std::forward<Args...>(args...)));
             expectedCalls.callOperator = 1;
             CHECK(expectedCalls == performedCalls);
 
-            dgt                          = nullptr;
+            dgt = nullptr;
             ++expectedCalls.deleteOperator;
             ++expectedCalls.destruction;
             test_rome_delegate::checkEmpty(dgt);
@@ -182,15 +178,13 @@ void assign_to_non_empty_delegate_and_expect_throwing(TSignature* callBehavior, 
         expectedCalls.defaultConstruction = 1;
         {
             auto dgt                       = TDelegate::create(std::move(mock));
-            expectedCalls.moveConstruction = 3;
-            // pass to delegate::create, to delegate_base::create and to new
+            expectedCalls.moveConstruction = 1;
             expectedCalls.newOperator = 1;
-            expectedCalls.destruction = 2;  // destroy temporaries
             static_cast<void>(dgt(std::forward<Args...>(args...)));
             expectedCalls.callOperator = 1;
             CHECK(expectedCalls == performedCalls);
 
-            dgt                          = nullptr;
+            dgt = nullptr;
             ++expectedCalls.deleteOperator;
             ++expectedCalls.destruction;
             test_rome_delegate::checkEmpty(dgt);
