@@ -36,7 +36,7 @@ TEST_CASE("delegate_base") {
             CHECK(static_cast<bool>(d1));
 
             d1();
-            ++expectedCalls;
+            ++expectedCalls.callOperator;
             CHECK((performedCalls == expectedCalls));
 
             auto d2{std::move(d1)};
@@ -52,7 +52,7 @@ TEST_CASE("delegate_base") {
             CHECK((performedCalls == expectedCalls));
 
             d2();
-            ++expectedCalls;
+            ++expectedCalls.callOperator;
             CHECK((performedCalls == expectedCalls));
         }
         CHECK((performedCalls == expectedCalls));

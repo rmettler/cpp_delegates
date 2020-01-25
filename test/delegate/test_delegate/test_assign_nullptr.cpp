@@ -36,25 +36,25 @@ static void assign_to_empty_delegate_and_expect_throwing(Args&&... args) {
     {
         TDelegate dgt;
         dgt = nullptr;
-        test_rome_delegate::checkEmpty(dgt);
+        test_rome_delegate::check(dgt).isEmpty();
         CHECK_CALLING_EMPTY_THROWS(shouldThrow, dgt(std::forward<Args...>(args...)));
     }
     {
         TDelegate dgt{};
         dgt = nullptr;
-        test_rome_delegate::checkEmpty(dgt);
+        test_rome_delegate::check(dgt).isEmpty();
         CHECK_CALLING_EMPTY_THROWS(shouldThrow, dgt(std::forward<Args...>(args...)));
     }
     {
         TDelegate dgt(nullptr);
         dgt = nullptr;
-        test_rome_delegate::checkEmpty(dgt);
+        test_rome_delegate::check(dgt).isEmpty();
         CHECK_CALLING_EMPTY_THROWS(shouldThrow, dgt(std::forward<Args...>(args...)));
     }
     {
         TDelegate dgt{nullptr};
         dgt = nullptr;
-        test_rome_delegate::checkEmpty(dgt);
+        test_rome_delegate::check(dgt).isEmpty();
         CHECK_CALLING_EMPTY_THROWS(shouldThrow, dgt(std::forward<Args...>(args...)));
     }
 }
@@ -78,11 +78,11 @@ void assign_to_non_empty_delegate_and_expect_throwing(TSignature* callBehavior, 
         auto expectedCalls         = performedCalls;
         auto dgt                   = TDelegate::template create<&TMock::mockedCall>();
         static_cast<void>(dgt(std::forward<Args...>(args...)));
-        expectedCalls = 1;
+        expectedCalls.callOperator = 1;
         CHECK(expectedCalls == performedCalls);
 
         dgt = nullptr;
-        test_rome_delegate::checkEmpty(dgt);
+        test_rome_delegate::check(dgt).isEmpty();
         CHECK_CALLING_EMPTY_THROWS(shouldThrow, dgt(std::forward<Args...>(args...)));
         CHECK(expectedCalls == performedCalls);
     }
@@ -95,11 +95,11 @@ void assign_to_non_empty_delegate_and_expect_throwing(TSignature* callBehavior, 
         TMock mock;
         auto dgt = TDelegate::template create<TMock, &TMock::mockedCall>(mock);
         static_cast<void>(dgt(std::forward<Args...>(args...)));
-        expectedCalls = 1;
+        expectedCalls.callOperator = 1;
         CHECK(expectedCalls == performedCalls);
 
         dgt = nullptr;
-        test_rome_delegate::checkEmpty(dgt);
+        test_rome_delegate::check(dgt).isEmpty();
         CHECK_CALLING_EMPTY_THROWS(shouldThrow, dgt(std::forward<Args...>(args...)));
         CHECK(expectedCalls == performedCalls);
     }
@@ -112,11 +112,11 @@ void assign_to_non_empty_delegate_and_expect_throwing(TSignature* callBehavior, 
         TMock mock;
         auto dgt = TDelegate::template create<TMock, &TMock::mockedCall>(mock);
         static_cast<void>(dgt(std::forward<Args...>(args...)));
-        expectedCalls = 1;
+        expectedCalls.callOperator = 1;
         CHECK(expectedCalls == performedCalls);
 
         dgt = nullptr;
-        test_rome_delegate::checkEmpty(dgt);
+        test_rome_delegate::check(dgt).isEmpty();
         CHECK_CALLING_EMPTY_THROWS(shouldThrow, dgt(std::forward<Args...>(args...)));
         CHECK(expectedCalls == performedCalls);
     }
@@ -137,7 +137,7 @@ void assign_to_non_empty_delegate_and_expect_throwing(TSignature* callBehavior, 
 
             dgt = nullptr;
             ++expectedCalls.destruction;
-            test_rome_delegate::checkEmpty(dgt);
+            test_rome_delegate::check(dgt).isEmpty();
             CHECK_CALLING_EMPTY_THROWS(shouldThrow, dgt(std::forward<Args...>(args...)));
             CHECK(expectedCalls == performedCalls);
         }
@@ -162,7 +162,7 @@ void assign_to_non_empty_delegate_and_expect_throwing(TSignature* callBehavior, 
             dgt = nullptr;
             ++expectedCalls.deleteOperator;
             ++expectedCalls.destruction;
-            test_rome_delegate::checkEmpty(dgt);
+            test_rome_delegate::check(dgt).isEmpty();
             CHECK_CALLING_EMPTY_THROWS(shouldThrow, dgt(std::forward<Args...>(args...)));
             CHECK(expectedCalls == performedCalls);
         }
@@ -187,7 +187,7 @@ void assign_to_non_empty_delegate_and_expect_throwing(TSignature* callBehavior, 
             dgt = nullptr;
             ++expectedCalls.deleteOperator;
             ++expectedCalls.destruction;
-            test_rome_delegate::checkEmpty(dgt);
+            test_rome_delegate::check(dgt).isEmpty();
             CHECK_CALLING_EMPTY_THROWS(shouldThrow, dgt(std::forward<Args...>(args...)));
             CHECK(expectedCalls == performedCalls);
         }

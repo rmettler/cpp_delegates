@@ -18,7 +18,7 @@ TEST_SUITE_BEGIN("header file: rome/delegate.hpp");
 //   - constructors
 //   - operator=
 //   - swap
-// rome::swap (also use ADL to test it!)
-// rome::make_delegate
+// TODO: rome::swap (also use ADL to test it!)
+// TODO: rome::make_delegate
 
 TEST_SUITE_END();  // rome/delegate.hpp

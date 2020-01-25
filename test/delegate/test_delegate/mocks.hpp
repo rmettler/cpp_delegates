@@ -18,7 +18,16 @@
 
 namespace test_rome_delegate {
 namespace detail {
-    struct FunctorCallCounter {
+    struct CallOperatorCounter {
+        int callOperator = 0;
+
+        bool operator==(const CallOperatorCounter& rhs) const {
+            CHECK(callOperator == rhs.callOperator);
+            return (callOperator == rhs.callOperator);
+        }
+    };
+
+    struct FunctorOperationsCounter {
         int defaultConstruction = 0;
         int destruction         = 0;
         int copyConstruction    = 0;
@@ -29,11 +38,7 @@ namespace detail {
         int newOperator         = 0;
         int deleteOperator      = 0;
 
-        void reset() {
-            *this = {};
-        }
-
-        bool operator==(const FunctorCallCounter& rhs) const {
+        bool operator==(const FunctorOperationsCounter& rhs) const {
             CHECK(defaultConstruction == rhs.defaultConstruction);
             CHECK(destruction == rhs.destruction);
             CHECK(copyConstruction == rhs.copyConstruction);
@@ -61,9 +66,11 @@ namespace detail {
         using mocked_call_type = Ret (*)(Args...);
         static mocked_call_type behavior;
         using call_counter_type = CallCounter;
+        static call_counter_type expectedCalls;
         static call_counter_type performedCalls;
 
         static const call_counter_type& init() {
+            expectedCalls  = {};
             performedCalls = {};
             return performedCalls;
         }
@@ -73,6 +80,9 @@ namespace detail {
         MockBase<Derived, CallCounter, Ret(Args...)>::behavior = nullptr;
     template<typename Derived, typename CallCounter, typename Ret, typename... Args>
     typename MockBase<Derived, CallCounter, Ret(Args...)>::call_counter_type
+        MockBase<Derived, CallCounter, Ret(Args...)>::expectedCalls = {};
+    template<typename Derived, typename CallCounter, typename Ret, typename... Args>
+    typename MockBase<Derived, CallCounter, Ret(Args...)>::call_counter_type
         MockBase<Derived, CallCounter, Ret(Args...)>::performedCalls = {};
 }  // namespace detail
 
@@ -80,14 +90,14 @@ template<typename Signature, size_t N = 0>
 class FunctionMock;
 
 template<typename Ret, typename... Args, size_t N>
-class FunctionMock<Ret(Args...), N>
-    : public detail::MockBase<FunctionMock<Ret(Args...), N>, int, Ret(Args...)> {
-    using base = detail::MockBase<FunctionMock, int, Ret(Args...)>;
+class FunctionMock<Ret(Args...), N> : public detail::MockBase<FunctionMock<Ret(Args...), N>,
+                                          detail::CallOperatorCounter, Ret(Args...)> {
+    using base = detail::MockBase<FunctionMock, detail::CallOperatorCounter, Ret(Args...)>;
 
   public:
     using performed_calls_type = typename base::call_counter_type;
     static Ret mockedCall(Args... args) {
-        ++base::performedCalls;
+        ++base::performedCalls.callOperator;
         return (*base::behavior)(std::forward<Args>(args)...);
     }
     static const char* typeToString() {
@@ -99,13 +109,13 @@ template<typename Signature, size_t N = 0>
 class MethodMock;
 
 template<typename Ret, typename... Args, size_t N>
-class MethodMock<Ret(Args...), N>
-    : public detail::MockBase<MethodMock<Ret(Args...), N>, int, Ret(Args...)> {
-    using base = detail::MockBase<MethodMock, int, Ret(Args...)>;
+class MethodMock<Ret(Args...), N> : public detail::MockBase<MethodMock<Ret(Args...), N>,
+                                        detail::CallOperatorCounter, Ret(Args...)> {
+    using base = detail::MockBase<MethodMock, detail::CallOperatorCounter, Ret(Args...)>;
 
   public:
     Ret mockedCall(Args... args) {
-        ++base::performedCalls;
+        ++base::performedCalls.callOperator;
         return (*base::behavior)(std::forward<Args>(args)...);
     }
     static const char* typeToString() {
@@ -117,13 +127,13 @@ template<typename Signature, size_t N = 0>
 class ConstMethodMock;
 
 template<typename Ret, typename... Args, size_t N>
-class ConstMethodMock<Ret(Args...), N>
-    : public detail::MockBase<ConstMethodMock<Ret(Args...), N>, int, Ret(Args...)> {
-    using base = detail::MockBase<ConstMethodMock, int, Ret(Args...)>;
+class ConstMethodMock<Ret(Args...), N> : public detail::MockBase<ConstMethodMock<Ret(Args...), N>,
+                                             detail::CallOperatorCounter, Ret(Args...)> {
+    using base = detail::MockBase<ConstMethodMock, detail::CallOperatorCounter, Ret(Args...)>;
 
   public:
     Ret mockedCall(Args... args) const {
-        ++base::performedCalls;
+        ++base::performedCalls.callOperator;
         return (*base::behavior)(std::forward<Args>(args)...);
     }
     static const char* typeToString() {
@@ -136,8 +146,8 @@ class SmallFunctorMock;
 
 template<typename Ret, typename... Args, size_t N>
 class SmallFunctorMock<Ret(Args...), N> : public detail::MockBase<SmallFunctorMock<Ret(Args...), N>,
-                                              detail::FunctorCallCounter, Ret(Args...)> {
-    using base = detail::MockBase<SmallFunctorMock, detail::FunctorCallCounter, Ret(Args...)>;
+                                              detail::FunctorOperationsCounter, Ret(Args...)> {
+    using base = detail::MockBase<SmallFunctorMock, detail::FunctorOperationsCounter, Ret(Args...)>;
 
     // dummy member to create size
     void* dummy_;
@@ -188,11 +198,12 @@ class BiggerFunctorMock;
 
 template<typename Ret, typename... Args, size_t N>
 class BiggerFunctorMock<Ret(Args...), N>
-    : public detail::MockBase<BiggerFunctorMock<Ret(Args...), N>, detail::FunctorCallCounter,
+    : public detail::MockBase<BiggerFunctorMock<Ret(Args...), N>, detail::FunctorOperationsCounter,
           Ret(Args...)> {
-    using base = detail::MockBase<BiggerFunctorMock, detail::FunctorCallCounter, Ret(Args...)>;
+    using base =
+        detail::MockBase<BiggerFunctorMock, detail::FunctorOperationsCounter, Ret(Args...)>;
 
-    // dummy member to create size
+    // dummy members to create size
     void* dummy1_;
     bool dummy2_;
 
@@ -240,9 +251,10 @@ class BadAlignedFunctorMock;
 
 template<typename Ret, typename... Args, size_t N>
 class BadAlignedFunctorMock<Ret(Args...), N>
-    : public detail::MockBase<BadAlignedFunctorMock<Ret(Args...), N>, detail::FunctorCallCounter,
-          Ret(Args...)> {
-    using base = detail::MockBase<BadAlignedFunctorMock, detail::FunctorCallCounter, Ret(Args...)>;
+    : public detail::MockBase<BadAlignedFunctorMock<Ret(Args...), N>,
+          detail::FunctorOperationsCounter, Ret(Args...)> {
+    using base =
+        detail::MockBase<BadAlignedFunctorMock, detail::FunctorOperationsCounter, Ret(Args...)>;
 
     // dummy member to create size and alignment
     alignas(2 * sizeof(void*)) void* dummy_;
@@ -292,62 +304,51 @@ namespace detail {
     template<typename Delegate, typename Mock>
     struct delegate_creator;
 
-    template<typename Signature, typename ExpectedBehavior, size_t N>
-    struct delegate_creator<rome::delegate<Signature, ExpectedBehavior>,
-        FunctionMock<Signature, N>> {
+    template<typename Delegate, typename Signature, size_t N>
+    struct delegate_creator<Delegate, FunctionMock<Signature, N>> {
         using TMock = FunctionMock<Signature, N>;
         static auto create(TMock&) {
-            return rome::delegate<Signature,
-                ExpectedBehavior>::template create<&TMock::mockedCall>();
+            return Delegate::template create<&TMock::mockedCall>();
         }
     };
 
-    template<typename Signature, typename ExpectedBehavior, size_t N>
-    struct delegate_creator<rome::delegate<Signature, ExpectedBehavior>, MethodMock<Signature, N>> {
+    template<typename Delegate, typename Signature, size_t N>
+    struct delegate_creator<Delegate, MethodMock<Signature, N>> {
         using TMock = MethodMock<Signature, N>;
         static auto create(TMock& mock) {
-            return rome::delegate<Signature, ExpectedBehavior>::template create<TMock,
-                &TMock::mockedCall>(mock);
+            return Delegate::template create<TMock, &TMock::mockedCall>(mock);
         }
     };
 
-    template<typename Signature, typename ExpectedBehavior, size_t N>
-    struct delegate_creator<rome::delegate<Signature, ExpectedBehavior>,
-        ConstMethodMock<Signature, N>> {
+    template<typename Delegate, typename Signature, size_t N>
+    struct delegate_creator<Delegate, ConstMethodMock<Signature, N>> {
         using TMock = ConstMethodMock<Signature, N>;
         static auto create(const TMock& mock) {
-            return rome::delegate<Signature, ExpectedBehavior>::template create<TMock,
-                &TMock::mockedCall>(mock);
+            return Delegate::template create<TMock, &TMock::mockedCall>(mock);
         }
     };
 
-    template<typename Signature, typename ExpectedBehavior, size_t N>
-    struct delegate_creator<rome::delegate<Signature, ExpectedBehavior>,
-        SmallFunctorMock<Signature, N>> {
+    template<typename Delegate, typename Signature, size_t N>
+    struct delegate_creator<Delegate, SmallFunctorMock<Signature, N>> {
         template<typename T>
         static auto create(T&& mock) {
-            return rome::delegate<Signature, ExpectedBehavior>::template create(
-                std::forward<T>(mock));
+            return Delegate::template create(std::forward<T>(mock));
         }
     };
 
-    template<typename Signature, typename ExpectedBehavior, size_t N>
-    struct delegate_creator<rome::delegate<Signature, ExpectedBehavior>,
-        BiggerFunctorMock<Signature, N>> {
+    template<typename Delegate, typename Signature, size_t N>
+    struct delegate_creator<Delegate, BiggerFunctorMock<Signature, N>> {
         template<typename T>
         static auto create(T&& mock) {
-            return rome::delegate<Signature, ExpectedBehavior>::template create(
-                std::forward<T>(mock));
+            return Delegate::template create(std::forward<T>(mock));
         }
     };
 
-    template<typename Signature, typename ExpectedBehavior, size_t N>
-    struct delegate_creator<rome::delegate<Signature, ExpectedBehavior>,
-        BadAlignedFunctorMock<Signature, N>> {
+    template<typename Delegate, typename Signature, size_t N>
+    struct delegate_creator<Delegate, BadAlignedFunctorMock<Signature, N>> {
         template<typename T>
         static auto create(T&& mock) {
-            return rome::delegate<Signature, ExpectedBehavior>::template create(
-                std::forward<T>(mock));
+            return Delegate::template create(std::forward<T>(mock));
         }
     };
 }  // namespace detail

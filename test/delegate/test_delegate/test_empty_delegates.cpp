@@ -32,12 +32,12 @@ template<typename TDelegate, typename... Args>
 static bool test_default_constructed_no_throw_on_call(Args&&... args) {
     {
         TDelegate dgt;
-        test_rome_delegate::checkEmpty(dgt);
+        test_rome_delegate::check(dgt).isEmpty();
         CHECK_NOTHROW(dgt(std::forward<Args...>(args...)));
     }
     {
         TDelegate dgt{};
-        test_rome_delegate::checkEmpty(dgt);
+        test_rome_delegate::check(dgt).isEmpty();
         CHECK_NOTHROW(dgt(std::forward<Args...>(args...)));
     }
     return true;
@@ -47,13 +47,13 @@ template<typename TDelegate, typename... Args>
 static bool test_default_constructed_throws_on_call(Args&&... args) {
     {
         TDelegate dgt;
-        test_rome_delegate::checkEmpty(dgt);
+        test_rome_delegate::check(dgt).isEmpty();
         CHECK_THROWS_WITH_AS(dgt(std::forward<Args...>(args...)), "rome::bad_delegate_call",
             rome::bad_delegate_call);
     }
     {
         TDelegate dgt{};
-        test_rome_delegate::checkEmpty(dgt);
+        test_rome_delegate::check(dgt).isEmpty();
         CHECK_THROWS_WITH_AS(dgt(std::forward<Args...>(args...)), "rome::bad_delegate_call",
             rome::bad_delegate_call);
     }
@@ -64,12 +64,12 @@ template<typename TDelegate, typename... Args>
 static bool test_nullptr_constructed_no_throw_on_call(Args&&... args) {
     {
         TDelegate dgt(nullptr);
-        test_rome_delegate::checkEmpty(dgt);
+        test_rome_delegate::check(dgt).isEmpty();
         CHECK_NOTHROW(dgt(std::forward<Args...>(args...)));
     }
     {
         TDelegate dgt{nullptr};
-        test_rome_delegate::checkEmpty(dgt);
+        test_rome_delegate::check(dgt).isEmpty();
         CHECK_NOTHROW(dgt(std::forward<Args...>(args...)));
     }
     return true;
@@ -79,13 +79,13 @@ template<typename TDelegate, typename... Args>
 static bool test_nullptr_constructed_throws_on_call(Args&&... args) {
     {
         TDelegate dgt(nullptr);
-        test_rome_delegate::checkEmpty(dgt);
+        test_rome_delegate::check(dgt).isEmpty();
         CHECK_THROWS_WITH_AS(dgt(std::forward<Args...>(args...)), "rome::bad_delegate_call",
             rome::bad_delegate_call);
     }
     {
         TDelegate dgt{nullptr};
-        test_rome_delegate::checkEmpty(dgt);
+        test_rome_delegate::check(dgt).isEmpty();
         CHECK_THROWS_WITH_AS(dgt(std::forward<Args...>(args...)), "rome::bad_delegate_call",
             rome::bad_delegate_call);
     }
