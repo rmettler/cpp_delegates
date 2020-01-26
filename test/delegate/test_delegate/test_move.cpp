@@ -43,10 +43,10 @@ struct Test {
     static constexpr delegate_signature<Delegate>* mockBehavior = mockBehavior_;
 };
 
-void mockedBehavior1(int) {
+static void mockedBehavior1(int) {
 }
 
-bool mockedBehavior2(int i) {
+static bool mockedBehavior2(int i) {
     return i > 0;
 }
 
