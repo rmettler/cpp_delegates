@@ -60,7 +60,7 @@ constexpr bool test_unsupported_types_do_fail() {
     return true;
 }
 
-TEST_CASE("rome::delegate - template parameter 'ExpectedBehavior'") {
+TEST_CASE("rome::delegate - template parameter 'Behavior'") {
     CHECK(test_default_type());
     CHECK(test_supported_types_do_not_fail());
     CHECK(test_unsupported_types_do_fail());

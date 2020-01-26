@@ -75,7 +75,7 @@ struct is_const_callable_with : decltype(is_const_callable_with_impl<T, Ret, Arg
 
 DOCTEST_CLANG_SUPPRESS_WARNING_POP
 
-// check whether a compile error would occur becaus ExpectedBehavior argument is not correct
+// check whether a compile error would occur because Behavior argument is not correct
 template<typename TDelegate>
 constexpr bool produces_expected_behavior_error =
     std::is_base_of<rome::detail::invalid_delegate_expected_behavior, TDelegate>::value;
@@ -266,7 +266,7 @@ TEST_WITH_RETURN_AND_ARGS(int, (TSignature));
 TEST_CASE("rome::delegate - template parameter combinations") {
     CHECK_MESSAGE(
         true, "explicit template instantiations build with different possible type combinations");
-    CHECK_MESSAGE(true, "templates of different types fail to instantiate if ExpectedBehavior is "
+    CHECK_MESSAGE(true, "templates of different types fail to instantiate if Behavior is "
                         "rome::target_is_optional and the return type is not void");
     CHECK_MESSAGE(true, "check size of class");
     CHECK_MESSAGE(true, "check default constructor");

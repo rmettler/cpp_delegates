@@ -30,10 +30,10 @@ TEST_SUITE_BEGIN(
         " - 'operator==' with nullptr returns false\n"
         " - 'operator!=' with nullptr returns true"));
 
-TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TExpectedBehavior,
+TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TBehavior,
     rome::target_is_mandatory, rome::target_is_expected, rome::target_is_optional) {
     using TSignature  = void(int);
-    using TDelegate   = rome::delegate<TSignature, TExpectedBehavior>;
+    using TDelegate   = rome::delegate<TSignature, TBehavior>;
     auto callBehavior = [](int) {};
     SUBCASE("create from funciton") {
         using TMock                = test_rome_delegate::FunctionMock<TSignature>;
@@ -72,7 +72,7 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TE
         TMock::behavior            = callBehavior;
         const auto& performedCalls = TMock::init();
         auto expectedCalls         = performedCalls;
-        
+
         TMock mock;
         {
             static_assert(
@@ -190,10 +190,10 @@ TEST_CASE_TEMPLATE("rome::delegate - create with Signature <void(int)> and ", TE
     }
 }
 
-TEST_CASE_TEMPLATE("rome::delegate - create with Signature <bool(int)> and ", TExpectedBehavior,
+TEST_CASE_TEMPLATE("rome::delegate - create with Signature <bool(int)> and ", TBehavior,
     rome::target_is_mandatory, rome::target_is_expected) {
     using TSignature  = bool(int);
-    using TDelegate   = rome::delegate<TSignature, TExpectedBehavior>;
+    using TDelegate   = rome::delegate<TSignature, TBehavior>;
     auto callBehavior = [](int i) { return i > 0; };
     SUBCASE("create from funciton") {
         using TMock                = test_rome_delegate::FunctionMock<TSignature>;

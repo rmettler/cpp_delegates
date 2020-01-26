@@ -1,4 +1,4 @@
-# _rome::delegate<Ret(Args...), ExpectedBehavior>_ **create**
+# _rome::delegate<Ret(Args...), Behavior>_ **create**
 
 ```cpp
 template<Ret (*pTarget)(Args...)>

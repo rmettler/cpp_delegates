@@ -1,4 +1,4 @@
-# _rome::delegate<Ret(Args...), ExpectedBehavior>::_ **swap**
+# _rome::delegate<Ret(Args...), Behavior>::_ **swap**
 
 ```cpp
 void swap(delegate& other) noexcept;

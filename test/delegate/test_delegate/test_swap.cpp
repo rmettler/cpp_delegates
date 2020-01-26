@@ -88,7 +88,7 @@ TEST_CASE_TEMPLATE_DEFINE("rome::delegate - swap targets", TTest, tests) {
     Mock1::behavior = TTest::mockBehavior1;
     Mock2::behavior = TTest::mockBehavior2;
     INFO("Signature = " << doctest::detail::type_to_string<delegate_signature<Delegate>>());
-    INFO("ExpectedBehavior = " << doctest::detail::type_to_string<delegate_behavior<Delegate>>());
+    INFO("Behavior = " << doctest::detail::type_to_string<delegate_behavior<Delegate>>());
     INFO("Mock = " << Mock1::typeToString());
 
     // TODO: subcases for each swap possibility!

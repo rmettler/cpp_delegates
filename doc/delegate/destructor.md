@@ -1,4 +1,4 @@
-# _rome::delegate<Ret(Args...), ExpectedBehavior>::_ **~delegate**
+# _rome::delegate<Ret(Args...), Behavior>::_ **~delegate**
 
 ```cpp
 ~delegate();

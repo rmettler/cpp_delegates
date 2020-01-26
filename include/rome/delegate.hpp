@@ -43,11 +43,11 @@ struct target_is_mandatory;
 namespace detail {
     struct invalid_delegate_expected_behavior {};
 
-    template<typename Ret, typename ExpectedBehavior>
+    template<typename Ret, typename Behavior>
     struct invalid_delegate_expected_behavior_ : invalid_delegate_expected_behavior {
         constexpr invalid_delegate_expected_behavior_() noexcept {
-            static_assert(wrong<Ret, ExpectedBehavior>,
-                "Invalid template parameter. The second template parameter 'ExpectedBehavior' must "
+            static_assert(wrong<Ret, Behavior>,
+                "Invalid template parameter. The second template parameter 'Behavior' must "
                 "either be empty or contain one of the types 'rome::target_is_optional', "
                 "'rome::target_is_expected' or 'rome::target_is_mandatory', where "
                 "'rome::target_is_optional' is only valid if the return type 'Ret' is 'void'.");
@@ -56,12 +56,12 @@ namespace detail {
 
     // TODO: change name to expected_behavior_delegate_param_invalid!
     // TODO: also cleanup unused helper macros for constexpr stuff
-    template<typename Ret, typename ExpectedBehavior>
+    template<typename Ret, typename Behavior>
     struct delegate_helper {
         template<typename... Args>
         using delegate_base_type =
             delegate_base::delegate_base<Ret(Args...), delegate_base::invalid_invoker>;
-        using assert_template_params = invalid_delegate_expected_behavior_<Ret, ExpectedBehavior>;
+        using assert_template_params = invalid_delegate_expected_behavior_<Ret, Behavior>;
     };
 
     template<>
@@ -81,15 +81,15 @@ namespace detail {
     };
 }  // namespace detail
 
-template<typename Signature, typename ExpectedBehavior = target_is_expected>
+template<typename Signature, typename Behavior = target_is_expected>
 class delegate;
 
-template<typename Ret, typename... Args, typename ExpectedBehavior>
-class delegate<Ret(Args...), ExpectedBehavior>
-    : private detail::delegate_helper<Ret, ExpectedBehavior>::assert_template_params {
+template<typename Ret, typename... Args, typename Behavior>
+class delegate<Ret(Args...), Behavior>
+    : private detail::delegate_helper<Ret, Behavior>::assert_template_params {
   private:
-    using delegate_base_type = typename detail::delegate_helper<Ret,
-        ExpectedBehavior>::template delegate_base_type<Args...>;
+    using delegate_base_type =
+        typename detail::delegate_helper<Ret, Behavior>::template delegate_base_type<Args...>;
 
     delegate_base_type target_ = {};
 
@@ -209,23 +209,23 @@ class delegate<Ret(Args...), target_is_mandatory> {
     }
 };
 
-template<typename Sig, typename ExpectedBehavior>
-constexpr bool operator==(const delegate<Sig, ExpectedBehavior>& lhs, std::nullptr_t) {
+template<typename Sig, typename Behavior>
+constexpr bool operator==(const delegate<Sig, Behavior>& lhs, std::nullptr_t) {
     return !lhs;
 }
 
-template<typename Sig, typename ExpectedBehavior>
-constexpr bool operator==(std::nullptr_t, const delegate<Sig, ExpectedBehavior>& rhs) {
+template<typename Sig, typename Behavior>
+constexpr bool operator==(std::nullptr_t, const delegate<Sig, Behavior>& rhs) {
     return !rhs;
 }
 
-template<typename Sig, typename ExpectedBehavior>
-constexpr bool operator!=(const delegate<Sig, ExpectedBehavior>& lhs, std::nullptr_t) {
+template<typename Sig, typename Behavior>
+constexpr bool operator!=(const delegate<Sig, Behavior>& lhs, std::nullptr_t) {
     return static_cast<bool>(lhs);
 }
 
-template<typename Sig, typename ExpectedBehavior>
-constexpr bool operator!=(std::nullptr_t, const delegate<Sig, ExpectedBehavior>& rhs) {
+template<typename Sig, typename Behavior>
+constexpr bool operator!=(std::nullptr_t, const delegate<Sig, Behavior>& rhs) {
     return static_cast<bool>(rhs);
 }
 
