@@ -91,13 +91,6 @@ TEST_CASE_TEMPLATE_DEFINE("rome::delegate - swap targets", TTest, tests) {
     INFO("Behavior = " << doctest::detail::type_to_string<delegate_behavior<Delegate>>());
     INFO("Mock = " << Mock1::typeToString());
 
-    // TODO: subcases for each swap possibility!
-    // swap:
-    //  mock1 <-> mock2
-    //  empty <-> empty
-    //  mock <-> empty
-    //  empty <-> mock
-    // normal swap (2x) and global swap (2x)
     SUBCASE("swap two non-empty delegates") {
         Mock1 mockedTarget1{};
         Mock2 mockedTarget2{};

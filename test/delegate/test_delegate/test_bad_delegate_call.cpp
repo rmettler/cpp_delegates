@@ -9,7 +9,7 @@
 
 #include <doctest.h>
 
-#include <rome/bad_delegate_call.hpp>
+#include <rome/detail/bad_delegate_call.hpp>
 #include <type_traits>
 
 TEST_SUITE_BEGIN("header file: rome/bad_delegate_call.hpp");

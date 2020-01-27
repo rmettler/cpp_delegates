@@ -14,11 +14,7 @@
 
 TEST_SUITE_BEGIN("header file: rome/delegate.hpp");
 
-// rome::delegate non-static members:
-//   - constructors
-//   - operator=
-//   - swap
-// TODO: rome::swap (also use ADL to test it!)
 // TODO: rome::make_delegate
+// TODO: forward_delegate
 
 TEST_SUITE_END();  // rome/delegate.hpp

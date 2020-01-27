@@ -20,7 +20,7 @@ namespace delegates {
 namespace detail {
 template <typename T, T t> struct delegate_factory;
 
-// TODO: add delegate factory for functors
+// TODO: add delegate factory for functors and include id in delegate.hpp
 
 template <typename C, typename Ret, typename... Args, Ret (C::*pMem)(Args...)>
 struct delegate_factory<Ret (C::*)(Args...), pMem> {

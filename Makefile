@@ -30,10 +30,8 @@ DEFINES =
 MAIN_SRC = test/test_main.cpp
 SRCS = \
 	test/test_function_ptr.cpp \
-	test/test_bad_delegate_call.cpp \
-	test/delegate/test_delegate.cpp \
+	test/delegate/test_delegate/test_bad_delegate_call.cpp \
 	test/delegate/test_delegate/test_template_definition.cpp \
-	test/delegate/test_delegate/test_delegate_base.cpp \
 	test/delegate/test_delegate/test_template_param_Behavior.cpp \
 	test/delegate/test_delegate/test_empty_delegates.cpp \
 	test/delegate/test_delegate/test_non_empty_delegates.cpp \

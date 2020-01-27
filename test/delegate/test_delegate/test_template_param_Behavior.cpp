@@ -16,7 +16,7 @@ TEST_SUITE_BEGIN("header file: rome/delegate.hpp");
 
 template<typename TDelegate>
 constexpr bool produces_expected_behavior_error =
-    std::is_base_of<rome::detail::invalid_delegate_expected_behavior, TDelegate>::value;
+    std::is_base_of<rome::detail::behavior_delegate_param_invalid, TDelegate>::value;
 
 constexpr bool test_default_type() {
     using rome::delegate;

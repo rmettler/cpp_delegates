@@ -78,7 +78,7 @@ DOCTEST_CLANG_SUPPRESS_WARNING_POP
 // check whether a compile error would occur because Behavior argument is not correct
 template<typename TDelegate>
 constexpr bool produces_expected_behavior_error =
-    std::is_base_of<rome::detail::invalid_delegate_expected_behavior, TDelegate>::value;
+    std::is_base_of<rome::detail::behavior_delegate_param_invalid, TDelegate>::value;
 
 template<typename Signature>
 struct tester;

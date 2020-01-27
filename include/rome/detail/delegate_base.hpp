@@ -13,7 +13,7 @@
 #include <cassert>
 #include <type_traits>
 
-#include "rome/bad_delegate_call.hpp"
+#include "rome/detail/bad_delegate_call.hpp"
 
 namespace rome {
 namespace detail {

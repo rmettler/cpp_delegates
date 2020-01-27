@@ -24,7 +24,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "bad_delegate_call.hpp"
+#include "detail/bad_delegate_call.hpp"
 #include "detail/assertions.hpp"
 #include "detail/delegate_base.hpp"
 
@@ -41,11 +41,11 @@ struct target_is_expected;
 struct target_is_mandatory;
 
 namespace detail {
-    struct invalid_delegate_expected_behavior {};
+    struct behavior_delegate_param_invalid {};
 
     template<typename Ret, typename Behavior>
-    struct invalid_delegate_expected_behavior_ : invalid_delegate_expected_behavior {
-        constexpr invalid_delegate_expected_behavior_() noexcept {
+    struct behavior_delegate_param_invalid_ : behavior_delegate_param_invalid {
+        constexpr behavior_delegate_param_invalid_() noexcept {
             static_assert(wrong<Ret, Behavior>,
                 "Invalid template parameter. The second template parameter 'Behavior' must "
                 "either be empty or contain one of the types 'rome::target_is_optional', "
@@ -54,14 +54,12 @@ namespace detail {
         }
     };
 
-    // TODO: change name to expected_behavior_delegate_param_invalid!
-    // TODO: also cleanup unused helper macros for constexpr stuff
     template<typename Ret, typename Behavior>
     struct delegate_helper {
         template<typename... Args>
         using delegate_base_type =
             delegate_base::delegate_base<Ret(Args...), delegate_base::invalid_invoker>;
-        using assert_template_params = invalid_delegate_expected_behavior_<Ret, Behavior>;
+        using assert_template_params = behavior_delegate_param_invalid_<Ret, Behavior>;
     };
 
     template<>
