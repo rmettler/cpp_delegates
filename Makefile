@@ -30,7 +30,7 @@ DEFINES =
 MAIN_SRC = test/test_main.cpp
 SRCS = \
 	test/test_function_ptr.cpp \
-	test/delegate/test_delegate/test_bad_delegate_call.cpp \
+	test/delegate/test_bad_delegate_call.cpp \
 	test/delegate/test_delegate/test_template_definition.cpp \
 	test/delegate/test_delegate/test_template_param_Behavior.cpp \
 	test/delegate/test_delegate/test_empty_delegates.cpp \
@@ -38,6 +38,14 @@ SRCS = \
 	test/delegate/test_delegate/test_assign_nullptr.cpp \
 	test/delegate/test_delegate/test_move.cpp \
 	test/delegate/test_delegate/test_swap.cpp \
+	test/delegate/test_fwd_delegate/test_template_definition.cpp \
+	test/delegate/test_fwd_delegate/test_empty_delegates.cpp \
+	test/delegate/test_fwd_delegate/test_non_empty_delegates.cpp \
+	test/delegate/test_fwd_delegate/test_assign_nullptr.cpp \
+	test/delegate/test_fwd_delegate/test_move.cpp \
+	test/delegate/test_fwd_delegate/test_swap.cpp \
+	test/delegate/test_command_delegate.cpp \
+	test/delegate/test_event_delegate.cpp \
 
 MAIN_OBJ = $(MAIN_SRC:%.cpp=$(BUILD_DIR)/%.o)
 OBJS = $(SRCS:%.cpp=$(BUILD_DIR)/%.o)

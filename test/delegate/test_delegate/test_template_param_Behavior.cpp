@@ -15,8 +15,8 @@
 TEST_SUITE_BEGIN("header file: rome/delegate.hpp");
 
 template<typename TDelegate>
-constexpr bool produces_expected_behavior_error =
-    std::is_base_of<rome::detail::behavior_delegate_param_invalid, TDelegate>::value;
+constexpr bool produces_template_param_error =
+    std::is_base_of<rome::detail::bad_delegate_template_param, TDelegate>::value;
 
 constexpr bool test_default_type() {
     using rome::delegate;
@@ -31,18 +31,18 @@ constexpr bool test_default_type() {
 
 constexpr bool test_supported_types_do_not_fail() {
     using rome::delegate;
-    static_assert(!produces_expected_behavior_error<delegate<bool(int)>>, "");
+    static_assert(!produces_template_param_error<delegate<bool(int)>>, "");
     static_assert(
-        !produces_expected_behavior_error<delegate<bool(int), rome::target_is_expected>>, "");
+        !produces_template_param_error<delegate<bool(int), rome::target_is_expected>>, "");
     static_assert(
-        !produces_expected_behavior_error<delegate<bool(int), rome::target_is_mandatory>>, "");
-    static_assert(!produces_expected_behavior_error<delegate<void(int)>>, "");
+        !produces_template_param_error<delegate<bool(int), rome::target_is_mandatory>>, "");
+    static_assert(!produces_template_param_error<delegate<void(int)>>, "");
     static_assert(
-        !produces_expected_behavior_error<delegate<void(int), rome::target_is_expected>>, "");
+        !produces_template_param_error<delegate<void(int), rome::target_is_expected>>, "");
     static_assert(
-        !produces_expected_behavior_error<delegate<void(int), rome::target_is_mandatory>>, "");
+        !produces_template_param_error<delegate<void(int), rome::target_is_mandatory>>, "");
     static_assert(
-        !produces_expected_behavior_error<delegate<void(int), rome::target_is_optional>>, "");
+        !produces_template_param_error<delegate<void(int), rome::target_is_optional>>, "");
     return true;
 }
 
@@ -55,8 +55,8 @@ constexpr bool test_unsupported_types_do_fail() {
     // delegate<bool(int), rome::target_is_optional> d3{};
 
     static_assert(
-        produces_expected_behavior_error<delegate<bool(int), rome::target_is_optional>>, "");
-    static_assert(produces_expected_behavior_error<delegate<void(int), int>>, "");
+        produces_template_param_error<delegate<bool(int), rome::target_is_optional>>, "");
+    static_assert(produces_template_param_error<delegate<void(int), int>>, "");
     return true;
 }
 
