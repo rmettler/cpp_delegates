@@ -10,7 +10,7 @@
 COMPILER_KIT = CLANG
 
 CXX_GNU = g++
-CXXFLAGS_GNU = -std=c++14 -Wall -Werror -Wextra -pedantic -O3
+CXXFLAGS_GNU = -std=c++14 -O3 -Wall -Werror -Wextra -pedantic
 LDFLAGS_GNU = 
 
 CXX_CLANG = clang++
@@ -29,7 +29,6 @@ DEFINES =
 
 MAIN_SRC = test/test_main.cpp
 SRCS = \
-	test/test_function_ptr.cpp \
 	test/delegate/test_bad_delegate_call.cpp \
 	test/delegate/test_delegate/test_template_definition.cpp \
 	test/delegate/test_delegate/test_template_param_Behavior.cpp \

@@ -10,8 +10,9 @@
 #pragma once
 
 #include <algorithm>
-#include <cassert>
+#include <cstddef>
 #include <type_traits>
+#include <utility>
 
 #include "rome/detail/bad_delegate_call.hpp"
 
