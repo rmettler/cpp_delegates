@@ -79,7 +79,7 @@ The size of a `rome::delegate` is the size of an object pointer plus twice the s
 #include <string>
 #include <vector>
 
-#include "rome/delegate.hpp"
+#include <rome/delegate.hpp>
 
 struct CommandProcessor {
     rome::delegate<void(const std::vector<int>&), rome::target_is_mandatory> onAddCommandRead;
