@@ -19,4 +19,15 @@ static_assert(std::is_base_of<rome::detail::bad_delegate_template_param_with_mut
                   rome::command_delegate<void(int&)>>::value,
     "");
 
+
+TEST_CASE("rome::command_delegate - construct and call delegate") {
+    struct X {
+        rome::command_delegate<void(int)> dgt;
+    };
+    int tst = 0;
+    X x = {decltype(X::dgt)::create([&tst](auto i) { tst += i; })};
+    CHECK_NOTHROW(x.dgt(13));
+    CHECK(tst == 13);
+}
+
 TEST_SUITE_END();  // rome/delegate.hpp
