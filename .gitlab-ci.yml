@@ -1,0 +1,79 @@
+stages:
+  - build_docker
+  - build
+  - test
+  - analysis
+  - deploy
+  - pages
+
+#############################
+# Build docker
+#############################
+
+.build:docker:
+  stage: build_docker
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  before_script:
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
+  when: manual
+  tags:
+    - docker
+
+.build:docker:clang6:
+  extends: .build:docker
+  script:
+    - |
+      /kaniko/executor \
+      --context $CI_PROJECT_DIR \
+      --dockerfile $CI_PROJECT_DIR/docker/ci_clang6/Dockerfile \
+      --destination $CI_REGISTRY_IMAGE/ci_clang6:$CI_COMMIT_TAG
+
+build:docker:clang6:testing:
+  extends: .build:docker:clang6
+  variables:
+    CI_COMMIT_TAG: "testing"
+
+build:docker:clang6:latest:
+  extends: .build:docker:clang6
+  variables:
+    CI_COMMIT_TAG: "latest"
+
+#############################
+# Build delegates
+#############################
+
+.build:linux:
+  stage: build
+  script:
+    - make all
+  tags:
+    - docker
+  artifacts:
+    paths:
+      - ${CI_PROJECT_DIR}/build/
+    expire_in: 1 hrs
+
+build:linux:clang6:
+  extends: .build:linux
+  image: registry.gitlab.com/rmettler/cpp_delegates/ci_clang6:latest
+
+#############################
+# Test delegates
+#############################
+
+.test:linux:
+  stage: test
+  script:
+    - make test
+  tags:
+    - docker
+
+test:linux:clang6:
+  extends: .test:linux
+  image: registry.gitlab.com/rmettler/cpp_delegates/ci_clang6:latest
+  dependencies: 
+    - build:linux:clang6
+  needs: ["build:linux:clang6"]
+  
