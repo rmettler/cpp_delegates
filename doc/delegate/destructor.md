@@ -1,7 +1,7 @@
-# _rome::delegate<Ret(Args...)>::_ **~delegate**
+# _rome::delegate<Ret(Args...), Behavior>::_ **~delegate**
 
 ```cpp
-constexpr ~delegate();
+~delegate();
 ```
 
 Destroys the `rome::delegate` instance. If the `rome::delegate` instance took the ownership of a _target_, the _target_ is destroyed too.

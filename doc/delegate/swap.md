@@ -1,7 +1,7 @@
-# _rome::delegate<Ret(Args...)>::_ **swap**
+# _rome::delegate<Ret(Args...), Behavior>::_ **swap**
 
 ```cpp
-constexpr void swap(delegate& other) noexcept;
+void swap(delegate& other) noexcept;
 ```
 
 Exchanges the stored callable objects of `*this` and other.

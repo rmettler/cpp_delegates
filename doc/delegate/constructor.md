@@ -1,17 +1,31 @@
-# _rome::delegate<Ret(Args...)>::_ **delegate**
+# _rome::delegate<Ret(Args...), Behavior>::_ **delegate**
+
+If `Behavior` != `rome::target_is_mandatory`:
 
 ```cpp
-constexpr delegate() noexcept;                 // (1)
-constexpr delegate(std::nullptr_t) noexcept;   // (2)
-constexpr delegate(delegate&& other) noexcept; // (3)
+constexpr delegate() noexcept;                // (1)
+constexpr delegate(std::nullptr_t) noexcept;  // (2)
+delegate(delegate&& other) noexcept;          // (3)
+```
+
+If `Behavior` == `rome::target_is_mandatory`:
+
+```cpp
+delegate() = delete;
+delegate(delegate&& other) noexcept; // (3)
 ```
 
 Constructs a `rome::delegate`.
 
-- **1, 2** -- Creates an _empty_ delegate.
-- **3** -- Moves the _target_ of other to `*this`. If other is _empty_, `*this` will be _empty_ after the call too. Leaves other in _empty_ state after the move.
+- **1, 2** -- Creates an _empty_ delegate.  
+  Only available if `Behavior` != `rome::target_is_mandatory`.
+- **3** -- Moves the _target_ of other to `*this`. If other is _empty_, `*this` will be _empty_ after the call too. Leaves other in _empty_ state after the move:
+  - If `Behavior` != `rome::target_is_mandatory`:  
+    After the move, other behaves as if default constructed.
+  - If `Behavior` == `rome::target_is_mandatory`:  
+    After the move, other throws a [`rome::bad_delegate_call`](delegate/bad_delegate_call.md) exception when called.
 
-Use [`rome::make_delegate`](../delegate/make_delegate.md) to assign a new _target_.
+Use [`create`](delegate/create.md) to assign a new _target_.
 
 ## Parameters
 
