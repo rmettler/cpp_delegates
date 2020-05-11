@@ -126,7 +126,7 @@ class delegate<Ret(Args...), Behavior>
     }
 
     Ret operator()(Args... args) const {
-        return target_.operator()(std::forward<Args>(args)...);
+        return target_.operator()(static_cast<Args>(args)...);
     }
 
     // Creates a new delegate targeting the passed function or static member function.
@@ -184,7 +184,7 @@ class delegate<Ret(Args...), target_is_mandatory> {
     }
 
     Ret operator()(Args... args) const {
-        return target_.operator()(std::forward<Args>(args)...);
+        return target_.operator()(static_cast<Args>(args)...);
     }
 
     // Creates a new delegate targeting the passed function or static member function.
@@ -337,7 +337,7 @@ class fwd_delegate<void(Args...), Behavior>
     }
 
     void operator()(Args... args) const {
-        return target_.operator()(std::forward<Args>(args)...);
+        return target_.operator()(static_cast<Args>(args)...);
     }
 
     // Creates a new fwd_delegate targeting the passed function or static member function.
@@ -396,7 +396,7 @@ class fwd_delegate<void(Args...), target_is_mandatory>
     }
 
     void operator()(Args... args) const {
-        return target_.operator()(std::forward<Args>(args)...);
+        return target_.operator()(static_cast<Args>(args)...);
     }
 
     // Creates a new fwd_delegate targeting the passed function or static member function.

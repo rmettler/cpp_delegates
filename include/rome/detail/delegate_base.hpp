@@ -35,7 +35,7 @@ namespace detail {
         // empty.
         struct no_call_invoker {
             template<typename Ret, typename... Args>
-            static inline Ret invoke(buffer_type&, Args&&...) {
+            static inline Ret invoke(buffer_type&, Args...) {
             }
         };
 
@@ -43,7 +43,7 @@ namespace detail {
         // empty.
         struct exception_call_invoker {
             template<typename Ret, typename... Args>
-            [[noreturn]] static inline Ret invoke(buffer_type&, Args&&...) {
+            [[noreturn]] static inline Ret invoke(buffer_type&, Args...) {
 #if (defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND))
                 throw rome::bad_delegate_call{};
 #else
@@ -68,7 +68,7 @@ namespace detail {
         template<typename Ret, typename... Args, typename EmptyInvoker>
         class delegate_base<Ret(Args...), EmptyInvoker> {
           private:
-            using invoker_type = Ret (*)(buffer_type&, Args&&...);
+            using invoker_type = Ret (*)(buffer_type&, Args...);
             using deleter_type = void (*)(buffer_type&);
             // buffer_ needs to be writable by 'operator()(Args...) const' if small buffer
             // optimization is used
@@ -109,7 +109,7 @@ namespace detail {
             }
 
             Ret operator()(Args... args) const {
-                return (*invoker_)(buffer_, std::forward<Args>(args)...);
+                return (*invoker_)(buffer_, static_cast<Args>(args)...);
             }
 
             // Creates a new delegate_base and stores the passed function or static member function
@@ -118,9 +118,7 @@ namespace detail {
             constexpr static delegate_base create() noexcept {
                 delegate_base d;
                 d.buffer_  = nullptr;
-                d.invoker_ = [](buffer_type&, Args&&... args) -> Ret {
-                    return (*function)(std::forward<Args>(args)...);
-                };
+                d.invoker_ = [](buffer_type&, Args... args) -> Ret { return (*function)(args...); };
                 d.deleter_ = no_delete;
                 return d;
             }
@@ -131,8 +129,8 @@ namespace detail {
             static delegate_base create(C& obj) noexcept {
                 delegate_base d;
                 d.buffer_  = &obj;
-                d.invoker_ = [](buffer_type& buffer, Args&&... args) -> Ret {
-                    return (static_cast<C*>(buffer)->*method)(std::forward<Args>(args)...);
+                d.invoker_ = [](buffer_type& buffer, Args... args) -> Ret {
+                    return (static_cast<C*>(buffer)->*method)(args...);
                 };
                 d.deleter_ = no_delete;
                 return d;
@@ -144,8 +142,8 @@ namespace detail {
             static delegate_base create(const C& obj) noexcept {
                 delegate_base d;
                 d.buffer_  = const_cast<C*>(&obj);  // const will be added again before used
-                d.invoker_ = [](buffer_type& buffer, Args&&... args) -> Ret {
-                    return (static_cast<const C*>(buffer)->*method)(std::forward<Args>(args)...);
+                d.invoker_ = [](buffer_type& buffer, Args... args) -> Ret {
+                    return (static_cast<const C*>(buffer)->*method)(args...);
                 };
                 d.deleter_ = no_delete;
                 return d;
@@ -160,10 +158,9 @@ namespace detail {
                 using Invokable = std::decay_t<T>;
                 delegate_base d;
                 static_cast<void>(::new (&d.buffer_) Invokable(std::forward<T>(invokable)));
-                d.invoker_ = [](buffer_type& buffer, Args&&... args) -> Ret {
+                d.invoker_ = [](buffer_type& buffer, Args... args) -> Ret {
                     auto pFunctor = static_cast<void*>(&buffer);
-                    return static_cast<Invokable*>(pFunctor)->operator()(
-                        std::forward<Args>(args)...);
+                    return static_cast<Invokable*>(pFunctor)->operator()(args...);
                 };
                 d.deleter_ = [](buffer_type& buffer) -> void {
                     auto pFunctor = static_cast<void*>(&buffer);
@@ -180,8 +177,8 @@ namespace detail {
                 using Invokable = std::decay_t<T>;
                 delegate_base d;
                 d.buffer_  = new Invokable(std::forward<T>(invokable));
-                d.invoker_ = [](buffer_type& buffer, Args&&... args) -> Ret {
-                    return static_cast<Invokable*>(buffer)->operator()(std::forward<Args>(args)...);
+                d.invoker_ = [](buffer_type& buffer, Args... args) -> Ret {
+                    return static_cast<Invokable*>(buffer)->operator()(args...);
                 };
                 d.deleter_ = [](buffer_type& buffer) -> void {
                     delete static_cast<Invokable*>(buffer);
