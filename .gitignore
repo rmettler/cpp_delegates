@@ -1,4 +1,2 @@
+.vscode
 build
-_build
-
-*.exe

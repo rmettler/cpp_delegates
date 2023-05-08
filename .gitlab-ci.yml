@@ -21,22 +21,17 @@ stages:
   tags:
     - docker
 
-.build:docker:clang6:
+.build:docker:minreq_ci:
   extends: .build:docker
   script:
     - |
       /kaniko/executor \
       --context $CI_PROJECT_DIR \
-      --dockerfile $CI_PROJECT_DIR/docker/ci_clang6/Dockerfile \
-      --destination $CI_REGISTRY_IMAGE/ci_clang6:$CI_COMMIT_TAG
+      --dockerfile $CI_PROJECT_DIR/docker/minreq_ci/Dockerfile \
+      --destination $CI_REGISTRY_IMAGE/minreq_ci:$CI_COMMIT_TAG
 
-build:docker:clang6:testing:
-  extends: .build:docker:clang6
-  variables:
-    CI_COMMIT_TAG: "testing"
-
-build:docker:clang6:latest:
-  extends: .build:docker:clang6
+build:docker:minreq_ci:latest:
+  extends: .build:docker:minreq_ci
   variables:
     CI_COMMIT_TAG: "latest"
 
@@ -47,7 +42,8 @@ build:docker:clang6:latest:
 .build:linux:
   stage: build
   script:
-    - make all
+    - cmake -DROME_DELEGATES_BUILD_TESTS:BOOL=ON -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_CXX_COMPILER:FILEPATH=clang++-4.0 -G Ninja -B build
+    - cmake --build build --config Release --target test_rome_delegates
   tags:
     - docker
   artifacts:
@@ -55,9 +51,9 @@ build:docker:clang6:latest:
       - ${CI_PROJECT_DIR}/build/
     expire_in: 1 hrs
 
-build:linux:clang6:
+build:linux:minreq_ci:
   extends: .build:linux
-  image: registry.gitlab.com/rmettler/cpp_delegates/ci_clang6:latest
+  image: registry.gitlab.com/rmettler/cpp_delegates/minreq_ci:latest
 
 #############################
 # Test delegates
@@ -66,14 +62,14 @@ build:linux:clang6:
 .test:linux:
   stage: test
   script:
-    - make test
+    - ninja -C build run_test_rome_delegates
   tags:
     - docker
 
-test:linux:clang6:
+test:linux:minreq_ci:
   extends: .test:linux
-  image: registry.gitlab.com/rmettler/cpp_delegates/ci_clang6:latest
+  image: registry.gitlab.com/rmettler/cpp_delegates/minreq_ci:latest
   dependencies: 
-    - build:linux:clang6
-  needs: ["build:linux:clang6"]
+    - build:linux:minreq_ci
+  needs: ["build:linux:minreq_ci"]
   
