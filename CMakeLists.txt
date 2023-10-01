@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 project(rome_delegates VERSION 0.1 LANGUAGES CXX)
 
-option(ROME_DELEGATES_BUILD_TESTS "enable to also build the tests as 'test_delegates'" OFF)
+option(ROME_DELEGATES_BUILD_TESTS "enable to also build the tests as 'test_rome_delegates'" OFF)
 
 
 add_library(${PROJECT_NAME} INTERFACE)

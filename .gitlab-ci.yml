@@ -43,7 +43,7 @@ build:docker:minreq_ci:latest:
   stage: build
   script:
     - cmake -DROME_DELEGATES_BUILD_TESTS:BOOL=ON -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_CXX_COMPILER:FILEPATH=clang++-4.0 -G Ninja -B build
-    - cmake --build build --config Release --target test_rome_delegates
+    - cmake --build build --config Release --target unittests
   tags:
     - docker
   artifacts:
@@ -62,7 +62,7 @@ build:linux:minreq_ci:
 .test:linux:
   stage: test
   script:
-    - ninja -C build run_test_rome_delegates
+    - ninja -C build run_all_tests
   tags:
     - docker
 
