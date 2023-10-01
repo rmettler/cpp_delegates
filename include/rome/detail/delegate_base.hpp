@@ -52,12 +52,6 @@ namespace detail {
             }
         };
 
-        // Used as template parameter for delegate_base. Sets nullptr as the function pointer. Is
-        // only used for invalid template parameter combinations.
-        struct invalid_invoker {
-            static constexpr auto invoke = nullptr;
-        };
-
         // Used as deleter in delegate_base when no destruction of buffer is needed.
         inline void no_delete(buffer_type&) {
         }
@@ -151,11 +145,10 @@ namespace detail {
 
             // Creates a new delegate_base and stores the passed invokable inside its local
             // buffer.
-            template<typename T,
-                std::enable_if_t<isSmallBufferOptimizable<std::decay_t<T>>(), int> = 0>
+            template<typename T, typename Invokable = std::decay_t<T>,
+                std::enable_if_t<isSmallBufferOptimizable<Invokable>(), int> = 0>
             static delegate_base create(T&& invokable) noexcept(
-                std::is_nothrow_move_constructible<std::decay_t<T>>::value) {
-                using Invokable = std::decay_t<T>;
+                noexcept(Invokable(std::forward<T>(invokable)))) {
                 delegate_base d;
                 static_cast<void>(::new (&d.buffer_) Invokable(std::forward<T>(invokable)));
                 d.invoker_ = [](buffer_type& buffer, Args... args) -> Ret {
@@ -171,10 +164,9 @@ namespace detail {
 
             // Creates a new delegate_base and stores the passed invokable at a new location
             // outside its local buffer.
-            template<typename T,
-                std::enable_if_t<!isSmallBufferOptimizable<std::decay_t<T>>(), int> = 0>
+            template<typename T, typename Invokable = std::decay_t<T>,
+                std::enable_if_t<!isSmallBufferOptimizable<Invokable>(), int> = 0>
             static delegate_base create(T&& invokable) {
-                using Invokable = std::decay_t<T>;
                 delegate_base d;
                 d.buffer_  = new Invokable(std::forward<T>(invokable));
                 d.invoker_ = [](buffer_type& buffer, Args... args) -> Ret {

@@ -62,7 +62,7 @@ CompactNamespaces: false
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 Cpp11BracedListStyle: true
 FixNamespaceComments: true
-IncludeBlocks: Regroup
+IncludeBlocks: Preserve
 
 IndentCaseLabels: true
 IndentPPDirectives: AfterHash

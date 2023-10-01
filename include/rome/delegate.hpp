@@ -39,61 +39,48 @@ struct target_is_expected;
 struct target_is_mandatory;
 
 namespace detail {
-    struct ok {};
+    // Selects the invoker that is called for empty delegates based on the given behavior.
+    template<typename Behavior>
+    using select_empty_invoker_t =
+        std::conditional_t<std::is_same<Behavior, target_is_optional>::value,
+            delegate_base::no_call_invoker, delegate_base::exception_call_invoker>;
 
-    template<typename...>
-    struct wrong_t : std::false_type {};
+    // Always false. Used to mark invalid parameters in static_assert.
+    template<typename>
+    constexpr bool invalid = false;
 
-    template<typename... T>
-    constexpr bool wrong = wrong_t<T...>::value;
+    // Whether 'Behavior' is one of the valid types.
+    template<typename Behavior>
+    constexpr bool is_behavior = std::is_same<Behavior, target_is_expected>::value
+                                 || std::is_same<Behavior, target_is_mandatory>::value
+                                 || std::is_same<Behavior, target_is_optional>::value;
 
-    struct bad_delegate_template_param {};
-
+    // Whether 'Behavior' is valid for return type 'Ret'.
     template<typename Ret, typename Behavior>
-    struct bad_delegate_template_param_ : bad_delegate_template_param {
-        constexpr bad_delegate_template_param_() noexcept {
-            static_assert(wrong<Ret, Behavior>,
-                "Invalid template parameter. The second template parameter 'Behavior' must "
-                "either be empty or contain one of the types 'rome::target_is_optional', "
-                "'rome::target_is_expected' or 'rome::target_is_mandatory', where "
-                "'rome::target_is_optional' is only valid if the return type 'Ret' is 'void'.");
-        }
-    };
-
-    template<typename Ret, typename Behavior>
-    struct delegate_helper {
-        template<typename... Args>
-        using delegate_base_type =
-            delegate_base::delegate_base<Ret(Args...), delegate_base::invalid_invoker>;
-        using assert_template_params = bad_delegate_template_param_<Ret, Behavior>;
-    };
-
-    template<>
-    struct delegate_helper<void, target_is_optional> {
-        template<typename... Args>
-        using delegate_base_type =
-            delegate_base::delegate_base<void(Args...), delegate_base::no_call_invoker>;
-        using assert_template_params = ok;
-    };
-
-    template<typename Ret>
-    struct delegate_helper<Ret, target_is_expected> {
-        template<typename... Args>
-        using delegate_base_type =
-            delegate_base::delegate_base<Ret(Args...), delegate_base::exception_call_invoker>;
-        using assert_template_params = ok;
-    };
+    constexpr bool is_valid_behavior =
+        !std::is_same<Behavior, target_is_optional>::value
+        || (std::is_same<Behavior, target_is_optional>::value && std::is_same<Ret, void>::value);
 }  // namespace detail
 
 template<typename Signature, typename Behavior = target_is_expected>
-class delegate;
+class delegate {
+    static_assert(detail::invalid<Signature>,
+        "Invalid parameter 'Signature'. The template parameter "
+        "'Signature' must be a valid function signature.");
+};
 
 template<typename Ret, typename... Args, typename Behavior>
-class delegate<Ret(Args...), Behavior>
-    : private detail::delegate_helper<Ret, Behavior>::assert_template_params {
-  private:
-    using delegate_base_type =
-        typename detail::delegate_helper<Ret, Behavior>::template delegate_base_type<Args...>;
+class delegate<Ret(Args...), Behavior> {
+    static_assert(detail::is_behavior<Behavior>,
+        "Invalid parameter 'Behavior'. The template parameter 'Behavior' must either be empty or "
+        "contain one of the types 'rome::target_is_optional', 'rome::target_is_expected' or "
+        "'rome::target_is_mandatory'.");
+    static_assert(detail::is_valid_behavior<Ret, Behavior>,
+        "Return type coflicts with parameter 'Behavior'. The parameter 'Behavior' is only "
+        "allowed to be 'rome::target_is_optional' if the return type is 'void'.");
+
+    using delegate_base_type = detail::delegate_base::delegate_base<Ret(Args...),
+        detail::select_empty_invoker_t<Behavior>>;
 
     delegate_base_type target_ = {};
 
@@ -110,7 +97,7 @@ class delegate<Ret(Args...), Behavior>
     }
 
     delegate& operator=(const delegate&) noexcept = delete;
-    delegate& operator=(delegate&&) noexcept = default;
+    delegate& operator=(delegate&&) noexcept      = default;
 
     constexpr delegate& operator=(std::nullptr_t) noexcept {
         target_ = nullptr;
@@ -157,7 +144,6 @@ class delegate<Ret(Args...), Behavior>
 
 template<typename Ret, typename... Args>
 class delegate<Ret(Args...), target_is_mandatory> {
-  private:
     using delegate_base_type = detail::delegate_base::delegate_base<Ret(Args...),
         detail::delegate_base::exception_call_invoker>;
 
@@ -173,7 +159,7 @@ class delegate<Ret(Args...), target_is_mandatory> {
     ~delegate()                        = default;
 
     delegate& operator=(const delegate&) noexcept = delete;
-    delegate& operator=(delegate&&) noexcept = default;
+    delegate& operator=(delegate&&) noexcept      = default;
 
     constexpr explicit operator bool() const noexcept {
         return target_.operator bool();
@@ -234,77 +220,123 @@ constexpr bool operator!=(std::nullptr_t, const delegate<Sig, Behavior>& rhs) {
 }
 
 namespace detail {
-    struct bad_delegate_template_param_with_mutable_arguments {};
+    // Helper class for 'remove_member_pointer_t' below.
+    template<typename T>
+    struct remove_member_pointer_helper;
 
-    template<typename... Args>
-    struct bad_delegate_template_param_with_mutable_arguments_
-        : bad_delegate_template_param_with_mutable_arguments {
-        constexpr bad_delegate_template_param_with_mutable_arguments_() noexcept {
-            static_assert(wrong<Args...>,
-                "Invalid template parameter. The first template parameter 'Signature' must be "
-                "of type 'void(Args...)' and all arguments 'Args...' must be of immutable type. "
-                "E.g.: 'fwd_delegate<void (int, int&&, const std::array<int,10>&, const "
-                "int*)>'");
-        }
+    template<typename T, typename C>
+    struct remove_member_pointer_helper<T C::*> {
+        using type = T;
     };
 
+    // Returns the type of the object the given member object pointer can point to. Compile error if
+    // no member object pointer was given.
     template<typename T>
-    constexpr bool is_value() {
-        return std::is_null_pointer<T>::value || std::is_integral<T>::value
-               || std::is_floating_point<T>::value || std::is_enum<T>::value
-               || std::is_union<T>::value || std::is_class<T>::value;
+    using remove_member_pointer_t =
+        typename remove_member_pointer_helper<std::remove_cv_t<T>>::type;
+
+
+    // Returns whether given function is const qualified.
+    template<typename T>
+    struct is_const_function : std::false_type {};
+
+    template<typename Ret, typename... Args>
+    struct is_const_function<Ret(Args...) const> : std::true_type {};
+    template<typename Ret, typename... Args>
+    struct is_const_function<Ret(Args...) const&> : std::true_type {};
+    template<typename Ret, typename... Args>
+    struct is_const_function<Ret(Args...) const&&> : std::true_type {};
+    template<typename Ret, typename... Args>
+    struct is_const_function<Ret(Args...) const volatile> : std::true_type {};
+    template<typename Ret, typename... Args>
+    struct is_const_function<Ret(Args...) const volatile&> : std::true_type {};
+    template<typename Ret, typename... Args>
+    struct is_const_function<Ret(Args...) const volatile&&> : std::true_type {};
+
+
+    // Returns whether given type allows that data can be changed, directly or inderectly through
+    // some kind of pointer or C-array. It cannot detect if a class allows to mutate data even if
+    // declared const (limitation of the C++ language).
+    template<typename T, typename = std::true_type>
+    struct is_immutable;
+
+    template<typename T>
+    struct is_immutable<T,
+        std::integral_constant<bool, std::is_void<T>::value || std::is_null_pointer<T>::value
+                                         || std::is_function<T>::value>> : std::true_type {};
+
+    template<typename T>
+    struct is_immutable<T,
+        std::integral_constant<bool, std::is_integral<T>::value || std::is_floating_point<T>::value
+                                         || std::is_union<T>::value || std::is_enum<T>::value
+                                         || std::is_class<T>::value>> : std::is_const<T>::type {};
+
+    template<typename T>
+    struct is_immutable<T, std::integral_constant<bool, std::is_array<T>::value>>
+        : is_immutable<std::remove_all_extents_t<T>>::type {};
+
+    template<typename T>
+    struct is_immutable<T, std::integral_constant<bool, std::is_pointer<T>::value>>
+        : std::integral_constant<bool,
+              std::is_const<T>::value && is_immutable<std::remove_pointer_t<T>>::value> {};
+
+    template<typename T>
+    struct is_immutable<T, std::integral_constant<bool, std::is_member_object_pointer<T>::value>>
+        : std::integral_constant<bool,
+              std::is_const<T>::value && is_immutable<remove_member_pointer_t<T>>::value> {};
+
+    template<typename T>
+    struct is_immutable<T, std::integral_constant<bool, std::is_member_function_pointer<T>::value>>
+        : is_const_function<remove_member_pointer_t<T>>::type {};
+
+
+    // Returns whether given function argument can be considered immutable. The type of the argument
+    // does not allow that the callee can change data of the caller, directly or inderectly through
+    // some kind references, pointers or C-array. It cannot detect if a class allows to mutate data
+    // even if declared const (limitation of the C++ language).
+    template<typename Arg>
+    constexpr auto is_immutable_argument() -> bool {
+        using NoRef = std::remove_reference_t<Arg>;
+        if (std::is_lvalue_reference<Arg>::value && !std::is_const<NoRef>::value
+            && !std::is_null_pointer<NoRef>::value && !std::is_function<NoRef>::value) {
+            return false;
+        }
+        // Moved or copied arguments are immutable in a sense as it is not possible to change the
+        // data at the caller's side at this level.
+        return is_immutable<const std::decay_t<Arg>>::value;
     }
 
-    template<typename T>
-    constexpr bool is_referenced_type_a_const_value() {
-        if (is_value<T>()) {
-            return std::is_const<T>::value;
-        }
-        if (std::is_pointer<T>::value) {
-            using TT = typename std::remove_pointer<T>::type;
-            return is_referenced_type_a_const_value<TT>();
-        }
-        return false;
-    }
-
-    template<typename T>
-    constexpr bool is_copied_moved_or_const_referenced_value() {
-        if (is_value<T>()) {
-            return true;
-        }
-        if (std::is_rvalue_reference<T>::value) {
-            using TT = typename std::remove_reference<T>::type;
-            return is_copied_moved_or_const_referenced_value<TT>();
-        }
-        if (std::is_lvalue_reference<T>::value) {
-            using TT = typename std::remove_reference<T>::type;
-            return is_referenced_type_a_const_value<TT>();
-        }
-        return is_referenced_type_a_const_value<T>();
-    }
-
-    struct fwd_delegate_params_ok {};
-
+    // Returns whether the function arguments 'Args...' can be considered immutable.
     template<typename... Args>
-    using fwd_delegate_assert_immutable_arguments = std::conditional_t<
-        std::is_same<
-            std::integer_sequence<bool, true, is_copied_moved_or_const_referenced_value<Args>()...>,
-            std::integer_sequence<bool, is_copied_moved_or_const_referenced_value<Args>()...,
-                true>>::value,
-        fwd_delegate_params_ok, bad_delegate_template_param_with_mutable_arguments_<Args...>>;
+    constexpr bool are_immutable_arguments =
+        std::is_same<std::integer_sequence<bool, true, is_immutable_argument<Args>()...>,
+            std::integer_sequence<bool, is_immutable_argument<Args>()..., true>>::value;
 }  // namespace detail
 
 // same as rome::delegate but restricts to void return and enforces immutable arguments
 template<typename Signature, typename Behavior = target_is_expected>
-class fwd_delegate;
+class fwd_delegate {
+    static_assert(detail::invalid<Signature>,
+        "Invalid parameter 'Signature'. The template parameter 'Signature' must be a valid "
+        "function signature with return type 'void'. Consider using 'rome::delegate' if a non-void "
+        "return type is needed.");
+};
 
 template<typename... Args, typename Behavior>
-class fwd_delegate<void(Args...), Behavior>
-    : private detail::delegate_helper<void, Behavior>::assert_template_params,
-      private detail::fwd_delegate_assert_immutable_arguments<Args...> {
-  private:
-    using delegate_base_type =
-        typename detail::delegate_helper<void, Behavior>::template delegate_base_type<Args...>;
+class fwd_delegate<void(Args...), Behavior> {
+    static_assert(detail::is_behavior<Behavior>,
+        "Invalid parameter 'Behavior'. The template parameter 'Behavior' must either be empty or "
+        "contain one of the types 'rome::target_is_optional', 'rome::target_is_expected' or "
+        "'rome::target_is_mandatory'.");
+    static_assert(detail::are_immutable_arguments<Args...>,
+        "Invalid mutable function argument in 'void(Args...)'. All function arguments of a "
+        "'rome::fwd_delegate' must be immutable. The argument types shall prevent that the callee "
+        "is able to modify passed data still owned by the caller. E.g. 'int&' is not allowed. "
+        "'const int&' is allowed (readonly). 'int' and 'int&&' are also allowed (data owned by "
+        "callee). Consider using 'rome::delegate' if mutable arguments are needed.");
+
+    using delegate_base_type = detail::delegate_base::delegate_base<void(Args...),
+        detail::select_empty_invoker_t<Behavior>>;
 
     delegate_base_type target_ = {};
 
@@ -321,7 +353,7 @@ class fwd_delegate<void(Args...), Behavior>
     }
 
     fwd_delegate& operator=(const fwd_delegate&) noexcept = delete;
-    fwd_delegate& operator=(fwd_delegate&&) noexcept = default;
+    fwd_delegate& operator=(fwd_delegate&&) noexcept      = default;
 
     constexpr fwd_delegate& operator=(std::nullptr_t) noexcept {
         target_ = nullptr;
@@ -367,9 +399,14 @@ class fwd_delegate<void(Args...), Behavior>
 };
 
 template<typename... Args>
-class fwd_delegate<void(Args...), target_is_mandatory>
-    : private detail::fwd_delegate_assert_immutable_arguments<Args...> {
-  private:
+class fwd_delegate<void(Args...), target_is_mandatory> {
+    static_assert(detail::are_immutable_arguments<Args...>,
+        "Invalid mutable function argument in 'void(Args...)'. All function arguments of a "
+        "'rome::fwd_delegate' must be immutable. The argument types shall prevent that the callee "
+        "is able to modify passed data still owned by the caller. E.g. 'int&' is not allowed. "
+        "'const int&' is allowed (readonly). 'int' and 'int&&' are also allowed (data owned by "
+        "callee). Consider using 'rome::delegate' if mutable arguments are needed.");
+
     using delegate_base_type = detail::delegate_base::delegate_base<void(Args...),
         detail::delegate_base::exception_call_invoker>;
 
@@ -385,7 +422,7 @@ class fwd_delegate<void(Args...), target_is_mandatory>
     ~fwd_delegate()                            = default;
 
     fwd_delegate& operator=(const fwd_delegate&) noexcept = delete;
-    fwd_delegate& operator=(fwd_delegate&&) noexcept = default;
+    fwd_delegate& operator=(fwd_delegate&&) noexcept      = default;
 
     constexpr explicit operator bool() const noexcept {
         return target_.operator bool();
