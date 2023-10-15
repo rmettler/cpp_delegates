@@ -47,10 +47,10 @@ See [`rome::delegate`](delegate.md) for a description of the functionality.
 ## Type aliases
 
 - `rome::command_delegate`  
-  This delegate was designed for event oder message-driven architectures to command an action that shall happen. Because the execution of the command is mandatory, a target must be assigned during construction of the delegate and can only be overriden by another target afterwards.  
+  This delegate was designed for event or message-driven architectures to command an action that shall happen. Because the execution of the command is mandatory, a target must be assigned during construction of the delegate and can only be overriden by another target afterwards.  
   A `rome::fwd_delegate` with `Behavior` set to `rome::target_is_mandatory`.
 - `rome::event_delegate`  
-  This delegate was designed for event oder message-driven architectures, to notify about happened events. Thus, it is optional whether someone wants to listen to the event or not.  
+  This delegate was designed for event or message-driven architectures, to notify about happened events. Thus, it is optional whether someone wants to listen to the event or not.  
   A `rome::fwd_delegate` with `Behavior` set to `rome::target_is_optional`.
 
 ## Member functions

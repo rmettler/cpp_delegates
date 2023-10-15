@@ -21,6 +21,16 @@ struct C {
         return i;
     }
 };
+struct CFrom {
+    operator C() {
+        return C{};
+    }
+};
+struct CFromExplicit {
+    explicit operator C() {
+        return C{};
+    }
+};
 using MemberObject           = int C::*;
 using ConstMemberObject      = const int C::*;
 using MemberFunctionPtr      = int (C::*)(int);
@@ -209,3 +219,138 @@ def test_fwd_delegate_argument_types_not_immutable(signature: str, behavior: str
     print(stdout)
     assert returncode is not 0
     assert expected_compile_error in stdout
+
+
+@pytest.mark.parametrize("delegate_type", ("delegate", "fwd_delegate"))
+@pytest.mark.parametrize("behavior", behavior_types)
+def test_create_delegate_with_invalid_functor_type(delegate_type: str, behavior: str):
+    expected_compile_error: Final = (
+        "Invalid object passed. Object needs to be a functor (a class type with a function call "
+        "operator, e.g. a lambda)."
+    )
+    test_line = f"auto dgt = rome::{delegate_type}<void(int), {behavior}>::create(FunctionPtr{{nullptr}});\n"
+    print("Test code:")
+    print(test_line)
+    print("Build output:")
+    (returncode, stdout) = _build_code(test_header + test_line)
+    print(stdout)
+    assert returncode is not 0
+    assert expected_compile_error in stdout
+
+
+@pytest.mark.parametrize("delegate_type", ("delegate", "fwd_delegate"))
+@pytest.mark.parametrize("behavior", behavior_types)
+@pytest.mark.parametrize(
+    "delegate_arguments, target_arguments",
+    (
+        ("int, int", "C, int"),
+        ("int, int", "int, C"),
+        ("CFromExplicit, int", "C, int"),
+        ("int, CFromExplicit", "int, C"),
+    ),
+)
+def test_create_delegate_with_functor_of_incompatible_signature_1(
+    delegate_type: str,
+    behavior: str,
+    delegate_arguments: str,
+    target_arguments: str,
+):
+    expected_compile_error: Final = (
+        "Passed functor has incompatible function call signature. The function call signature "
+        "must be compatible with the signature of the delegate so that the delegate is able to "
+        "invoke the functor."
+    )
+    test_code = f"""\
+        auto dgt = rome::{delegate_type}<void({delegate_arguments}), {behavior}>::create(
+            []({target_arguments}) -> void {{ return; }}
+        );
+        """
+    print("Test code:")
+    print(test_code)
+    print("Build output:")
+    (returncode, stdout) = _build_code(test_header + test_code)
+    print(stdout)
+    assert returncode is not 0
+    assert expected_compile_error in stdout
+
+
+@pytest.mark.parametrize(
+    "behavior", ("rome::target_is_expected", "rome::target_is_mandatory")
+)
+@pytest.mark.parametrize(
+    "delegate_signature, target_return",
+    (("C()", "int"), ("C()", "CFromExplicit")),
+)
+def test_create_delegate_with_functor_of_incompatible_signature_2(
+    behavior: str,
+    delegate_signature: str,
+    target_return: str,
+):
+    expected_compile_error: Final = (
+        "Passed functor has incompatible function call signature. The function call signature "
+        "must be compatible with the signature of the delegate so that the delegate is able to "
+        "invoke the functor."
+    )
+    test_code = f"""\
+        auto dgt = rome::delegate<{delegate_signature}, {behavior}>::create(
+            []() -> {target_return} {{ return {{}}; }}
+        );
+        """
+    print("Test code:")
+    print(test_code)
+    print("Build output:")
+    (returncode, stdout) = _build_code(test_header + test_code)
+    print(stdout)
+    assert returncode is not 0
+    assert expected_compile_error in stdout
+
+
+@pytest.mark.parametrize("delegate_type", ("delegate", "fwd_delegate"))
+@pytest.mark.parametrize("behavior", behavior_types)
+@pytest.mark.parametrize(
+    "delegate_arguments, target_arguments",
+    (("CFrom, int", "C, int"), ("int, CFrom", "int, C")),
+)
+def test_create_delegate_with_functor_of_compatible_signature_1(
+    delegate_type: str,
+    behavior: str,
+    delegate_arguments: str,
+    target_arguments: str,
+):
+    test_code = f"""\
+        auto dgt = rome::{delegate_type}<void({delegate_arguments}), {behavior}>::create(
+            []({target_arguments}) -> void {{ return; }}
+        );
+        """
+    print("Test code:")
+    print(test_code)
+    print("Build output:")
+    (returncode, stdout) = _build_code(test_header + test_code)
+    print(stdout)
+    assert returncode is 0
+
+
+@pytest.mark.parametrize(
+    "behavior", ("rome::target_is_expected", "rome::target_is_mandatory")
+)
+@pytest.mark.parametrize(
+    "delegate_signature, target_return, target_arguments",
+    (("C(int)", "CFrom", "int"), ("C(CFrom)", "CFrom", "C")),
+)
+def test_create_delegate_with_functor_of_compatible_signature_2(
+    behavior: str,
+    delegate_signature: str,
+    target_return: str,
+    target_arguments: str,
+):
+    test_code = f"""\
+        auto dgt = rome::delegate<{delegate_signature}, {behavior}>::create(
+            []({target_arguments}) -> {target_return} {{ return {{}}; }}
+        );
+        """
+    print("Test code:")
+    print(test_code)
+    print("Build output:")
+    (returncode, stdout) = _build_code(test_header + test_code)
+    print(stdout)
+    assert returncode is 0

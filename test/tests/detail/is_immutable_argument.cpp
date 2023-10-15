@@ -28,7 +28,7 @@ struct C {
 // NOLINTNEXTLINE(misc-use-anonymous-namespace,readability-function-cognitive-complexity,readability-function-size)
 TEST_CASE("A data type is only detected as immutable if every referencing except moving into the "
           "function is declared const.") {
-    using rome::detail::is_immutable_argument;
+    using rome::detail::delegate::is_immutable_argument;
 
     // copied data
     STATIC_REQUIRE(is_immutable_argument<int>());
