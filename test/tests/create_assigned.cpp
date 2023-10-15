@@ -10,6 +10,10 @@
 #include <rome/delegate.hpp>
 #include <test/common_delegate_checks.hpp>
 
+DOCTEST_GCC_SUPPRESS_WARNING("-Wmismatched-new-delete")
+// GCC seems to have problems to detect that for both overloaded new and delete of the mocks use the
+// same global allocator/deallocator are used and produces a wrong positive warning (GCC 13.2).
+
 
 // clang-format off
 using test_vector = std::tuple<

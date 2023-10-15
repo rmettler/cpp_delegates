@@ -121,11 +121,12 @@ namespace detail {
         }
         static auto operator new(std::size_t sz) -> void* {
             targetMock<CallSignature, N>.new_();
-            return ::operator new(sz);
+            void* ptr = ::operator new(sz);
+            return ptr;
         }
         static void operator delete(void* ptr) {
-            targetMock<CallSignature, N>.delete_();
             ::operator delete(ptr);
+            targetMock<CallSignature, N>.delete_();
         }
     };
 }  // namespace detail

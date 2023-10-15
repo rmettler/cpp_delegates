@@ -7,8 +7,6 @@ option(ROME_DELEGATES_BUILD_TESTS "enable to also build the tests as 'test_rome_
 add_library(${PROJECT_NAME} INTERFACE)
 target_sources(${PROJECT_NAME} INTERFACE
     include/rome/delegate.hpp
-    include/rome/detail/bad_delegate_call.hpp
-    include/rome/detail/delegate_base.hpp
 )
 add_library(rome::delegates ALIAS ${PROJECT_NAME})
 target_include_directories(${PROJECT_NAME} INTERFACE include)

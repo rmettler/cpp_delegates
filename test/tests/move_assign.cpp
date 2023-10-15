@@ -97,7 +97,10 @@ TEST_CASE_TEMPLATE_DEFINE(
         const auto expectDestroyTarget = test::expectDestroyTargetAtEndOfScope<Sig, TargetType>();
         Delegate dgt = test::createDelegateWithMockedTarget<Delegate, TargetType>();
 
+        DOCTEST_GCC_SUPPRESS_WARNING_WITH_PUSH("-Wself-move")
+        // self-move on intention
         dgt = std::move(dgt);
+        DOCTEST_GCC_SUPPRESS_WARNING_POP
 
         CHECK(test::isObservedAsAssigned(dgt));
         CHECK(test::callingDelegateCallsMockedTarget<>(dgt));
@@ -206,7 +209,10 @@ TEST_CASE_TEMPLATE_DEFINE(
     SUBCASE("Self assign") {
         Delegate dgt{};
 
+        DOCTEST_GCC_SUPPRESS_WARNING_WITH_PUSH("-Wself-move")
+        // self-move on intention
         dgt = std::move(dgt);
+        DOCTEST_GCC_SUPPRESS_WARNING_POP
 
         CHECK(test::isObservedAsEmpty(dgt));
         CHECK(test::callingDelegateLeadsToEmptyBehavior(dgt));
