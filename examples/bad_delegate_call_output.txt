@@ -1,0 +1,1 @@
+caught: rome::bad_delegate_call

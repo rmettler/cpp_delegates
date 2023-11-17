@@ -1,0 +1,4 @@
+empty:
+false, true, true
+assigned:
+true, false, false

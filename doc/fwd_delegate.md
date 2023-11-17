@@ -4,7 +4,7 @@ Defined in header [`<rome/delegate.hpp>`](../include/rome/delegate.hpp).
 
 ```cpp
 template<typename Signature, typename Behavior = target_is_expected>
-class fwd_delegate; // undefined
+class fwd_delegate;  // undefined
 
 template<typename... Args, typename Behavior>
 class fwd_delegate<void(Args...), Behavior>;
@@ -16,33 +16,35 @@ template<typename Signature>
 using command_delegate = fwd_delegate<Signature, target_is_mandatory>;
 ```
 
-Instances of class template `rome::fwd_delegate` can store and invoke callable _targets_ such as functions, lambda expressions, std::function, other function objects, as well as static and non-static member functions.
+Instances of class template `rome::fwd_delegate` can store and invoke any callable _target_ -- functions, lambda expressions, std::function, other function objects, as well as static and non-static member functions.
 
-The `rome::fwd_delegate` has identical functionality as [`rome::delegate`](delegate.md), but with the restriction that data can only be ___forwarded___. To ensure this, only function signatures with `void` return and arguments of immutable type are supported. E.g. the signature `void(const std::string&)` would work, while `void(int*)` or `bool()` would produce a compile error.
+The `rome::fwd_delegate` has identical functionality as [`rome::delegate`](delegate.md), but with the restriction that data can only be **_forwarded_**. To ensure this, only function signatures with `void` return and arguments of immutable type are supported. E.g. the signature `void(const std::string&)` would work, while `void(int*)` or `bool()` would not compile.
 
 See [`rome::delegate`](delegate.md) for a description of the functionality.
 
 ## Template parameters
 
 - `Args...`  
-  The argument types of the _target_ beeing called (0 to N). Must be immutable.
+  The argument types of the _target_ being called. Must be immutable.
 - `Behavior`  
-  Defines the behavior of an _empty_ `rome::delegate` being called. Defaults to `rome::target_is_expected`.
+  Defines the behavior of an _empty_ `rome::fwd_delegate` being called. Defaults to `rome::target_is_expected`.
   
   The behavior can be chosen by declaring the delegate with one the following types:
   
   - `rome::target_is_expected`  
-    A valid _target_ is expected to be assigned before the `rome::delegate` is called.  
-    When an _empty_ `rome::delegate` is being called:
-    - Throws a [`rome::bad_delegate_call`](delegate/bad_delegate_call.md) exception.
+    A valid _target_ is expected to be assigned before the `rome::fwd_delegate` is called.  
+    When an _empty_ `rome::fwd_delegate` is being called:
+    - Throws a [`rome::bad_delegate_call`](./bad_delegate_call.md) exception.
     - Instead calls [`std::terminate`](https://en.cppreference.com/w/cpp/error/terminate), if exceptions are disabled.
-  - `rome::target_is_optional` _(only if `Ret`==`void`)_  
-    Assigning a _target_ to the `rome::delegate` is optional. Calling an _empty_ delegate is well defined and directly returns without doing anything.  
-    Compile error, if `Ret` != `void`.
+  - `rome::target_is_optional`  
+    Assigning a _target_ to the `rome::fwd_delegate` is optional. Calling an _empty_ delegate returns directly without doing anything.  
   - `rome::target_is_mandatory`  
-    Ensures by design that a `rome::delegate` cannot be _empty_. This has following consequences:
-    - Default constructor is deleted. A new instance of `rome::delegate` can only be created by using one of the factory functions [create](delegate/create.md).
+    Prevents by design that a `rome::fwd_delegate` can be _empty_. This has following consequences:
+
+    - Default constructor is deleted. A new instance of `rome::fwd_delegate` can only be created by passing a _target_ to the [constructor](delegate/constructor.md) or by using one of the factory functions [create](delegate/create.md).
     - There is no possibility to drop a currently assigned _target_, though it can be overridden by assigning a new _target_.
+
+    _Note: The `rome::fwd_delegate` still becomes_ empty _after a move, i.e., after `auto y = std::move(x)`_ x _is_ empty _and behaves as if `Behavior` was set to `rome::target_is_expected`._
 
 ## Type aliases
 
@@ -63,72 +65,109 @@ See [`rome::delegate`](delegate.md)
 
 ## Example
 
+Model of an extremely simplified cruise control system. The four classes _Engine_, _BrakingSystem_, _SpeedSensor_ and _CruiseControl_ are atomic, i.e., are free from dependencies to other classes. _Integration_ integrates all four.
+
+_See the code in [examples/cruise_control.cpp](../examples/cruise_control.cpp)._
+
 ```cpp
 #include <iostream>
-#include <iterator>
-#include <numeric>
-#include <sstream>
-#include <string>
-#include <vector>
-
 #include <rome/delegate.hpp>
 
-struct CommandProcessor {
-    rome::fwd_delegate<void(const std::vector<int>&)> onSubtractCommandRead; // (1)
-    // is equal to:
-    //  rome::fwd_delegate<void(const std::vector<int>&), rome::target_is_expected> onSubtractCommandRead;
-    rome::command_delegate<void(const std::vector<int>&)> onAddCommandRead;  // (2)
-    rome::event_delegate<void(const std::string&)> onParseError;             // (3)
-
-    void processCommand(const std::string& line) const {
-        std::istringstream iss{line.substr(2)};
-        const std::vector<int> args{std::istream_iterator<int>{iss}, std::istream_iterator<int>{}};
-        if ('+' == line.at(0)) {
-            onAddCommandRead(args);
-        }
-        else if ('-' == line.at(0)) {
-            onSubtractCommandRead(args);
-        }
-        else {
-            onParseError(line);
-        }
+struct Engine {
+    void accelerate() {
+        std::cout << "engine accelerating\n";
     }
-    CommandProcessor(decltype(onAddCommandRead)&& dgt)
-        : onAddCommandRead{std::move(dgt)} {
+    void turnOff() {
+        std::cout << "engine turned off\n";
     }
 };
 
+struct BrakingSystem {
+    void turnBrakesOn() {
+        std::cout << "brakes on\n";
+    }
+    void turnBrakesOff() {
+        std::cout << "brakes off\n";
+    }
+};
+
+struct SpeedSensor {
+    // Assigning delegate is optional for speed sensor to work.
+    rome::event_delegate<void(float)> onSpeedChanged;
+};
+
+class CruiseControl {
+    float targetSpeed_ = 0.0F;
+
+    // Assigning both delegates is required for cruise control to work.
+    rome::command_delegate<void()> onAccelerateCar_;
+    rome::command_delegate<void()> onSlowDownCar_;
+
+  public:
+    void updateAcceleration(const float drivingSpeed) {
+        if (drivingSpeed < targetSpeed_ * 0.95F) {
+            onAccelerateCar_();
+        }
+        else if (drivingSpeed > targetSpeed_ * 1.05F) {
+            onSlowDownCar_();
+        }
+    }
+
+    void setTargetSpeed(const float targetSpeed) {
+        targetSpeed_ = targetSpeed;
+    }
+
+    CruiseControl(rome::command_delegate<void()>&& onAccelerateCar,
+        rome::command_delegate<void()>&& onSlowDownCar)
+        : onAccelerateCar_{std::move(onAccelerateCar)}, onSlowDownCar_{std::move(onSlowDownCar)} {
+    }
+};
+
+struct Integration {
+    SpeedSensor speedSensor;
+    CruiseControl cruiseControl;
+    Engine engine;
+    BrakingSystem brakes;
+
+    Integration()
+        : cruiseControl{
+            [this]() {
+                brakes.turnBrakesOff();
+                engine.accelerate();
+            },
+            [this]() {
+                engine.turnOff();
+                brakes.turnBrakesOn();
+            }} {
+        speedSensor.onSpeedChanged = [this](float drivingSpeed) {
+            cruiseControl.updateAcceleration(drivingSpeed);
+        };
+    }
+};
+
+Integration integration{};
+
 int main() {
-    const CommandProcessor cp{decltype(cp.onAddCommandRead)::create([](const std::vector<int>& args) {
-        const auto result = std::accumulate(args.begin(), args.end(), 0);
-        std::cout << "sum = " << result << '\n';
-    })};
-    const std::string cmd1{"+ 1 2 3"};
-    const std::string cmd2{"- 1 2 3"};
-    const std::string cmd3{"error"};
-    std::cout << "cmd1:" << '\n';
-    cp.processCommand(cmd1);
-    // Calls the target assigned to the command_delegate (2). It was mandatory to assign a target to
-    // this delegate and would have led to a compiler error otherwise.
-    try {
-        std::cout << "cmd2:" << '\n';
-        cp.processCommand(cmd2);
-        // Calls the fwd_delegate (1) with no assigned target. For this delegate, however, it is
-        // expected that a target is assigned before call. -> an exception is thrown
-    }
-    catch (const rome::bad_delegate_call& ex) {
-        std::cout << ex.what() << '\n';
-    }
-    std::cout << "cmd3:" << '\n';
-    cp.processCommand(cmd3);
-    // Calls the event_delegate (3) with no assigned target. For this it is optional that a target
-    // is assigned before call. -> nothing happens
+    // Simulate IO not connected in this example
+    integration.cruiseControl.setTargetSpeed(25.0F);
+    integration.speedSensor.onSpeedChanged(20.0F);
+    integration.speedSensor.onSpeedChanged(25.0F);
+    integration.speedSensor.onSpeedChanged(30.0F);
 }
 ```
+
+Output:
+
+> brakes off  
+> engine accelerating  
+> engine turned off  
+> brakes on
 
 ## See also
 
 - [rome::delegate](delegate.md)  
-  same as `rome::fwd_delegate` but without return and argument type restrictsions
-- [std::function](https://en.cppreference.com/w/cpp/utility/functional/function)  
-  wraps callable object of any type with specified function call signature
+  The same as `rome::fwd_delegate` but without return and argument type restrictions.
+- [std::move_only_function](https://en.cppreference.com/w/cpp/utility/functional/move_only_function) (C++23)  
+  Wraps a callable object of any type with specified function call signature.
+- [std::function](https://en.cppreference.com/w/cpp/utility/functional/function) (C++11)  
+  Wraps a callable object of any copy constructible type with specified function call signature.

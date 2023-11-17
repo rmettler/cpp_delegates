@@ -24,6 +24,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <exception>
 #include <type_traits>
 #include <utility>
 
@@ -50,36 +51,35 @@ class bad_delegate_call : public std::exception {
 
 namespace detail {
     namespace delegate {
-        // The type used to store any small buffer optimizable data inside the delegate.
-        using buffer_type = void*;
+        // The type used to store any small object optimizable data inside the delegate.
+        using storage_type = void*;
 
-        constexpr std::size_t buffer_alignment =
-            std::max(sizeof(buffer_type), alignof(buffer_type));
+        constexpr std::size_t storage_alignment =
+            std::max(sizeof(storage_type), alignof(storage_type));
 
         // Returns whether size and alignment of type T are small enough so that it can be stored
         // within the delegate.
         template<typename T>
-        constexpr bool is_small_buffer_optimizable =
-            (sizeof(T) <= sizeof(buffer_type))
-            && (alignof(T) <= buffer_alignment);  // NOLINT(misc-redundant-expression)
+        constexpr bool is_small_object_optimizable =
+            (sizeof(T) <= sizeof(storage_type))
+            && (alignof(T) <= storage_alignment);  // NOLINT(misc-redundant-expression)
 
         // Type used to store the function that inkvokes the target when the delegate is called.
         template<typename Ret, typename... Args>
-        using target_invoker_t = Ret (*)(buffer_type&, Args...);
+        using target_invoker_t = Ret (*)(storage_type&, Args...);
 
         // Type used to store the function that deletes a possible assigned target.
-        using target_deleter_t = void (*)(buffer_type&);
+        using target_deleter_t = void (*)(storage_type&);
 
 
         // Used by a delegate when nothing needs to be done.
-        template<typename Ret, typename... Args>
-        auto do_nothing(buffer_type&, Args...) -> Ret {
+        template<typename... Args>
+        void do_nothing(storage_type&, Args...) {
         }
-
 
         // Used by an empty delegate when calling the delegate is invalid.
         template<typename Ret, typename... Args>
-        [[noreturn]] auto throw_on_call(buffer_type&, Args...) -> Ret {
+        [[noreturn]] auto throw_on_call(storage_type&, Args...) -> Ret {
 #if (defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND))
             throw rome::bad_delegate_call{};
 #else
@@ -87,38 +87,38 @@ namespace detail {
 #endif
         }
 
-        // Used by a delegate with an assigned functor that was small buffer optimized inside the
+        // Used by a delegate with an assigned functor that was small object optimized inside the
         // delegate.
         template<typename Functor, typename Ret, typename... Args>
-        auto invoke_small_buffer_optimized_functor(buffer_type& buffer, Args... args) -> Ret {
-            auto* pBuffer  = static_cast<void*>(&buffer);
-            auto* pFunctor = static_cast<Functor*>(pBuffer);
+        auto invoke_locally_stored_functor(storage_type& storage, Args... args) -> Ret {
+            auto* pStorage = static_cast<void*>(&storage);
+            auto* pFunctor = static_cast<Functor*>(pStorage);
             return pFunctor->operator()(static_cast<Args>(args)...);
         }
 
         // Used by a delegate with an assigned functor that was dynamically stored outside of the
         // delegate.
         template<typename Functor, typename Ret, typename... Args>
-        auto invoke_dynamically_stored_functor(buffer_type& buffer, Args... args) -> Ret {
-            auto* pFunctor = static_cast<Functor*>(buffer);
+        auto invoke_dynamically_allocated_functor(storage_type& storage, Args... args) -> Ret {
+            auto* pFunctor = static_cast<Functor*>(storage);
             return pFunctor->operator()(static_cast<Args>(args)...);
         }
 
 
-        // Used by a delegate with an assigned functor that was small buffer optimized inside the
+        // Used by a delegate with an assigned functor that was small object optimized inside the
         // delegate.
         template<typename Functor>
-        void destroy_buffer_optimized_functor(buffer_type& buffer) {
-            auto* pBuffer  = static_cast<void*>(&buffer);
-            auto* pFunctor = static_cast<Functor*>(pBuffer);
+        void destroy_locally_stored_functor(storage_type& storage) {
+            auto* pStorage = static_cast<void*>(&storage);
+            auto* pFunctor = static_cast<Functor*>(pStorage);
             pFunctor->~Functor();
         }
 
         // Used by a delegate with an assigned functor that was dynamically stored outside of the
         // delegate.
         template<typename Functor>
-        void delete_dynamically_stored_functor(buffer_type& buffer) {
-            auto* pFunctor = static_cast<Functor*>(buffer);
+        void delete_dynamically_allocated_functor(storage_type& storage) {
+            auto* pFunctor = static_cast<Functor*>(storage);
             delete pFunctor;
         }
 
@@ -126,32 +126,36 @@ namespace detail {
         // The function that is called when a delegate has no target assigned, based on whether it
         // shall throw an exception or not.
         template<bool shallThrow, typename Ret, typename... Args>
-        constexpr target_invoker_t<Ret, Args...> empty_invoker;
+        struct empty_invoker;
 
         template<typename Ret, typename... Args>
-        constexpr target_invoker_t<Ret, Args...> empty_invoker<true, Ret, Args...> = throw_on_call;
+        struct empty_invoker<true, Ret, Args...> {
+            static constexpr target_invoker_t<Ret, Args...> value = throw_on_call;
+        };
 
         template<typename Ret, typename... Args>
-        constexpr target_invoker_t<Ret, Args...> empty_invoker<false, Ret, Args...> = do_nothing;
+        struct empty_invoker<false, Ret, Args...> {
+            static constexpr target_invoker_t<Ret, Args...> value = do_nothing;
+        };
     }  // namespace delegate
 
 
-    // Implements the actual behavior of all delegates
-    template<typename Signature, bool shallThrowWhenEmpty>
-    class delegate_core;
+        // Implements the actual behavior of all delegates
+        template<typename Signature, bool shallThrowWhenEmpty>
+        class delegate_core;
 
     template<typename Ret, typename... Args, bool shallThrowWhenEmpty>
     class delegate_core<Ret(Args...), shallThrowWhenEmpty> {
-        using buffer_type = delegate::buffer_type;
+        using storage_type = delegate::storage_type;
 
         static constexpr auto emptyInvoker =
-            delegate::empty_invoker<shallThrowWhenEmpty, Ret, Args...>;
+            delegate::empty_invoker<shallThrowWhenEmpty, Ret, Args...>::value;
 
-        // buffer_ needs to be writable by `operator()(Args...) const` while small buffer
+        // storage_ needs to be writable by `operator()(Args...) const` while small object
         // optimization is used
-        alignas(delegate::buffer_alignment) mutable buffer_type buffer_ = nullptr;
-        delegate::target_invoker_t<Ret, Args...> invokeTarget_          = emptyInvoker;
-        delegate::target_deleter_t deleteTarget_                        = delegate::do_nothing;
+        alignas(delegate::storage_alignment) mutable storage_type storage_ = nullptr;
+        delegate::target_invoker_t<Ret, Args...> invokeTarget_             = emptyInvoker;
+        delegate::target_deleter_t deleteTarget_                           = delegate::do_nothing;
 
       public:
         constexpr delegate_core() noexcept           = default;
@@ -161,7 +165,7 @@ namespace detail {
         }
 
         ~delegate_core() {
-            (*deleteTarget_)(buffer_);
+            (*deleteTarget_)(storage_);
         }
 
         auto operator=(const delegate_core&) noexcept -> delegate_core& = delete;
@@ -170,55 +174,80 @@ namespace detail {
             return *this;
         }
 
-        void drop_target() noexcept {
-            delegate_core{}.swap(*this);
-        }
-
-        void swap(delegate_core& other) noexcept {
-            using std::swap;
-            swap(buffer_, other.buffer_);
-            swap(invokeTarget_, other.invokeTarget_);
-            swap(deleteTarget_, other.deleteTarget_);
-        }
-
         constexpr explicit operator bool() const noexcept {
             return invokeTarget_ != emptyInvoker;
         }
 
         auto operator()(Args... args) const -> Ret {
-            return (*invokeTarget_)(buffer_, static_cast<Args>(args)...);
+            return (*invokeTarget_)(storage_, static_cast<Args>(args)...);
         }
 
-        // Stores the passed functor inside the local buffer of the delegate.
-        template<typename T, typename Functor = std::decay_t<T>>
-        static auto from_optimizable_functor(T&& functor) noexcept(
-            noexcept(Functor(std::forward<T>(functor)))) -> delegate_core {
-            delegate_core d;
-            (void)::new (&d.buffer_) Functor(std::forward<T>(functor));
-            d.invokeTarget_ =
-                delegate::invoke_small_buffer_optimized_functor<Functor, Ret, Args...>;
-            d.deleteTarget_ = delegate::destroy_buffer_optimized_functor<Functor>;
-            return d;
+        void swap(delegate_core& other) noexcept {
+            using std::swap;
+            swap(storage_, other.storage_);
+            swap(invokeTarget_, other.invokeTarget_);
+            swap(deleteTarget_, other.deleteTarget_);
         }
 
-        // Stores the passed functor at a new location outside the local buffer of the delegate in a
-        // dynamically allocated storage.
-        template<typename T, typename Functor = std::decay_t<T>>
-        static auto from_dynamic_allocated_functor(T&& functor) -> delegate_core {
-            delegate_core d;
-            d.buffer_       = new Functor(std::forward<T>(functor));
-            d.invokeTarget_ = delegate::invoke_dynamically_stored_functor<Functor, Ret, Args...>;
-            d.deleteTarget_ = delegate::delete_dynamically_stored_functor<Functor>;
-            return d;
+        void drop_target() noexcept {
+            delegate_core{}.swap(*this);
+        }
+
+        // Stores the passed function object inside the local storage of the delegate.
+        template<typename T,
+            std::enable_if_t<delegate::is_small_object_optimizable<std::decay_t<T>>, int> = 0>
+        void assign(T&& functor) noexcept(noexcept(std::decay_t<T>(std::forward<T>(functor)))) {
+            using Functor = std::decay_t<T>;
+            (void)::new (&storage_) Functor(std::forward<T>(functor));
+            invokeTarget_ = delegate::invoke_locally_stored_functor<Functor, Ret, Args...>;
+            deleteTarget_ = delegate::destroy_locally_stored_functor<Functor>;
+        }
+
+        // Stores the passed function object at a new location outside the local storage of the
+        // delegate in a dynamically allocated storage.
+        template<typename T,
+            std::enable_if_t<!delegate::is_small_object_optimizable<std::decay_t<T>>, int> = 0>
+        void assign(T&& functor) {
+            using Functor = std::decay_t<T>;
+            storage_      = new Functor(std::forward<T>(functor));
+            invokeTarget_ = delegate::invoke_dynamically_allocated_functor<Functor, Ret, Args...>;
+            deleteTarget_ = delegate::delete_dynamically_allocated_functor<Functor>;
         }
     };
 
 
     namespace delegate {
+        // Used to wrap non function object targets as function objects.
+        template<typename Signature>
+        struct functor_factory;
+
+        template<typename Ret, typename... Args>
+        struct functor_factory<Ret(Args...)> {
+            template<Ret (*pFunction)(Args...)>
+            static auto wrap_function() {
+                return [](Args... args) -> Ret { return (*pFunction)(static_cast<Args>(args)...); };
+            }
+
+            template<typename C, Ret (C::*pMethod)(Args...)>
+            static auto wrap_member_function(C& obj) {
+                return [&obj](Args... args) -> Ret {
+                    return (obj.*pMethod)(static_cast<Args>(args)...);
+                };
+            }
+
+            template<typename C, Ret (C::*pMethod)(Args...) const>
+            static auto wrap_const_member_function(const C& obj) {
+                return [&obj](Args... args) -> Ret {
+                    return (obj.*pMethod)(static_cast<Args>(args)...);
+                };
+            }
+        };
+
         // Always false. Used to mark invalid parameters in static_assert.
         template<typename>
         constexpr bool invalid = false;
 
+        // NOLINTBEGIN(misc-redundant-expression)
         // Whether `Behavior` is one of the valid types.
         template<typename Behavior>
         constexpr bool is_behavior = std::is_same<Behavior, target_is_expected>::value
@@ -230,6 +259,7 @@ namespace detail {
         constexpr bool is_valid_behavior = !std::is_same<Behavior, target_is_optional>::value
                                            || (std::is_same<Behavior, target_is_optional>::value
                                                && std::is_same<Ret, void>::value);
+        // NOLINTEND(misc-redundant-expression)
 
 
         template<typename...>
@@ -346,7 +376,6 @@ namespace detail {
                 std::integer_sequence<bool, is_immutable_argument<Args>()..., true>>::value;
     }  // namespace delegate
 
-
     // Provides common delegate behavior using the 'curiously recurring template pattern' so that
     // deriving delegates can reuse the functionality.
     template<typename DerivedDelegate>
@@ -361,18 +390,6 @@ namespace detail {
         core_type core_ = {};
 
       public:
-        constexpr base_delegate() noexcept = default;
-        base_delegate(core_type&& core) noexcept : core_{std::move(core)} {
-        }
-
-        void drop_target() noexcept {
-            core_.drop_target();
-        }
-
-        void swap(delegate_type& other) noexcept {
-            core_.swap(other.core_);
-        }
-
         constexpr explicit operator bool() const noexcept {
             return core_.operator bool();
         }
@@ -381,12 +398,19 @@ namespace detail {
             return core_.operator()(static_cast<Args>(args)...);
         }
 
+        void swap(delegate_type& other) noexcept {
+            core_.swap(other.core_);
+        }
+
+        void drop_target() noexcept {
+            core_.drop_target();
+        }
 
         // Creates a new delegate targeting the passed function or static member function.
         template<Ret (*pFunction)(Args...)>
         static constexpr auto create() noexcept -> delegate_type {
             return create(
-                [](Args... args) -> Ret { return (*pFunction)(static_cast<Args>(args)...); });
+                delegate::functor_factory<Ret(Args...)>::template wrap_function<pFunction>());
         }
 
         // Creates a new delegate targeting the non-static member function and related object.
@@ -394,60 +418,52 @@ namespace detail {
         template<typename C, Ret (C::*pMethod)(Args...)>
         static auto create(C& obj) noexcept -> delegate_type {
             return create(
-                [&obj](Args... args) -> Ret { return (obj.*pMethod)(static_cast<Args>(args)...); });
+                delegate::functor_factory<Ret(Args...)>::template wrap_member_function<C, pMethod>(
+                    obj));
         }
 
         // Creates a new delegate targeting the passed non-static const member function and related
         // object. Does NOT take ownership of the passed object `obj`.
         template<typename C, Ret (C::*pMethod)(Args...) const>
         static auto create(const C& obj) noexcept -> delegate_type {
-            return create(
-                [&obj](Args... args) -> Ret { return (obj.*pMethod)(static_cast<Args>(args)...); });
+            return create(delegate::functor_factory<Ret(
+                    Args...)>::template wrap_const_member_function<C, pMethod>(obj));
         }
 
-        // Dummy to capture passed values that are no functors.
-        template<typename T, typename Functor = std::decay_t<T>,
-            std::enable_if_t<!std::is_class<Functor>::value, int> = 0>
+        // Dummy to capture passed values that are no function objects.
+        template<typename T, std::enable_if_t<!std::is_class<std::decay_t<T>>::value, int> = 0>
         static auto create(T&&) -> delegate_type {
+            using Functor = std::decay_t<T>;
             static_assert(std::is_class<Functor>::value,
-                "Invalid object passed. Object needs to be a functor (a class type with a function "
+                "Invalid object passed. Object needs to be a function object (a class type with a "
+                "function "
                 "call operator, e.g. a lambda).");
         }
 
         // Dummy to capture passed objects that cannot be called by the delegate.
-        template<typename T, typename Functor = std::decay_t<T>,
-            std::enable_if_t<std::is_class<Functor>::value
-                                 && !delegate::is_callable_by<Functor, Ret(Args...)>,
+        template<typename T,
+            std::enable_if_t<std::is_class<std::decay_t<T>>::value
+                                 && !delegate::is_callable_by<std::decay_t<T>, Ret(Args...)>,
                 int> = 0>
         static auto create(T&&) -> delegate_type {
+            using Functor = std::decay_t<T>;
             static_assert(delegate::is_callable_by<Functor, Ret(Args...)>,
-                "Passed functor has incompatible function call signature. The function call "
+                "Passed function object has incompatible function call signature. The function "
+                "call "
                 "signature must be compatible with the signature of the delegate so that the "
-                "delegate is able to invoke the functor.");
+                "delegate is able to invoke the function object.");
         }
 
-        // Creates a new delegate targeting the passed functor and taking ownership of it.
-        // The functor is stored in the local storage of the delegate (no dynamic allocation).
+        // Creates a new delegate targeting the passed function object and taking ownership of it.
         template<typename T, typename Functor = std::decay_t<T>,
             std::enable_if_t<std::is_class<Functor>::value
-                                 && delegate::is_callable_by<Functor, Ret(Args...)>
-                                 && delegate::is_small_buffer_optimizable<Functor>,
+                                 && delegate::is_callable_by<Functor, Ret(Args...)>,
                 int> = 0>
-        static auto create(T&& functor) noexcept(
-            noexcept(core_type::template from_optimizable_functor(std::forward<T>(functor))))
-            -> delegate_type {
-            return {core_type::template from_optimizable_functor(std::forward<T>(functor))};
-        }
-
-        // Creates a new delegate targeting the passed functor and taking ownership of it.
-        // The functor is stored in a dynamically allocated storage outside the delegate.
-        template<typename T, typename Functor = std::decay_t<T>,
-            std::enable_if_t<std::is_class<Functor>::value
-                                 && delegate::is_callable_by<Functor, Ret(Args...)>
-                                 && !delegate::is_small_buffer_optimizable<Functor>,
-                int> = 0>
-        static auto create(T&& functor) -> delegate_type {
-            return {core_type::template from_dynamic_allocated_functor(std::forward<T>(functor))};
+        static auto create(T&& functor) noexcept(noexcept(
+            std::declval<core_type&>().assign(std::forward<T>(functor)))) -> delegate_type {
+            base_delegate dgt;
+            dgt.core_.assign(std::forward<T>(functor));
+            return {std::move(dgt)};
         }
     };
 }  // namespace detail
@@ -487,6 +503,18 @@ class delegate<Ret(Args...), Behavior>
     auto operator=(const delegate&) noexcept -> delegate& = delete;
     auto operator=(delegate&&) noexcept -> delegate&      = default;
 
+    // Construct from a function object target.
+    // SFINAE to prevent hiding the constructors `delegate(delegate&&)`, `delegate(base_type&&)`,
+    // and `delegate(std::nullptr_t)`.
+    template<typename Functor,
+        std::enable_if_t<!std::is_base_of<base_type, std::decay_t<Functor>>::value
+                             && !std::is_same<std::nullptr_t, std::decay_t<Functor>>::value,
+            int> = 0>
+    delegate(Functor&& functor) noexcept(
+        noexcept(base_type::create(std::forward<Functor>(functor))))
+        : delegate{base_type::create(std::forward<Functor>(functor))} {
+    }
+
     constexpr delegate(std::nullptr_t) noexcept : delegate{} {
     }
     constexpr auto operator=(std::nullptr_t) noexcept -> delegate& {
@@ -517,6 +545,18 @@ class delegate<Ret(Args...), target_is_mandatory>
 
     auto operator=(const delegate&) noexcept -> delegate& = delete;
     auto operator=(delegate&&) noexcept -> delegate&      = default;
+
+    // Construct directly from a function object target.
+    // SFINAE to prevent hiding the constructors `delegate(delegate&&)`, `delegate(base_type&&)`,
+    // and `delegate(std::nullptr_t)`.
+    template<typename Functor,
+        std::enable_if_t<!std::is_base_of<base_type, std::decay_t<Functor>>::value
+                             && !std::is_same<std::nullptr_t, std::decay_t<Functor>>::value,
+            int> = 0>
+    delegate(Functor&& functor) noexcept(
+        noexcept(base_type::create(std::forward<Functor>(functor))))
+        : delegate{base_type::create(std::forward<Functor>(functor))} {
+    }
 
     using base_type::swap;
     using base_type::operator bool;
@@ -582,6 +622,18 @@ class fwd_delegate<void(Args...), Behavior>
     auto operator=(const fwd_delegate&) noexcept -> fwd_delegate& = delete;
     auto operator=(fwd_delegate&&) noexcept -> fwd_delegate&      = default;
 
+    // Construct directly from a function object target.
+    // SFINAE to prevent hiding the constructors `delegate(delegate&&)`, `delegate(base_type&&)`,
+    // and `delegate(std::nullptr_t)`.
+    template<typename Functor,
+        std::enable_if_t<!std::is_base_of<base_type, std::decay_t<Functor>>::value
+                             && !std::is_same<std::nullptr_t, std::decay_t<Functor>>::value,
+            int> = 0>
+    fwd_delegate(Functor&& functor) noexcept(
+        noexcept(base_type::create(std::forward<Functor>(functor))))
+        : fwd_delegate{base_type::create(std::forward<Functor>(functor))} {
+    }
+
     constexpr fwd_delegate(std::nullptr_t) noexcept : fwd_delegate{} {
     }
     constexpr auto operator=(std::nullptr_t) noexcept -> fwd_delegate& {
@@ -619,6 +671,18 @@ class fwd_delegate<void(Args...), target_is_mandatory>
 
     auto operator=(const fwd_delegate&) noexcept -> fwd_delegate& = delete;
     auto operator=(fwd_delegate&&) noexcept -> fwd_delegate&      = default;
+
+    // Construct directly from a function object target.
+    // SFINAE to prevent hiding the constructors `delegate(delegate&&)`, `delegate(base_type&&)`,
+    // and `delegate(std::nullptr_t)`.
+    template<typename Functor,
+        std::enable_if_t<!std::is_base_of<base_type, std::decay_t<Functor>>::value
+                             && !std::is_same<std::nullptr_t, std::decay_t<Functor>>::value,
+            int> = 0>
+    fwd_delegate(Functor&& functor) noexcept(
+        noexcept(base_type::create(std::forward<Functor>(functor))))
+        : fwd_delegate{base_type::create(std::forward<Functor>(functor))} {
+    }
 
     using base_type::swap;
     using base_type::operator bool;

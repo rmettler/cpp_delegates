@@ -131,16 +131,16 @@ namespace detail {
     };
 }  // namespace detail
 
-// The class for a functor target that is small buffer optimizable within a delegate (no heap
+// The class for a functor target that is small object optimizable within a delegate (no heap
 // allocation needed).
 // It is mocked using 'targetMock<...>'.
 template<typename CallSignature, size_t N = 0>
-class BufferOptimizableFunctor : public detail::FunctorBase<CallSignature, N> {
+class ObjectOptimizableFunctor : public detail::FunctorBase<CallSignature, N> {
     void* dummy_ = nullptr;  // dummy member to create size
 };
-static_assert(sizeof(BufferOptimizableFunctor<void(int)>) == sizeof(void*), "");
+static_assert(sizeof(ObjectOptimizableFunctor<void(int)>) == sizeof(void*), "");
 
-// The class for a functor target that is too big for small buffer optimization within a delegate
+// The class for a functor target that is too big for small object optimization within a delegate
 // (heap allocation needed).
 // It is mocked using 'targetMock<...>'.
 template<typename CallSignature, size_t N = 0>
@@ -150,7 +150,7 @@ class TooBigFunctor : public detail::FunctorBase<CallSignature, N> {
 };
 static_assert(sizeof(TooBigFunctor<void(int)>) > sizeof(void*), "");
 
-// The class for a functor target with an alignment that cannot be small buffer optimized within a
+// The class for a functor target with an alignment that cannot be small object optimized within a
 // delegate (heap allocation needed).
 // It is mocked using 'targetMock<...>'.
 template<typename CallSignature, size_t N = 0>

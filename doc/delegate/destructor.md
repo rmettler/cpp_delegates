@@ -8,4 +8,28 @@ Destroys the `rome::delegate` instance. If the `rome::delegate` instance took th
 
 ## Examples
 
-> TODO: show examples where the target is destroyed and where not!
+```cpp
+#include <iostream>
+#include <rome/delegate.hpp>
+
+struct F {
+    ~F() {
+        std::cout << "~F()\n";
+    }
+    void operator()() const {
+    }
+};
+
+int main() {
+    rome::delegate<void()> d = F{};
+    std::cout << "end of main\n";
+}
+```
+
+Output:
+
+> ~F()  
+> end of main  
+> ~F()
+
+The first `~F()` comes from the temporary object passed to the `rome::delegate`, the second from the `F` instance managed by the `rome::delegate`.

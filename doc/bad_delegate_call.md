@@ -1,12 +1,12 @@
 # _rome::_ **bad_delegate_call**
 
-Defined in header [`<rome/bad_delegate_call.hpp>`](../include/rome/bad_delegate_call.hpp).
+Defined in header [`<rome/delegate.hpp>`](../include/rome/delegate.hpp).
 
 ```cpp
 class bad_delegate_call;
 ```
 
-`rome::bad_delegate_call` is the type of exception thrown by `rome::delegate::operator()` and `rome::event_delegate::operator()` if the delegate is _empty_, has no _target_
+`rome::bad_delegate_call` is the type of exception thrown when an _empty_ [`rome::delegate`](./delegate.md) is invoked.
 
 `rome::bad_delegate_call` inherits from [`std::exception`](https://en.cppreference.com/w/cpp/error/exception)
 
@@ -19,7 +19,7 @@ class bad_delegate_call;
   bad_delegate_call() noexcept;
   ```
   
-- **destructor** - _virtual_, inherited from [`std::exception`](https://en.cppreference.com/w/cpp/error/exception)  
+- **destructor** - _virtual_  
   destroys the exception object
   
   ```cpp
@@ -35,17 +35,19 @@ class bad_delegate_call;
 
 ## Example
 
+_See the code in [examples/bad_delegate_call.cpp](../examples/bad_delegate_call.cpp)._
+
 ```cpp
 #include <iostream>
 #include <rome/delegate.hpp>
 
 int main() {
+    rome::delegate<void(), rome::target_is_expected> d{};
     try {
-        rome::delegate<void(), rome::target_is_expected> d;
         d();
     }
-    catch (const std::exception& e) {
-        std::cerr << "caught: " << e.what() << '\n';
+    catch (const rome::bad_delegate_call& e) {
+        std::cout << "caught: " << e.what() << '\n';
     }
 }
 ```

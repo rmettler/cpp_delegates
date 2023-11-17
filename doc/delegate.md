@@ -4,7 +4,7 @@ Defined in header [`<rome/delegate.hpp>`](../include/rome/delegate.hpp).
 
 ```cpp
 template<typename Signature, typename Behavior = target_is_expected>
-class delegate; // undefined
+class delegate;  // undefined
 
 template<typename Ret, typename... Args, typename Behavior>
 class delegate<Ret(Args...), Behavior>;
@@ -14,19 +14,34 @@ Instances of class template `rome::delegate` can store and invoke any callable _
 
 The stored callable object is called the **_target_** of `rome::delegate`. If a `rome::delegate` contains no _target_, it is called **_empty_**.
 
-Invoking the _target_ of an _empty_ `rome::delegate` results in a behavior configurable by the `Behavior` template parameter (see below). By default a [`rome::bad_delegate_call`](delegate/bad_delegate_call.md) exception is thrown.
+Invoking the _target_ of an _empty_ `rome::delegate` results in a defined behavior configurable by the `Behavior` template parameter (see [_Template parameters_](#template-parameters) below).
 
-To assign a new _target_, a new `rome::delegate` needs to be constructed using [`create`](delegate/create.md). If a function object is assigned and its size exceeds `sizeof(void*)`, a heap allocation is needed during assignment. Smaller function objects and all other _targets_ are guaranteed to be embedded in the local memory of the `rome::delegate`. Thus, it is possible to efficiently assign a _target_ from a lambda expression with one captured pointer.
+Assigning a function object _target_ to a `rome::delegate` can be done during construction of or with an assignment to the `rome::delegate`. Other callable _targets_ such as functions and member functions either need to be wrapped by a function object (e.g. by a lambda expression) or use the provided factory method [`create`](delegate/create.md). See also the [_Examples_](#examples) below.
 
-The size of a `rome::delegate` is the size of an object pointer plus twice the size of a function pointer:  
-`sizeof(rome::delegate<Ret(Args...), Behavior>) == sizeof(void*) + 2*sizeof(void (*)())`
+Small _targets_ are stored in the local storage of a `rome::delegate`. Such small object optimization takes place if:
+
+- the _target_ is a function object of size smaller or equal to `sizeof(void*)`  
+  _e.g. a lambda expression capturing a pointer_
+- the _target_ is a function
+- the _target_ is a member function, both the member function pointer and the reference to the object are stored locally
+
+If a function object _target_ is bigger than `sizeof(void*)`, new storage is dynamically allocated.
+
+The size of a `rome::delegate` is the size of an object pointer plus twice the size of a function pointer:
+
+```cpp
+sizeof(rome::delegate<Ret(Args...), Behavior>)
+    == sizeof(void*) + 2*sizeof(void (*)())
+```
+
+A `rome::delegate` is moveable but not copyable.
 
 ## Template parameters
 
 - `Ret`  
-  The return type of the _target_ beeing called.
+  The return type of the _target_ being called.
 - `Args...`  
-  The argument types of the _target_ beeing called (0 to N).
+  The argument types of the _target_ being called.
 - `Behavior`  
   Defines the behavior of an _empty_ `rome::delegate` being called. Defaults to `rome::target_is_expected`.
   
@@ -35,15 +50,18 @@ The size of a `rome::delegate` is the size of an object pointer plus twice the s
   - `rome::target_is_expected`  
     A valid _target_ is expected to be assigned before the `rome::delegate` is called.  
     When an _empty_ `rome::delegate` is being called:
-    - Throws a [`rome::bad_delegate_call`](delegate/bad_delegate_call.md) exception.
+    - Throws a [`rome::bad_delegate_call`](./bad_delegate_call.md) exception.
     - Instead calls [`std::terminate`](https://en.cppreference.com/w/cpp/error/terminate), if exceptions are disabled.
   - `rome::target_is_optional` _(only if `Ret`==`void`)_  
-    Assigning a _target_ to the `rome::delegate` is optional. Calling an _empty_ delegate is well defined and directly returns without doing anything.  
+    Assigning a _target_ to the `rome::delegate` is optional. Calling an _empty_ delegate returns directly without doing anything.  
     Compile error, if `Ret` != `void`.
   - `rome::target_is_mandatory`  
-    Ensures by design that a `rome::delegate` cannot be _empty_. This has following consequences:
-    - Default constructor is deleted. A new instance of `rome::delegate` can only be created by using one of the factory functions [create](delegate/create.md).
+    Prevents by design that a `rome::delegate` can be _empty_. This has following consequences:
+
+    - Default constructor is deleted. A new instance of `rome::delegate` can only be created by passing a _target_ to the [constructor](delegate/constructor.md) or by using one of the factory functions [create](delegate/create.md).
     - There is no possibility to drop a currently assigned _target_, though it can be overridden by assigning a new _target_.
+
+    _Note: The `rome::delegate` still becomes_ empty _after a move, i.e., after `auto y = std::move(x)`_ x _is_ empty _and behaves as if `Behavior` was set to `rome::target_is_expected`._
 
 ## Member functions
 
@@ -52,9 +70,9 @@ The size of a `rome::delegate` is the size of an object pointer plus twice the s
 - [desctructor](delegate/destructor.md)  
   destroys a `rome::delegate` instance
 - [operator=](delegate/operator_assignment.md)  
-  assigns the _target_ of another `rome::delegate` or just drops the stored _target_
+  assigns or drops a _target_
 - [swap](delegate/swap.md)  
-  swaps the contents
+  swaps the _targets_
 - [operator bool](delegate/operator_bool.md)  
   checks if a valid _target_ is contained
 - [operator()](delegate/operator_function_call.md)  
@@ -65,84 +83,124 @@ The size of a `rome::delegate` is the size of an object pointer plus twice the s
 ## Non-member functions
 
 - [rome::swap](delegate/swap2.md)  
-  swaps the contents of two `rome::delegate` instances
+  swaps the _targets_ of two `rome::delegate` instances
 - [operator==, operator!=](delegate/operator_cmp_nullptr.md)  
   compares `rome::delegate` with nullptr
 
-## Example
+## Notes
+
+The most similar C++ standard library counterpart is [std::move_only_function](https://en.cppreference.com/w/cpp/utility/functional/move_only_function) (since C++23). It has similar behavior and interface, with following main differences:
+
+- undefined behavior when called empty
+- specifiable cv-qualifiers, ref-qualifiers and noexcept-specifiers for `operator()`
+- direct assignment of functions and member functions possible  
+  _With `rome::delegate` they need to be wrapped by a function object (e.g. lambda expression) or by using the [create](delegate/create.md) function._
+- unspecified storage size for small object optimization
+
+## Examples
+
+Basic usage examples for all three types of `Behavior` and the three target types function, member function and function object.
+
+_See the code in [examples/basic_examples.cpp](../examples/basic_examples.cpp)._
 
 ```cpp
+#include <functional>
 #include <iostream>
-#include <iterator>
-#include <numeric>
-#include <sstream>
-#include <string>
-#include <vector>
-
 #include <rome/delegate.hpp>
 
-struct CommandProcessor {
-    rome::delegate<void(const std::vector<int>&), rome::target_is_mandatory> onAddCommandRead;
-    rome::delegate<void(const std::vector<int>&), rome::target_is_expected>  onSubtractCommandRead;
-    rome::delegate<void(const std::string&),      rome::target_is_optional>  onParseError;
-    void processCommand(const std::string& line) const {
-        std::istringstream iss{line.substr(2)};
-        const std::vector<int> args{std::istream_iterator<int>{iss}, std::istream_iterator<int>{}};
-        if ('+' == line.at(0)) {
-            onAddCommandRead(args);
-        }
-        else if ('-' == line.at(0)) {
-            onSubtractCommandRead(args);
-        }
-        else {
-            onParseError(line);
-        }
+void print(int i) {
+    std::cout << i << '\n';
+}
+
+int plus100(int i) {
+    return i + 100;
+}
+
+struct TargetClass {
+    int value = 0;
+
+    void set(int i) {
+        value = i;
     }
-    CommandProcessor(decltype(onAddCommandRead)&& dgt)
-        : onAddCommandRead{std::move(dgt)} {
+};
+
+struct Example {
+    rome::delegate<int(int), rome::target_is_mandatory> onMandatoryNotEmpty;
+    rome::delegate<int(int) /*, rome::target_is_expected*/> onExpectedNotEmpty;  // (1)
+    // rome::delegate<int(int), rome::target_is_optional> onMaybeEmpty;          // (2) does not compile
+    rome::delegate<void(int), rome::target_is_optional> onMaybeEmpty;
+
+    Example(decltype(onMandatoryNotEmpty)&& mand) : onMandatoryNotEmpty{std::move(mand)} {  // (3)
     }
 };
 
 int main() {
-    const CommandProcessor cp{decltype(cp.onAddCommandRead)::create([](const std::vector<int>& args) {
-        const auto result = std::accumulate(args.begin(), args.end(), 0);
-        std::cout << "sum = " << result << '\n';
-    })};
-    const std::string cmd1{"+ 1 2 3"};
-    const std::string cmd2{"- 1 2 3"};
-    const std::string cmd3{"error"};
-    std::cout << "cmd1:" << '\n';
-    cp.processCommand(cmd1);
-    // Calls the target assigned to the first delegate. It was mandatory to assign a target to this delegate and would have led to a compiler error otherwise.
+    TargetClass obj{};
+    Example x{std::negate<>{}};                       // (3)
+
+    std::cout << "Calls after initialization:\n";
+    print(x.onMandatoryNotEmpty(1));
     try {
-        std::cout << "cmd2:" << '\n';
-        cp.processCommand(cmd2);
-        // Calls the second delegate with no assigned target. For this delegate, however, it is expected that a target is assigned before call. -> an exception is thrown
+        x.onExpectedNotEmpty(2);
     }
-    catch (const rome::bad_delegate_call& ex) {
-        std::cout << ex.what() << '\n';
+    catch (const rome::bad_delegate_call& e) {
+        std::cout << e.what() << '\n';
     }
-    std::cout << "cmd3:" << '\n';
-    cp.processCommand(cmd3);
-    // Calls the third delegate with no assigned target. For this it is optional that a target is assigned before call. -> nothing happens
+    x.onMaybeEmpty(3);
+
+    std::cout << "\nCalls with fresh assigned targets:\n";
+    x.onMandatoryNotEmpty = [](int i) { return i + 10; };
+    x.onExpectedNotEmpty  = [](int i) { return plus100(i); };
+    x.onMaybeEmpty        = [&obj](int i) { obj.set(i); };
+    print(x.onMandatoryNotEmpty(4));
+    print(x.onExpectedNotEmpty(5));
+    print(obj.value);
+    x.onMaybeEmpty(6);
+    print(obj.value);
+
+    std::cout << "\nCalls after dropping targets:\n";
+    // x.onMandatoryNotEmpty = nullptr;               // (4) does not compile
+    x.onExpectedNotEmpty  = nullptr;
+    x.onMaybeEmpty        = nullptr;
+    print(x.onMandatoryNotEmpty(7));
+    try {
+        x.onExpectedNotEmpty(8);
+    }
+    catch (const rome::bad_delegate_call& e) {
+        std::cout << e.what() << '\n';
+    }
+    x.onMaybeEmpty(9);
+    print(obj.value);
 }
 ```
 
-Console output:
+- **(1)** - second template parameter is `rome::target_is_expected` by default
+- **(2)** - `rome::delegate` with `rome::target_is_optional` must have void return
+- **(3)** -  `rome::delegate` with `rome::target_is_mandatory` has deleted default constructor, a _target_ must be assigned during construction
+- **(4)** - `rome::delegate` with `rome::target_is_mandatory` does not allow to drop _targets_
 
-> cmd1:  
-> sum = 6  
-> cmd2:  
+Output:
+
+> Calls after initialization:  
+> -1  
 > rome::bad_delegate_call  
-> cmd3:
+>
+> Calls with fresh assigned targets:  
+> 14  
+> 105  
+> 0  
+> 6  
+>
+> Calls after dropping targets:  
+> 17  
+> rome::bad_delegate_call  
+> 6
 
 ## See also
 
 - [rome::fwd_delegate](fwd_delegate.md)  
-  same as `rome::delegate` but restricts data to be forwarded only
-- [std::function](https://en.cppreference.com/w/cpp/utility/functional/function)  
-  wraps callable object of any type with specified function call signature
-
-## Remarks
-
-This documentation is heavily influenced by the documentation of [std::function](https://en.cppreference.com/w/cpp/utility/functional/function) at [cppreference.com](https://en.cppreference.com).
+  The same as `rome::delegate` but restricts data to be forwarded only.
+- [std::move_only_function](https://en.cppreference.com/w/cpp/utility/functional/move_only_function) (C++23)  
+  Wraps a callable object of any type with specified function call signature.
+- [std::function](https://en.cppreference.com/w/cpp/utility/functional/function) (C++11)  
+  Wraps a callable object of any copy constructible type with specified function call signature.
