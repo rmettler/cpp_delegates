@@ -1,0 +1,8 @@
+function
+function
+method
+method
+const method
+const method
+function object
+function object

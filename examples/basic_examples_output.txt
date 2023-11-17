@@ -1,0 +1,14 @@
+Calls after initialization:
+-1
+rome::bad_delegate_call
+
+Calls with fresh assigned targets:
+14
+105
+0
+6
+
+Calls after dropping targets:
+17
+rome::bad_delegate_call
+6

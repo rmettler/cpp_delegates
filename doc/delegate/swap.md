@@ -16,4 +16,34 @@ Exchanges the stored callable objects of `*this` and other.
 
 ## Examples
 
-> TODO
+_See the code in [examples/swap.cpp](../examples/swap.cpp)._
+
+```cpp
+#include <iostream>
+#include <rome/delegate.hpp>
+
+int main() {
+    rome::delegate<void()> d1 = []() { std::cout << "1\n"; };
+    rome::delegate<void()> d2 = []() { std::cout << "2\n"; };
+    d1();
+    d2();
+    d1.swap(d2);
+    d1();
+    d2();
+    {
+        using std::swap;
+        swap(d1, d2);
+    }
+    d1();
+    d2();
+}
+```
+
+Output:
+
+> 1  
+> 2  
+> 2  
+> 1  
+> 1  
+> 2

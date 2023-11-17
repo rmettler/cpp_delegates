@@ -26,8 +26,8 @@ using test_vector_assigned = std::tuple<
     input_params<     rome::delegate<bool(int&), rome::target_is_mandatory>, test::target::method >,
     input_params<     rome::delegate<bool(int),  rome::target_is_expected>,  test::target::const_method >,
     input_params<     rome::delegate<bool(int),  rome::target_is_mandatory>, test::target::const_method >,
-    input_params<     rome::delegate<bool(int),  rome::target_is_expected>,  test::target::buffer_optimizable_functor >,
-    input_params<     rome::delegate<bool(int),  rome::target_is_mandatory>, test::target::buffer_optimizable_functor >,
+    input_params<     rome::delegate<bool(int),  rome::target_is_expected>,  test::target::object_optimizable_functor >,
+    input_params<     rome::delegate<bool(int),  rome::target_is_mandatory>, test::target::object_optimizable_functor >,
     input_params<     rome::delegate<bool(int),  rome::target_is_expected>,  test::target::too_big_functor >,
     input_params<     rome::delegate<bool(int&), rome::target_is_mandatory>, test::target::too_big_functor >,
     input_params<     rome::delegate<bool(int&), rome::target_is_expected>,  test::target::bad_aligned_functor >,
@@ -41,9 +41,9 @@ using test_vector_assigned = std::tuple<
     input_params<     rome::delegate<void(int),  rome::target_is_expected>,  test::target::const_method >,
     input_params<     rome::delegate<void(int&), rome::target_is_mandatory>, test::target::const_method >,
     input_params<     rome::delegate<void(int&), rome::target_is_optional>,  test::target::const_method >,
-    input_params<     rome::delegate<void(int&), rome::target_is_expected>,  test::target::buffer_optimizable_functor >,
-    input_params<     rome::delegate<void(int),  rome::target_is_mandatory>, test::target::buffer_optimizable_functor >,
-    input_params<     rome::delegate<void(int),  rome::target_is_optional>,  test::target::buffer_optimizable_functor >,
+    input_params<     rome::delegate<void(int&), rome::target_is_expected>,  test::target::object_optimizable_functor >,
+    input_params<     rome::delegate<void(int),  rome::target_is_mandatory>, test::target::object_optimizable_functor >,
+    input_params<     rome::delegate<void(int),  rome::target_is_optional>,  test::target::object_optimizable_functor >,
     input_params<     rome::delegate<void(int),  rome::target_is_expected>,  test::target::too_big_functor >,
     input_params<     rome::delegate<void(int),  rome::target_is_mandatory>, test::target::too_big_functor >,
     input_params<     rome::delegate<void(int&), rome::target_is_optional>,  test::target::too_big_functor >,
@@ -59,9 +59,9 @@ using test_vector_assigned = std::tuple<
     input_params< rome::fwd_delegate<void(int),  rome::target_is_expected>,  test::target::const_method >,
     input_params< rome::fwd_delegate<void(int),  rome::target_is_mandatory>, test::target::const_method >,
     input_params< rome::fwd_delegate<void(int),  rome::target_is_optional>,  test::target::const_method >,
-    input_params< rome::fwd_delegate<void(int),  rome::target_is_expected>,  test::target::buffer_optimizable_functor >,
-    input_params< rome::fwd_delegate<void(int),  rome::target_is_mandatory>, test::target::buffer_optimizable_functor >,
-    input_params< rome::fwd_delegate<void(int),  rome::target_is_optional>,  test::target::buffer_optimizable_functor >,
+    input_params< rome::fwd_delegate<void(int),  rome::target_is_expected>,  test::target::object_optimizable_functor >,
+    input_params< rome::fwd_delegate<void(int),  rome::target_is_mandatory>, test::target::object_optimizable_functor >,
+    input_params< rome::fwd_delegate<void(int),  rome::target_is_optional>,  test::target::object_optimizable_functor >,
     input_params< rome::fwd_delegate<void(int),  rome::target_is_expected>,  test::target::too_big_functor >,
     input_params< rome::fwd_delegate<void(int),  rome::target_is_mandatory>, test::target::too_big_functor >,
     input_params< rome::fwd_delegate<void(int),  rome::target_is_optional>,  test::target::too_big_functor >,
@@ -79,7 +79,8 @@ TEST_CASE_TEMPLATE_DEFINE(
     using Sig        = test::delegate_signature_t<Delegate>;
 
     SUBCASE("Two assigned delegates") {
-        const auto expectDestroyTarget1 = test::expectDestroyTargetAtEndOfScope<Sig, TargetType, 1>();
+        const auto expectDestroyTarget1 =
+            test::expectDestroyTargetAtEndOfScope<Sig, TargetType, 1>();
         Delegate from = test::createDelegateWithMockedTarget<Delegate, TargetType, 1>();
         Delegate to   = test::createDelegateWithMockedTarget<Delegate, TargetType, 0>();
         {
@@ -97,10 +98,14 @@ TEST_CASE_TEMPLATE_DEFINE(
         const auto expectDestroyTarget = test::expectDestroyTargetAtEndOfScope<Sig, TargetType>();
         Delegate dgt = test::createDelegateWithMockedTarget<Delegate, TargetType>();
 
+#if __GNUC__ >= 13
         DOCTEST_GCC_SUPPRESS_WARNING_WITH_PUSH("-Wself-move")
+#endif
         // self-move on intention
         dgt = std::move(dgt);
+#if __GNUC__ >= 13
         DOCTEST_GCC_SUPPRESS_WARNING_POP
+#endif
 
         CHECK(test::isObservedAsAssigned(dgt));
         CHECK(test::callingDelegateCallsMockedTarget<>(dgt));
@@ -114,7 +119,7 @@ using test_vector_mixed = std::tuple<
     input_params<     rome::delegate<bool(int&), rome::target_is_expected>,  test::target::function >,
     input_params<     rome::delegate<bool(int),  rome::target_is_expected>,  test::target::method >,
     input_params<     rome::delegate<bool(int),  rome::target_is_expected>,  test::target::const_method >,
-    input_params<     rome::delegate<bool(int),  rome::target_is_expected>,  test::target::buffer_optimizable_functor >,
+    input_params<     rome::delegate<bool(int),  rome::target_is_expected>,  test::target::object_optimizable_functor >,
     input_params<     rome::delegate<bool(int&), rome::target_is_expected>,  test::target::too_big_functor >,
     input_params<     rome::delegate<bool(int),  rome::target_is_expected>,  test::target::bad_aligned_functor >,
     input_params<     rome::delegate<void(int),  rome::target_is_expected>,  test::target::function >,
@@ -123,8 +128,8 @@ using test_vector_mixed = std::tuple<
     input_params<     rome::delegate<void(int&), rome::target_is_optional>,  test::target::method >,
     input_params<     rome::delegate<void(int),  rome::target_is_expected>,  test::target::const_method >,
     input_params<     rome::delegate<void(int),  rome::target_is_optional>,  test::target::const_method >,
-    input_params<     rome::delegate<void(int&), rome::target_is_expected>,  test::target::buffer_optimizable_functor >,
-    input_params<     rome::delegate<void(int&), rome::target_is_optional>,  test::target::buffer_optimizable_functor >,
+    input_params<     rome::delegate<void(int&), rome::target_is_expected>,  test::target::object_optimizable_functor >,
+    input_params<     rome::delegate<void(int&), rome::target_is_optional>,  test::target::object_optimizable_functor >,
     input_params<     rome::delegate<void(int),  rome::target_is_expected>,  test::target::too_big_functor >,
     input_params<     rome::delegate<void(int),  rome::target_is_optional>,  test::target::too_big_functor >,
     input_params<     rome::delegate<void(int&), rome::target_is_expected>,  test::target::bad_aligned_functor >,
@@ -135,8 +140,8 @@ using test_vector_mixed = std::tuple<
     input_params< rome::fwd_delegate<void(int),  rome::target_is_optional>,  test::target::method >,
     input_params< rome::fwd_delegate<void(int),  rome::target_is_expected>,  test::target::const_method >,
     input_params< rome::fwd_delegate<void(int),  rome::target_is_optional>,  test::target::const_method >,
-    input_params< rome::fwd_delegate<void(int),  rome::target_is_expected>,  test::target::buffer_optimizable_functor >,
-    input_params< rome::fwd_delegate<void(int),  rome::target_is_optional>,  test::target::buffer_optimizable_functor >,
+    input_params< rome::fwd_delegate<void(int),  rome::target_is_expected>,  test::target::object_optimizable_functor >,
+    input_params< rome::fwd_delegate<void(int),  rome::target_is_optional>,  test::target::object_optimizable_functor >,
     input_params< rome::fwd_delegate<void(int),  rome::target_is_expected>,  test::target::too_big_functor >,
     input_params< rome::fwd_delegate<void(int),  rome::target_is_optional>,  test::target::too_big_functor >,
     input_params< rome::fwd_delegate<void(int),  rome::target_is_expected>,  test::target::bad_aligned_functor >,
@@ -209,10 +214,14 @@ TEST_CASE_TEMPLATE_DEFINE(
     SUBCASE("Self assign") {
         Delegate dgt{};
 
+#if __GNUC__ >= 13
         DOCTEST_GCC_SUPPRESS_WARNING_WITH_PUSH("-Wself-move")
+#endif
         // self-move on intention
         dgt = std::move(dgt);
+#if __GNUC__ >= 13
         DOCTEST_GCC_SUPPRESS_WARNING_POP
+#endif
 
         CHECK(test::isObservedAsEmpty(dgt));
         CHECK(test::callingDelegateLeadsToEmptyBehavior(dgt));

@@ -36,13 +36,13 @@ namespace target {
     struct method {};
     // Tag for a non-static const member function.
     struct const_method {};
-    // Tag for a functor that is small buffer optimizable within a delegate (no heap allocation
+    // Tag for a functor that is small object optimizable within a delegate (no heap allocation
     // needed).
-    struct buffer_optimizable_functor {};
-    // Tag for a functor that is too big for small buffer optimization within a delegate (heap
+    struct object_optimizable_functor {};
+    // Tag for a functor that is too big for small object optimization within a delegate (heap
     // allocation needed).
     struct too_big_functor {};
-    // Tag for a functor with an alignment that cannot be small buffer optimized within a delegate
+    // Tag for a functor with an alignment that cannot be small object optimized within a delegate
     // (heap allocation needed).
     struct bad_aligned_functor {};
 }  // namespace target
@@ -66,14 +66,14 @@ namespace detail {
             return Delegate::template create<Cls, &Cls::mockedConstMethod>(
                 targetConstObject<Sig, N>);
         }
-        auto operator()(const target::buffer_optimizable_functor&) -> Delegate {
+        auto operator()(const target::object_optimizable_functor&) -> Delegate {
             trompeloeil::sequence seq;
             REQUIRE_CALL((targetMock<Sig, N>), defaultConstruct())
                 .IN_SEQUENCE(seq);  // temporary 'mockedFunctor'
             REQUIRE_CALL((targetMock<Sig, N>), moveConstruct()).IN_SEQUENCE(seq);
             REQUIRE_CALL((targetMock<Sig, N>), destruct())
                 .IN_SEQUENCE(seq);  // temporary 'mockedFunctor'
-            BufferOptimizableFunctor<Sig, N> mockedFunctor;
+            ObjectOptimizableFunctor<Sig, N> mockedFunctor;
             return Delegate::create(std::move(mockedFunctor));
         }
         template<typename Functor>
@@ -121,7 +121,7 @@ auto expectDestroyTargetAtEndOfScope() -> auto {
 }
 
 template<typename CallSignature, typename TargetType, size_t N = 0,
-    std::enable_if_t<std::is_same<TargetType, target::buffer_optimizable_functor>{}, int> = 0>
+    std::enable_if_t<std::is_same<TargetType, target::object_optimizable_functor>{}, int> = 0>
 auto expectDestroyTargetAtEndOfScope() -> auto {
     return NAMED_REQUIRE_CALL((targetMock<CallSignature, N>), destruct());
 }
