@@ -1,0 +1,98 @@
+{
+    "version": 2,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 20,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "default",
+            "description": "Defaults to be inherited by other presets.",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build_${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+                "CMAKE_CXX_EXTENSIONS": "OFF",
+                "ROME_DELEGATES_BUILD_TESTS": "ON",
+                "ROME_DELEGATES_INSTRUMENT": "OFF"
+            }
+        },
+        {
+            "name": "clang-cpp23",
+            "inherits": "default",
+            "displayName": "clang++ (C++23)",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CMAKE_CXX_STANDARD": "23"
+            }
+        },
+        {
+            "name": "clang-cpp23-instr",
+            "inherits": "default",
+            "displayName": "clang++ (C++23) with coverage, ASan, UBSan",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CMAKE_CXX_STANDARD": "23",
+                "ROME_DELEGATES_INSTRUMENT": "ON"
+            }
+        },
+        {
+            "name": "clang-cpp14",
+            "inherits": "default",
+            "displayName": "clang++ (C++14)",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CMAKE_CXX_STANDARD": "14"
+            }
+        },
+        {
+            "name": "clang-cpp14-instr",
+            "inherits": "default",
+            "displayName": "clang++ (C++14) with coverage, ASan, UBSan",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CMAKE_CXX_STANDARD": "14",
+                "ROME_DELEGATES_INSTRUMENT": "ON"
+            }
+        },
+        {
+            "name": "gcc-cpp23",
+            "inherits": "default",
+            "displayName": "g++ (C++23)",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "g++",
+                "CMAKE_CXX_STANDARD": "23"
+            }
+        },
+        {
+            "name": "gcc-cpp14",
+            "inherits": "default",
+            "displayName": "g++ (C++14)",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "g++",
+                "CMAKE_CXX_STANDARD": "14"
+            }
+        },
+        {
+            "name": "msvc-cpp23",
+            "inherits": "default",
+            "displayName": "MSVC (C++23)",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "cl",
+                "CMAKE_CXX_STANDARD": "23"
+            }
+        },
+        {
+            "name": "msvc-cpp14",
+            "inherits": "default",
+            "displayName": "MSVC (C++14)",
+            "cacheVariables": {
+                "CMAKE_CXX_COMPILER": "cl",
+                "CMAKE_CXX_STANDARD": "14"
+            }
+        }
+    ]
+}

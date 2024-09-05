@@ -27,6 +27,7 @@ _See the code in [examples/empty_after_move.cpp](../examples/empty_after_move.cp
 
 ```cpp
 #include <iostream>
+#include <utility>
 #include <rome/delegate.hpp>
 
 int main() {

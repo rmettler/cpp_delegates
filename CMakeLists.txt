@@ -1,7 +1,8 @@
-cmake_minimum_required(VERSION 3.14)
-project(rome_delegates VERSION 0.1 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.20)
+project(rome_delegates VERSION 1.0 LANGUAGES CXX)
 
-option(ROME_DELEGATES_BUILD_TESTS "enable to also configure the test targets" OFF)
+option(ROME_DELEGATES_BUILD_TESTS "Enable to also configure the test targets." OFF)
+option(ROME_DELEGATES_INSTRUMENT "Instrument unit tests for sanitizers and code coverage." OFF)
 
 
 add_library(${PROJECT_NAME} INTERFACE)
@@ -14,6 +15,5 @@ target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_14)
 
 
 if(ROME_DELEGATES_BUILD_TESTS)
-    enable_testing()
     add_subdirectory(test)
 endif()

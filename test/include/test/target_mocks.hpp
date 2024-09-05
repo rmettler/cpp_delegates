@@ -37,6 +37,7 @@ namespace detail {
 // All mocked targets below use this mock object.
 // Use different numbers 'N' to control multiple mocks at the same time.
 template<typename CallSignature, size_t N = 0>
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 detail::Mock<CallSignature> targetMock{};
 
 namespace detail {
@@ -92,6 +93,18 @@ template<typename CallSignature, size_t N = 0>
 const TargetClass<CallSignature, N> targetConstObject{};
 
 
+// Used solely for detail::FunctorBase below.
+// There is a false positive `-Wmismatched-new-delete` warning with GCC 11 and later. GCC inlines
+// `FunctorBase::operator new(size_t)` and sees the call to `::operator new(size_t)`. It, however,
+// does not seem to inline `FunctorBase::operator delete(void*)`, does NOT see the call to 
+// `::operator delete(void*)` and thus warns about a mismatch.
+#if defined(__GNUC__) && __GNUC__ >= 11
+#    define GCC_NOINLINE __attribute__((noinline))
+#endif
+#ifndef GCC_NOINLINE
+#    define GCC_NOINLINE
+#endif
+
 namespace detail {
     template<typename CallSignature, size_t N>
     struct FunctorBase {
@@ -119,12 +132,12 @@ namespace detail {
             -> detail::return_type<CallSignature> {
             return targetMock<CallSignature, N>.call(arg);
         }
-        static auto operator new(std::size_t sz) -> void* {
+        GCC_NOINLINE static auto operator new(std::size_t sz) -> void* {
             targetMock<CallSignature, N>.new_();
             void* ptr = ::operator new(sz);
             return ptr;
         }
-        static void operator delete(void* ptr) {
+        GCC_NOINLINE static void operator delete(void* ptr) {
             ::operator delete(ptr);
             targetMock<CallSignature, N>.delete_();
         }

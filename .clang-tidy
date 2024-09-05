@@ -7,22 +7,29 @@ Checks: >
   -clang-analyzer-*,
   concurrency-*,
   cppcoreguidelines-*,
-  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-avoid-magic-numbers,
   -cppcoreguidelines-macro-usage,
   -cppcoreguidelines-owning-memory,
   misc-*,
+  -misc-include-cleaner,
   modernize-*,
   -modernize-concat-nested-namespaces,
   performance-*,
+  -performance-enum-size,
   readability-*,
   -readability-identifier-length,
-  -readability-named-parameter
-HeaderFilterRegex: '(include[\/\\]rome([\/\\]detail)?|test[\/\\]delegate.*)[\/\\][a-zA-Z_]+\.hpp$'
-WarningsAsErrors: ''
-AnalyzeTemporaryDtors: false
-FormatStyle:     none
-User:            user
-CheckOptions: 
+  -readability-magic-numbers,
+  -readability-named-parameter,
+  -readability-redundant-casting
+HeaderFileExtensions:
+  - hpp
+ImplementationFileExtensions:
+  - cpp
+SystemHeaders:    false
+WarningsAsErrors: '*'
+FormatStyle:      none
+User:             user
+CheckOptions:
   cppcoreguidelines-narrowing-conversions.WarnWithinTemplateInstantiation: 'true'
   cppcoreguidelines-narrowing-conversions.PedanticMode: 'true'
   bugprone-narrowing-conversions.WarnWithinTemplateInstantiation: 'true'

@@ -106,6 +106,7 @@ _See the code in [examples/basic_examples.cpp](../examples/basic_examples.cpp)._
 ```cpp
 #include <functional>
 #include <iostream>
+#include <utility>
 #include <rome/delegate.hpp>
 
 void print(int i) {

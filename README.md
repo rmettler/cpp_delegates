@@ -1,30 +1,39 @@
 # C++ delegates
 
-- [Introduction](#introduction)
+> **☑️COMPLETE**  
+> This project is considered complete, and no further work will be done until requested otherwise.  
+> Please [open an issue on GitLab](https://gitlab.com/rmettler/cpp_delegates/-/issues) if you miss a feature or found a bug.
+
+[![pipeline status](https://gitlab.com/rmettler/cpp_delegates/badges/master/pipeline.svg)](https://gitlab.com/rmettler/cpp_delegates/-/commits/master)
+[![coverage report](https://gitlab.com/rmettler/cpp_delegates/badges/master/coverage.svg)](https://gitlab.com/rmettler/cpp_delegates/-/commits/master)
+[![latest release](https://gitlab.com/rmettler/cpp_delegates/-/badges/release.svg)](https://gitlab.com/rmettler/cpp_delegates/-/releases)
+
+- [Introduction and goals](#introduction-and-goals)
 - [Library content](#library-content)
   - [`rome::delegate`](#romedelegate)
   - [`rome::fwd_delegate`](#romefwd_delegate)
   - [`rome::event_delegate`](#romeevent_delegate)
   - [`rome::command_delegate`](#romecommand_delegate)
-- [Integration](#integration)
 - [Documentation](#documentation)
+- [Integration](#integration)
+- [Tests](#tests)
+  - [Configure CMake](#configure-cmake)
+  - [Run tests](#run-tests)
 - [Examples](#examples)
   - [Usage of `rome::delegate`](#usage-of-romedelegate)
   - [Usage of `rome::command_delegate` and `rome::event_delegate`](#usage-of-romecommand_delegate-and-romeevent_delegate)
-- [Dependencies](#dependencies)
-- [Comparision with other solutions](#comparision-with-other-solutions)
+- [Comparison with other solutions](#comparison-with-other-solutions)
 - [Design decisions](#design-decisions)
-- [Tests](#tests)
+- [Motive for this library](#motive-for-this-library)
 - [Feedback](#feedback)
-- [Motivation](#motivation)
 - [Thanks](#thanks)
 - [References](#references)
 
-## Introduction
+## Introduction and goals
 
 The _C++ delegates_ library provides lightweight function wrappers able to store and invoke any callable target without the caller having to know the details of the callee. Examples of such callable targets are functions, member functions, function objects or lambda expressions. They just need to support the function call signature specified with the delegate.
 
-This library is written in C++14 following the design goals below:
+This library is single header, written in C++14, and following the design goals:
 
 1. Safe to use:
    - No undefined behavior, no matter how the delegates are used.
@@ -35,87 +44,82 @@ This library is written in C++14 following the design goals below:
 4. Easy to use.
 5. Configurable behavior for calls when no target was assigned.
 
+The library is tested to be compatible and free of compiler warnings with:
+
+- C++14, C++23
+- Clang: 4.0, 17.0, 18.1
+- GCC: 5.3, 13.2, 14.1
+- MSVC: 19.40
+
 ## Library content
 
 ### `rome::delegate`
 
-The basic delegate which supports any callable target of any function signature. On call, calls a previously assigned target. By default throws an exception when called without assigned target. But this behavior is configurable with the following options:
+```cpp
+delegate<bool(int)> d_exp;            // same as `delegate<bool(int), target_is_expected>`
+d_exp(1);                             // throws exception, no target was assigned
+d_exp = [](int i) { return i > 0; };
+assert(d_exp(2) == true);             // ok
 
-- `rome::target_is_expected`:  
-  If no target was assigned before the `rome::delegate` is called, an exception is thrown. _(default)_
+delegate<bool(int), target_is_optional> d_opt1;  // does not compile, non-void return
+delegate<void(int), target_is_optional> d_opt2;  // ok
+d_opt2(3);                                       // does nothing
+
+delegate<bool(int), target_is_mandatory> d_mand1;  // does not compile, no target assigned
+delegate<bool(int), target_is_mandatory> d_mand2 = [](int i) { return i > 0; };  // ok
+assert(d_mand2(4) == true);                        // ok
+```
+
+The basic delegate which supports any callable target of any function signature. On call, calls a previously assigned target. By default, throws an exception when called without assigned target. This behavior is configurable by the following options:
+
+- `rome::target_is_expected` _(default)_:  
+  If no target was assigned before the `rome::delegate` is called, an exception is thrown.
 - `rome::target_is_optional`:  
-  If no target was assigned before the `rome::delegate` is called, it directly returns without doing anything (only works if `Ret` == `void`).
+  If no target was assigned before the `rome::delegate` is called, it directly returns without doing anything (only works if the function call signature has `void` return).
 - `rome::target_is_mandatory`  
   Ensures by design that there is always a target assigned to `rome::delegate`. For this, the default constructor is deleted and there is no possibility to drop an assigned target.
 
 _See also the detailed documentation of [`rome::delegate`](doc/delegate.md) in [doc/delegate.md](doc/delegate.md)._
 
-```cpp
-namespace rome {
-    template<typename Signature, typename Behavior = target_is_expected>
-    class delegate; // undefined
-
-    template<typename Ret, typename... Args, typename Behavior>
-    class delegate<Ret(Args...), Behavior>;
-}
-```
-
 ### `rome::fwd_delegate`
 
-Provides the same functionality as `rome::delegate`, but with the restriction that data can only be **_forwarded_**. To ensure this, only function signatures with `void` return and arguments of immutable type are supported. E.g. the signature `void(const std::string&)` would work, while `void(int*)` or `bool()` would produce a compile error.
+```cpp
+fwd_delegate<bool()> d_nonvoid;       // does not compile, non-void return
+fwd_delegate<void(int&)> d_mut;       // does not compile, mutable argument
+fwd_delegate<void(const int&)> d_ok;  // ok
+```
+
+Provides the same functionality as `rome::delegate`, but with the restriction that data can only be **_forwarded_**. To ensure this, only function signatures with `void` return and arguments of immutable type are allowed. E.g. the signature `void(const std::string&)` would work, while `void(int*)` or `bool()` would produce a compile error.
 
  _See also the detailed documentation of [`rome::fwd_delegate`](doc/fwd_delegate.md) in [doc/fwd_delegate.md](doc/fwd_delegate.md)._
 
-```cpp
-namespace rome {
-    template<typename Signature, typename Behavior = target_is_expected>
-    class fwd_delegate; // undefined
-
-    template<typename... Args, typename Behavior>
-    class fwd_delegate<void(Args...), Behavior>;
-}
-```
-
 ### `rome::event_delegate`
+
+```cpp
+event_delegate<void(int)> d;
+d(1);                               // does nothing
+d = [](int i) { std::cout << i; };
+d(2);                               // prints "2"
+```
 
 A [`rome::fwd_delegate`](doc/fwd_delegate.md) that ignores calls if no target was assigned.
 
-Designed for event oder message-driven architectures, to notify about happened events. Thus, it is optional whether someone wants to listen to the event or not.
+Designed for event or message-driven architectures, to notify about happened events. Thus, it is optional whether someone wants to listen to the event or not.
 
 _See also the detailed documentation of [`rome::event_delegate`](doc/fwd_delegate.md) in [doc/fwd_delegate.md](doc/fwd_delegate.md)._
 
-```cpp
-namespace rome {
-    template<typename Signature>
-    using event_delegate = fwd_delegate<Signature, target_is_optional>;
-}
-```
-
 ### `rome::command_delegate`
+
+```cpp
+command_delegate<void(int)> d_err;  // does not compile, no target assigned
+command_delegate<void(int)> d_ok = [](int i) { std::cout << i; };  // ok
+```
 
 A [`rome::fwd_delegate`](doc/fwd_delegate.md) that ensures that always a target is assigned.
 
-Designed for event oder message-driven architectures to command an action that shall happen. Because the execution of the command is mandatory, a target must be assigned during construction of the delegate and can only be overriden by another target afterwards.
+Designed for event or message-driven architectures to command an action that shall happen. Because the execution of the command is mandatory, a target must be assigned during construction of the delegate and can only be overridden by another target afterwards.
 
 _See also the detailed documentation of [`rome::command_delegate`](doc/fwd_delegate.md) in [doc/fwd_delegate.md](doc/fwd_delegate.md)._
-
-```cpp
-namespace rome {
-    template<typename Signature>
-    using command_delegate = fwd_delegate<Signature, target_is_mandatory>;
-}
-```
-
-## Integration
-
-- Add the folder `./include` to the include paths of your compiler.
-- Include the delegates in your code with:
-  
-  ```cpp
-  #include <rome/delegate.hpp>
-  ```
-
-Or simply copy the single header file in `./include/rome` to your project.
 
 ## Documentation
 
@@ -124,13 +128,72 @@ Please see the documentation in the folder `./doc`. Especially the following mar
 - [doc/delegate.md](doc/delegate.md)
 - [doc/fwd_delegate.md](doc/fwd_delegate.md)
 
+## Integration
+
+- Add the folder `./include` to the include paths of your compiler or copy `./include/rome/delegate.hpp`.
+- Include the delegates:
+  
+  ```cpp
+  #include <rome/delegate.hpp>
+  ```
+
+If exceptions are disabled, the delegates will call `std::terminate()` instead (see also [doc/delegate.md](doc/delegate.md)).
+
+The delegates depend on the following headers of the C++ standard library:
+
+- `<algorithm>`
+- `<cstddef>`
+- `<exception>`
+- `<new>`
+- `<type_traits>`
+- `<utility>`
+
+## Tests
+
+The tests can be found in [./test](./test).
+
+### Configure CMake
+
+```bash
+cmake --preset clang-cpp14-instr -B build
+```
+
+Setting `ROME_DELEGATES_BUILD_TESTS=ON` configures the test targets. They are hidden otherwise.
+
+Setting `ROME_DELEGATES_INSTRUMENT=ON` enables instrumentation for code coverage, address sanitizer (ASan) and undefined behavior sanitizer (UBSan). Instrumentation only works with Clang.
+
+Both options are enabled with the CMake presets `clang-cpp14-instr` and `clang-cpp23-instr`. See also the [`CMakePresets.json`](./CMakePresets.json).
+
+### Run tests
+
+`cd build`
+
+- `ninja run_unittest`  
+  Test functionality and constraints of the delegates. The unit tests are built with `-Wall -Wextra -pedantic -Werror` or `/W4 /WX` for MSVC. Uses the unit test framework [doctest][doctest] and the mocking framework [Trompeloeil].  
+  If `ROME_DELEGATES_INSTRUMENT` is enabled:
+  - Prints errors of address sanitizer and undefined behavior sanitizer to stderr.
+  - Creates coverage data.
+
+- `ninja coverage`:  
+  Build and run the unit tests, collect coverage results, print the results to console, and create coverage reports in `build/test/coverage`.
+
+- `ninja run_compile_error_tests`:  
+  Test delegates for expected compile errors.
+
+- `ninja run_example_tests`:  
+  Test that the provided examples are working.
+
+- `ninja clang_tidy`:  
+  Run clang-tidy code analysis over the delegates and the unit tests.
+
 ## Examples
 
 ### Usage of `rome::delegate`
 
 Basic usage examples for all three types of `Behavior` and the three target types function, member function and function object.
 
-_See the code in [examples/basic_examples.cpp](../examples/basic_examples.cpp)._
+_See the code in [examples/basic_examples.cpp](../examples/basic_examples.cpp)._  
+_Or explore it online at [Compiler Explorer](https://godbolt.org/#z:OYLghAFBqd5QCxAYwPYBMCmBRdBLAF1QCcAaPECAMzwBtMA7AQwFtMQByARg9KtQYEAysib0QXACx8BBAKoBnTAAUAHpwAMvAFYTStJg1DIApACYAQuYukl9ZATwDKjdAGFUtAK4sGIAMwAbKSuADJ4DJgAcj4ARpjEEsEADqgKhE4MHt6%2BASlpGQLhkTEs8YlcwXaYDplCBEzEBNk%2BfkG2mPaOAvWNBMXRcQlJtg1NLbntCmP9EYNlw5UAlLaoXsTI7Bzm/hHI3lgA1Cb%2BbggEBMkKIAD0N8RMAO4AdMCECF6xXkobsowEzzQLHubAu9GIN2QyWSAH0sPRgEwCJgFDcWExpgkbnsDph7qg2Dd4ZhEcjnghoSdsCYNABBHY4rxHE5uJzTYiYVhUmn0sy7Bj7JmYY6nLyOWiEACe3LpPPZXgch2wRjmxwA7FY6YdtYcAG6oPDoQ5MZCbcFIzAQJbqzW0nX2w7TdAgFBrAgitws45mMyMN6RY2mzoJJERYAmACsbgY5jMJ1t9pMaoAIjz7frDYcCOsGAB5KhUK02tMO7VOl1oMUer2xv2q7PESJG1AFyPR2PxkvapOp2UpzuyunyxUWB4AazDQklmJYxa1OozRobDFHTDHKNzDCLSYTpcdBGdrqrLJrPti45RhwEbZjPoHdp1Pa7eoNS5zq/XCnzhetO%2Bf9vLI93RPU5vTMc810vFsqBvDt/F3bt%2Bz7VN4J5OUCGIBV3SEZJMEwdAhEYBQSDnB9tTuQ5aQUdJgAYMNDmJUlhTwBQr2SbpmFoQ5%2BGIR1cPwx0iJIohDkeEgx2eZ9iAJdgQEwXV/jhYMmJZRdqFoVAkSWKkrwYHC8PcBBDGAfD7yfVDB1pfYMVYtxMJYzAPEEaSuL/edtSoDSkSzRoTOEfj0BhEVk0ODRng0AAxMz3MOCiqJouijEOWJUAIBAGOUi1WJYw4OQARy8PAOSNHjDmQeylDK2QXKzVBRPEySYuktgKwJdEGECxiLVU18rR0gQrLNENkTcRoYXve1mtkoF2s6zLkR6w0%2Bv8bBdKEDTHmTVBHiyMboofZJPglZAQGfRdDi8ZJ0AtQbgweDiIDQBhpm4rz3XQYg8F1ScAt/DV/x1PAqEOCAPq%2Bn6DI9HziD8/T8KCgAqULngATgjCK/oQvdtQGoNzRGsblqxxMkLIh1OkqoGQbB76jDho0dLGWGAsRw4uHC9HMYB0seg2radtG4gYSJ7n1V7Mmn0s9NX0EggABVfMwfyDMegQXs8zT3SZpX6a5mL7W15X4eC6HmYMibH1J587MKpQnIwzwICm1qWFmpSEW6041O0lbzECP3dNu/HHMaUhRed11XcMOaPYWr3ep96kzH95O1r57bduIbT9Z1EBA7x4aQ6FndAJYVAFIgXGhvuovtJTUg0%2B2/nM/GjVS/Ly1eabjPBbrkK3Ilq3%2Bws%2BkhwwrDDgASUEEl7syUj7XpwjnpIhQAuX4jiAt7UbYc%2B2avK23HOqzxt6VFUAzrSIz4/Sdp2RWcIM/fb7Wn5FgDngQ%2Bpz7U88PveT60AHtjRMEYLBpRYpGZM25/o/xAU/FEzxlwfg3AWEWcDsZX0wM8E01cLToLJtjHsYcMGPjARAhQUCYHExAdqLBSCczfgIbQ0sCCFAMMbCgr8W4fY0NLE%2BFMC89xrwMhvEgzwegBTOMZASJx%2B7kIQJAiM0CNbeRphDfCetCF7n/nbQBzxLrXWREHYamRQafVpsAXWZ8SYoSxpLekw9bQ8jfrPUMAhDgRHfp/GM/0nFoTpF4w46IIjUOfBRIQeAWBeAMMiKeuZDgMFSlVBgkQHACQiFmRRrFMCqFYMkegz4vFuI4oCCqx9nKeGeEoeWisjboAgGYCM4UMZn2KR/dxDBqnryEsQCRekpFGSMPhRpYVIq8KKTPDppSRH4TEX0yRBlpHDIaU0lpEyYrtJ8d00RvT%2Bn02WSZBp/gxmtJHg4jgKxaCcAjLwPw3BeCoE4J6Sw1hHRrA2MKHYPBSAEE0JclYY4QCSEkM8LgycIwaECBoMwkgNAo0CP4AAHMEa5HBJB3P%2BaQJ5HBeDXA0L8/5Kw4CwBgIgSOyQ6AJHIJQIElLwQoAMEYLgSKuAEpoLQZExBrgQFiFi2IERGiSk4D8gVzBiCSlzLEbQNQ/kPNIDNf4m5aDCo4FoUgWAvjAFGrQWg1x5VYHasAcQareD4A5LUBS%2Br1W5JqGKLY6rilovVRKCCEqPBYCxRhKJIreAKWIClJQyZMBGolEYIlfADDAAUAANTwJgR4uZcL3J%2BfwQQIgxDsCkDIQQigVDqFNaQXQXB9DGRQNYaw%2Bg8CxGuJAFYqB2KZH1QAWlzP4R5/rPpYFrVaDoXRMguA6hMPwJawhzFKOUPQqR0gcWHVOgoHEBgTsWH22VdQZhzpLdUWoPQZhLqGBUUYfRN1HqaPuhYFQVjEXWJsCQVybmYsLTiw4qgUXNsCJIMqTLgBsyRWC8KINcCEBIt8pYvA5VaCWCsBAnIsCJF7WijFpAWDArVM8JFEY1RSDMBhrDkgcPBHueqnFeKQAEog5c0gJLyVukOgQGlqsWD0oSFEVgWxGgsF1GqZtTAv3GV/f%2Bm1%2BAiBdr0Gm4QohxDZvE3mtQWLi2kEeA8ZIvr70cFuaQIjjzOC5jFHRq8wNX2BHfZ%2B6ySUWWCZBh4JjVLeKgfA0StTSGUMRjMGC/DuHsOeekFp7FnBSPkcc6QIFEZmlIrVP4SQKN/AozVBGFGGggjZrRe2zTWKSOEtNVB/QnAzCPuI/5zLkGVj%2BvSM4SQQA)._
 
 ```cpp
 #include <functional>
@@ -232,10 +295,12 @@ Output:
 
 Model of an extremely simplified cruise control system. The four classes _Engine_, _BrakingSystem_, _SpeedSensor_ and _CruiseControl_ are atomic, i.e., are free from dependencies to other classes. _Integration_ integrates all four.
 
-_See the code in [examples/cruise_control.cpp](../examples/cruise_control.cpp)._
+_See the code in [examples/cruise_control.cpp](../examples/cruise_control.cpp)._  
+_Or explore it online at [Compiler Explorer](https://godbolt.org/#z:OYLghAFBqd5QCxAYwPYBMCmBRdBLAF1QCcAaPECAMzwBtMA7AQwFtMQByARg9KtQYEAysib0QXACx8BBAKoBnTAAUAHpwAMvAFYTStJg1DIApACYAQuYukl9ZATwDKjdAGFUtAK4sGIAMwAbKSuADJ4DJgAcj4ARpjEEsEADqgKhE4MHt6%2BASlpGQLhkTEs8YlcwXaYDplCBEzEBNk%2BfkG2mPaOAvWNBMXRcQlJtg1NLbntCmP9EYNlw5UAlLaoXsTI7Bzm/hHI3lgA1Cb%2BbggEBMkKIAD0N8RMAO4AdMCECF6xXkobsowEzzQLHubAu9GIN2QyWSAH0sPRgEwCJgFDcWExpgkbnsDph7qg2Dd4ZhEcjnghoSdsCYNABBHY4rxHE5uJzTYiYVhUmn0sy7Bj7JmYY6nLyOWiEACe3LpPPZXgch2wRjmxwA7FY6YdtYcAG6oPDoQ5MZCbcFIzAQJbqzW0nX2w7TdAgFBrAgitws45mMyMN6RY2mzoJJERYAmACsbgY5jMJ1t9pMaoAIjz7frDYcCOsGAB5KhUK02tMO7VOl1oMUer2xv2q7PESJG1AFyPR2PxkvapOp2UpzuyunyxUWB4AazDQklmJYxa1OozRobDFHTDHKNzDCLSYTpcdBGdrqrLJrPti45RhwEbZjPoHdp1Pa7eoNS5zq/XCnzhetO%2Bf9vLI93RPU5vTMc810vFsqBvDt/F3bt%2Bz7VN4J5OUCGIBV3SEZJMEwdAhEYBQSDnB9tTuQ5aQUdJgAYMNDmJUlhTwBQr2SbpmFoQ5%2BGIR1cPwx0iJIohDkeEgx2eZ9iAJdgQEwXV/jhYMmJZRdqFoVAkSWKkrwYHC8PcBBDGAfD7yfVDB1pfYMVYtxMJYzAPEEaSuL/edtSoDSkSzRoTOEfj0BhEVk0ODRng0AAxMz3MOCiqJouijEOWJUAIBAGOUi1WJYw4OQARy8PAOSNHjDmQeylDK2QXKzVBRPEySYuktgKwJdEGECxiLVU18rR0gQrLNENkTcRoYXve1mtkoF2s6zLkR6w0%2Bv8bBdKEDTHmTVBHiyMboofZJPglZAQGfRdDi8ZJ0AtQbgweDiIDQBhpm4rz3XQYg8F1ScAt/DV/x1PAqEOCAPq%2Bn6DI9HziD8/T8KCgAqULngATgjCK/oQvdtQGoNzRGsblqxxMkLIh1OkqoGQbB76jDho0dLGWGAsRw4uHC9HMYB0seg2radtG4gYSJ7n1V7Mmn0s9NX0EggABVfMwfyDMegQXs8zT3SZpX6a5mL7W15X4eC6HmYMibH1J587MKpQnIwzwICm1qWFmpSEW6041O0lbzECP3dNu/HHMaUhRed11XcMOaPYWr3ep96kzH95O1r57bduIbT9Z1EBA7x4aQ6FndAJYVAFIgXGhvuovtJTUg0%2B2/nM/GjVS/Ly1eabjPBbrkK3Ilq3%2Bws%2BkhwwrDDgASUEEl7syUj7XpwjnpIhQAuX4jiAt7UbYc%2B2avK23HOqzxt6VFUAzrSIz4/Sdp2RWcIM/fb7Wn5FgDngQ%2Bpz7U88PveT60AHtjRMEYLBpRYpGZM25/o/xAU/FEzxlwfg3AWEWcDsZX0wM8E01cLToLJtjHsYcMGPjARAhQUCYHExAdqLBSCczfgIbQ0sCCFAMMbCgr8W4fY0NLE%2BFMC89xrwMhvEgzwegBTOMZASJx%2B7kIQJAiM0CNbeRphDfCetCF7n/nbQBzxLrXWREHYamRQafVpsAXWZ8SYoSxpLekw9bQ8jfrPUMAhDgRHfp/GM/0nFoTpF4w46IIjUOfBRIQeAWBeAMMiKeuZDgMFSlVBgkQHACQiFmRRrFMCqFYMkegz4vFuI4oCCqx9nKeGeEoeWisjboAgGYCM4UMZn2KR/dxDBqnryEsQCRekpFGSMPhRpYVIq8KKTPDppSRH4TEX0yRBlpHDIaU0lpEyYrtJ8d00RvT%2Bn02WSZBp/gxmtJHg4jgKxaCcAjLwPw3BeCoE4J6Sw1hHRrA2MKHYPBSAEE0JclYY4QCSEkM8LgycIwaECBoMwkgNAo0CP4AAHMEa5HBJB3P%2BaQJ5HBeDXA0L8/5Kw4CwBgIgSOyQ6AJHIJQIElLwQoAMEYLgSKuAEpoLQZExBrgQFiFi2IERGiSk4D8gVzBiCSlzLEbQNQ/kPNIDNf4m5aDCo4FoUgWAvjAFGrQWg1x5VYHasAcQareD4A5LUBS%2Br1W5JqGKLY6rilovVRKCCEqPBYCxRhKJIreAKWIClJQyZMBGolEYIlfADDAAUAANTwJgR4uZcL3J%2BfwQQIgxDsCkDIQQigVDqFNaQXQXB9DGRQNYaw%2Bg8CxGuJAFYqB2KZH1QAWlzP4R5/rPpYFrVaDoXRMguA6hMPwJawhzFKOUPQqR0gcWHVOgoHEBgTsWH22VdQZhzpLdUWoPQZhLqGBUUYfRN1HqaPuhYFQVjEXWJsCQVybmYsLTiw4qgUXNsCJIMqTLgBsyRWC8KINcCEBIt8pYvA5VaCWCsBAnIsCJF7WijFpAWDArVM8JFEY1RSDMBhrDkgcPBHueqnFeKQAEog5c0gJLyVukOgQGlqsWD0oSFEVgWxGgsF1GqZtTAv3GV/f%2Bm1%2BAiBdr0Gm4QohxDZvE3mtQWLi2kEeA8ZIvr70cFuaQIjjzOC5jFHRq8wNX2BHfZ%2B6ySUWWCZBh4JjVLeKgfA0StTSGUMRjMGC/DuHsOeekFp7FnBSPkcc6QIFEZmlIrVP4SQKN/AozVBGFGGggjZrRe2zTWKSOEtNVB/QnAzCPuI/5zLkGVj%2BvSM4SQQA)._
 
 ```cpp
 #include <iostream>
+#include <utility>
 #include <rome/delegate.hpp>
 
 struct Engine {
@@ -328,47 +393,37 @@ Output:
 > engine turned off  
 > brakes on
 
-## Dependencies
+## Comparison with other solutions
 
-The delegates only depend on following headers of the C++ standard library:
-
-- `<algorithm>`
-- `<cstddef>`
-- `<exception>`
-- `<type_traits>`
-- `<utility>`
-
-## Comparision with other solutions
-
-Similar C++ standard library counterparts, in behavior and interface:
+Similar C++ standard library counterparts in behavior and interface are:
 
 - `std::move_only_function` (C++23)  
-  Very similar by constraints and efficency. However, it is undefined behavior when an `std::move_only_function` is called empty. For _C++ delegates_, this behavior is definable.
+  Very similar by constraints and efficiency. However, it is undefined behavior when a `std::move_only_function` is called empty. For _C++ delegates_, this behavior is always defined and configurable.
 - `std::function` (C++11)  
   Copyable but less efficient. Throws an exception when called empty.
 
 ## Design decisions
 
-- Why do delegates take ownership of assigned function objects?  
-  Lets take the example `delegate<void()> d = []() {};`. If the delegate would only reference the function object created by the lambda expression, it may easily happen, that the assigned function object is already destroyed when the delegate is called. To make safe usage of the delegate easy and unsafe usage hard, the delegate takes the ownership of a function object.  
-  Note, that it is still necessary to manage the lifetime of objects that the function object captures by reference.
+- **Why do delegates take ownership of assigned function objects?**  
+  Let's take the example `delegate<void()> d = []() {};`. If the delegate would only reference the function object created by the lambda expression, it may easily happen, that the assigned function object is already destroyed when the delegate is called. To make safe usage of the delegate easy and unsafe usage hard, the delegate takes the ownership of the function object.  
+  Note that it is still necessary to manage the lifetime of objects that the assigned function object captures by reference.
 
-- Why is the size of the delegate `sizeof(void*) + 2*sizof(void(*)())`?
+- **Why is the size of the delegate `sizeof(void*) + 2*sizof(void(*)())`?**
   
   - One function pointer stores the function that invokes the target.
   - One function pointer stores the function that destroys an assigned function object. This happens either when the delegate is destroyed or when a target is dropped.
-  - The object pointer stores the address where the function object is stored. Or, with small object optimization, the function object is stored within the memory of the pointer.
+  - The object pointer stores the address where the function object is stored. Or, with small object optimization, the function object is stored within the memory of the object pointer.
   
-  Thus, it is already the minimum size needed to achieve the above. And the size is kept at that minimum for to be available for memory restricted devices.
+  Thus, the size is kept at the required minimum, with memory restricted devices in mind.
 
-- Why can't I copy delegates, why are they move-only?
+- **Why can't I copy delegates, why are they move-only?**
   
   - It would need another function pointer stored within the delegate that increases its size significantly.
-  - Copying the delegate may only lead to a shallow copy of the target but a deep copy might be needed. Because the delegate hides the assigned target, this issue is not visible.
+  - Copying the delegate may only lead to a shallow copy of the target, but a deep copy might be needed. Because the delegate hides the assigned target, this issue is invisible.
 
   As a result, the _C++ delegates_ are move only. If you need multiple instances of the same delegate, just create multiple delegates and assign the same target.
 
-- Why can't I directly assign a function to a _C++ delegate_, as for example with  `std::move_only_function`?
+- **Why can't I directly assign a function to a _C++ delegate_, as for example with `std::move_only_function`?**  
   Because it is less optimizable and may lead to less efficient code.
 
   - With direct assignment `delegate<void()> d = &function;`:  
@@ -376,49 +431,17 @@ Similar C++ standard library counterparts, in behavior and interface:
   - When wrapped by a function object `delegate<void()> d = []() { function(); };`:  
     The function is now bound to the type of the function object. Therefore, it is known during compilation time.
 
-- Why is the size for small object optimization `sizeof(void*)`?  
-  An object pointer is already needed to store the dynamic allocated storage for function objects. If the size of the function object is less or equal `sizeof(void*)`, the space of the pointer can instead be used to store the function object in. This enables to small buffer optimize any lambda expression that captures a reference or a pointer. Through that reference/pointer any addionally needed data may be accessed.  
+- **Why is the size for small object optimization `sizeof(void*)`?**  
+  When a big function object is assigned to a _C++ delegate_, the delegate needs to store the object in a dynamic allocated memory and remember that location with a pointer (`sizeof(void*)`). If, however, the function object is smaller or equal to the pointer, the space of the pointer can instead be used to store the function object in. This enables to small buffer optimize any lambda expression that only captures a reference or a pointer. Additional data may be accessed through that reference/pointer.  
   As a result, dynamic allocation should be avoidable in any use case without increasing the size of the delegate.
 
-- Why is the namespace called _rome_?  
-  This has nothing to do with the Italian capiltal, it's just the initials of my name.
+- **Why is the namespace called _rome_?**  
+  It has nothing to do with the Italian capital, it's just the initials of my name.
 
-## Tests
+## Motive for this library
 
-The tests are free of warnings, tested with `-Werror -Wall -pedantic -Wextra`, on following compilers:
-
-- Clang: 4.0.0 and 16.0.5
-- GCC: 5.4.0 and 13.2.0
-- MSVC: not yet tested
-
-The tests can be found in [./test](./test).
-
-Build and run the tests:
-
-```bash
-cmake -B build -D ROME_DELEGATES_BUILD_TESTS=ON -G Ninja
-ninja -C build run_all_tests
-```
-
-`ROME_DELEGATES_BUILD_TESTS=ON` needs to be set to configure the test targets. They are hidden otherwise.
-
-Test targets:
-
-- `run_unittests` -- tests functionality and constraints of the delegates  
-  Uses the library provided copy of the unittest framework [doctest][doctest] and the mocking framework [Trompeloeil].
-- `run_compile_error_tests` -- tests whether compile errors are raised as expected  
-  Requires Python 3 and pytest to be installed.
-- `run_example_tests` -- runs the examples of the documentation and tests against the expected output  
-  Requires Python 3 to be installed.
-- `run_all_tests`: runs all the  tests above
-
-## Feedback
-
-Some request, a question or found a bug? Please [open an issue on GitLab](https://gitlab.com/rmettler/cpp_delegates/-/issues/new) or write me an email. I am also happy to hear from any positive or negative experience you had with this library.
-
-## Motivation
-
-The initial use case was to wire independent modules together. Let `A` and `B` be two modules. `A` is reactive and may produce the event `done`. If `A` produces the event `done`, `B` shall `start`.
+The initial motivation was the wiring between independent modules.  
+Let `A` and `B` be two modules. `A` is reactive and may produce the event `done`. When `A` produces the event `done`, `B` shall `start`.
 
 ```cpp
 namespace module_a {
@@ -438,7 +461,7 @@ void wire() {
 }
 ```
 
-In OOP, this is commonly done by `A` having an association to an interface `I` and `B` realizing that interface. `B` is then injected into `A` by using `I`.  
+In OOP, this is commonly done by `A` having an association to an interface `I` and `B` realizing that interface. `B` is then injected into `A` by its base class `I`.  
 It might look something like the following:
 
 ```cpp
@@ -466,11 +489,11 @@ void wire() {
 }
 ```
 
-This has the following consequences:
+The consequences are:
 
-- `I` needs to be stored somewhere, either in module `A`, module `B` or a third module.
-  - If `I` is stored in `A` or `B`, one module depends on the other, they are not independent anymore.
-  - If `I` is stored in a third module, that third module is created just for that purpose, while `A` and `B` still are not as independet anymore as without.
+- The code of `I` needs to be stored somewhere, either in module `A`, module `B`, or a third module.
+  - If `I` is stored in `A` or `B`, one module depends on the other. They are not independent anymore.
+  - If `I` is stored in a third module, that third module is created just for that purpose, while `A` and `B` still are not as independent anymore as without.
 - By realizing `I` in `B`, `I` becomes a public interface of some class in `B`. However, the function names of `I` might be a bad fit for the public interface of `B`, so you need to add an extra class and hide it somehow, just to realize `I`.
 
 A better solution is to use `std::function` for the event `done`:
@@ -497,23 +520,27 @@ void wire() {
 
 While already a lot better than the OOP interface headache, `std::function` isn't exactly lightweight. On memory restricted devices this might become a problem. Furthermore, `std::function` throws an exception if no target was assigned. This enforces to assign a target to any provided event, whether handling that event is of interest or not. And if the handling of an event is required, a compile error is preferable to a runtime exception.
 
-So we need a lightweight solution, similar to `std::function`, that enables us to mark the handling of the event as optional or mandatory, with unhandeled optional events doing nothing and unhandeled mandatory events raising a compile error.
+So, a lightweight solution similar to `std::function` is needed, that enables marking the handling of an event as optional or mandatory, with unhandled optional events doing nothing and unhandled mandatory events raising a compile error.
 
 That's where my journey started and the reason for the [`rome::event_delegate`](doc/fwd_delegate.md) and the [`rome::command_delegate`](doc/fwd_delegate.md).
+
+## Feedback
+
+Do you have any request, a question or found a bug? Please [open an issue on GitLab](https://gitlab.com/rmettler/cpp_delegates/-/issues/new) or write me an email. I am also happy to hear from any positive or negative experience you had with this library.
 
 ## Thanks
 
 - Sergey Ryazanov for his incredible article [_The Impossibly Fast C++ Delegates_][impossDelegates]. He explains how you can use the fact that the address of any function can be passed as non-type template argument to create highly optimizable function delegates.
-- Lee David for help finding more comprehensible names
-- Matthias Deimbacher for the initial set up of the CI pipelines at gitlab
+- Lee David for help finding more comprehensible names.
+- Matthias Deimbacher for the initial set up of the CI pipelines at GitLab.
 
 ## References
 
-1. Ryazanov, Sergey. “The Impossibly Fast C++ Delegates.” [_The Impossibly Fast C++ Delegates_][impossDelegates], CodeProject, 18 July 2005, www.codeproject.com/Articles/11015/The-Impossibly-Fast-C-Delegates.
+1. Ryazanov, Sergey. “The Impossibly Fast C++ Delegates.” [_The Impossibly Fast C++ Delegates_][impossDelegates], CodeProject, 18 July 2005, https://www.codeproject.com/Articles/11015/The-Impossibly-Fast-C-Delegates, MIT.
 2. Cppreference. [_std::move_only_function_][std_move_only_function], cppreference.com, 14 November 2023, https://en.cppreference.com/w/cpp/utility/functional/move_only_function, CC-BY-SA.
 3. Cppreference. [_std::function_][std_function], cppreference.com, 14 November 2023, https://en.cppreference.com/w/cpp/utility/functional/function, CC-BY-SA.
-4. Kirilov, Viktor. [_doctest_][doctest], 15 March 2023, https://github.com/onqtam/doctest, MIT
-5. Fahler, Björn. [_Trompeloeil_][trompeloeil], 21 July 2023, https://github.com/rollbear/trompeloeil, BSL-1.0
+4. Kirilov, Viktor. [_doctest_][doctest], 15 March 2023, https://github.com/onqtam/doctest, MIT.
+5. Fahler, Björn. [_Trompeloeil_][trompeloeil], 21 July 2023, https://github.com/rollbear/trompeloeil, BSL-1.0.
 
 [impossDelegates]: https://www.codeproject.com/Articles/11015/The-Impossibly-Fast-C-Delegates
 [std_move_only_function]: https://en.cppreference.com/w/cpp/utility/functional/move_only_function

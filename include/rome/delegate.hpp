@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <exception>
+#include <new>
 #include <type_traits>
 #include <utility>
 
@@ -61,20 +62,11 @@ namespace detail {
         // within the delegate.
         template<typename T>
         constexpr bool is_small_object_optimizable =
-            (sizeof(T) <= sizeof(storage_type))
-            && (alignof(T) <= storage_alignment);  // NOLINT(misc-redundant-expression)
-
-        // Type used to store the function that inkvokes the target when the delegate is called.
-        template<typename Ret, typename... Args>
-        using target_invoker_t = Ret (*)(storage_type&, Args...);
-
-        // Type used to store the function that deletes a possible assigned target.
-        using target_deleter_t = void (*)(storage_type&);
-
+            (sizeof(T) <= sizeof(storage_type)) && (alignof(T) <= storage_alignment);
 
         // Used by a delegate when nothing needs to be done.
         template<typename... Args>
-        void do_nothing(storage_type&, Args...) {
+        void do_nothing(storage_type&, Args...) noexcept {
         }
 
         // Used by an empty delegate when calling the delegate is invalid.
@@ -91,7 +83,8 @@ namespace detail {
         // delegate.
         template<typename Functor, typename Ret, typename... Args>
         auto invoke_locally_stored_functor(storage_type& storage, Args... args) -> Ret {
-            auto* pStorage = static_cast<void*>(&storage);
+            // NOLINTNEXTLINE(bugprone-multi-level-implicit-pointer-conversion)
+            auto* pStorage = static_cast<void*>(&storage);  // conversion from void** to void*
             auto* pFunctor = static_cast<Functor*>(pStorage);
             return pFunctor->operator()(static_cast<Args>(args)...);
         }
@@ -108,8 +101,9 @@ namespace detail {
         // Used by a delegate with an assigned functor that was small object optimized inside the
         // delegate.
         template<typename Functor>
-        void destroy_locally_stored_functor(storage_type& storage) {
-            auto* pStorage = static_cast<void*>(&storage);
+        void destroy_locally_stored_functor(storage_type& storage) noexcept {
+            // NOLINTNEXTLINE(bugprone-multi-level-implicit-pointer-conversion)
+            auto* pStorage = static_cast<void*>(&storage);  // conversion from void** to void*
             auto* pFunctor = static_cast<Functor*>(pStorage);
             pFunctor->~Functor();
         }
@@ -117,7 +111,7 @@ namespace detail {
         // Used by a delegate with an assigned functor that was dynamically stored outside of the
         // delegate.
         template<typename Functor>
-        void delete_dynamically_allocated_functor(storage_type& storage) {
+        void delete_dynamically_allocated_functor(storage_type& storage) noexcept {
             auto* pFunctor = static_cast<Functor*>(storage);
             delete pFunctor;
         }
@@ -130,19 +124,19 @@ namespace detail {
 
         template<typename Ret, typename... Args>
         struct empty_invoker<true, Ret, Args...> {
-            static constexpr target_invoker_t<Ret, Args...> value = throw_on_call;
+            static constexpr auto value = &throw_on_call<Ret, Args...>;
         };
 
-        template<typename Ret, typename... Args>
-        struct empty_invoker<false, Ret, Args...> {
-            static constexpr target_invoker_t<Ret, Args...> value = do_nothing;
+        template<typename... Args>
+        struct empty_invoker<false, void, Args...> {
+            static constexpr auto value = &do_nothing<Args...>;
         };
     }  // namespace delegate
 
 
-        // Implements the actual behavior of all delegates
-        template<typename Signature, bool shallThrowWhenEmpty>
-        class delegate_core;
+    // Implements the actual behavior of all delegates
+    template<typename Signature, bool shallThrowWhenEmpty>
+    class delegate_core;
 
     template<typename Ret, typename... Args, bool shallThrowWhenEmpty>
     class delegate_core<Ret(Args...), shallThrowWhenEmpty> {
@@ -154,8 +148,8 @@ namespace detail {
         // storage_ needs to be writable by `operator()(Args...) const` while small object
         // optimization is used
         alignas(delegate::storage_alignment) mutable storage_type storage_ = nullptr;
-        delegate::target_invoker_t<Ret, Args...> invokeTarget_             = emptyInvoker;
-        delegate::target_deleter_t deleteTarget_                           = delegate::do_nothing;
+        Ret (*invokeTarget_)(storage_type&, Args...)                       = emptyInvoker;
+        void (*deleteTarget_)(storage_type&) noexcept                      = &delegate::do_nothing;
 
       public:
         constexpr delegate_core() noexcept           = default;
@@ -198,6 +192,7 @@ namespace detail {
             std::enable_if_t<delegate::is_small_object_optimizable<std::decay_t<T>>, int> = 0>
         void assign(T&& functor) noexcept(noexcept(std::decay_t<T>(std::forward<T>(functor)))) {
             using Functor = std::decay_t<T>;
+            // NOLINTNEXTLINE(bugprone-multi-level-implicit-pointer-conversion)
             (void)::new (&storage_) Functor(std::forward<T>(functor));
             invokeTarget_ = delegate::invoke_locally_stored_functor<Functor, Ret, Args...>;
             deleteTarget_ = delegate::destroy_locally_stored_functor<Functor>;
@@ -357,23 +352,23 @@ namespace detail {
         // argument does not allow that the callee can change data of the caller, directly or
         // inderectly through some kind references, pointers or C-array. It cannot detect if a class
         // allows to mutate data even if declared const (limitation of the C++ language).
-        template<typename Arg>
-        constexpr auto is_immutable_argument() -> bool {
-            using NoRef = std::remove_reference_t<Arg>;
-            if (std::is_lvalue_reference<Arg>::value && !std::is_const<NoRef>::value
-                && !std::is_null_pointer<NoRef>::value && !std::is_function<NoRef>::value) {
-                return false;
-            }
-            // Moved or copied arguments are immutable in a sense as it is not possible to change
-            // the data at the caller's side at this level.
-            return is_immutable<const std::decay_t<Arg>>::value;
-        }
+        // NOLINTBEGIN(misc-redundant-expression)
+        template<typename Arg, typename NoRef = std::remove_reference_t<Arg>>
+        constexpr bool is_immutable_argument =
+            (std::is_lvalue_reference<Arg>::value)
+                ? ((std::is_const<NoRef>::value || std::is_null_pointer<NoRef>::value
+                       || std::is_function<NoRef>::value)
+                      && is_immutable<const std::decay_t<Arg>>::value)
+                // Moved or copied arguments are immutable in a sense as it is not possible to
+                // change the data at the caller's side at this level.
+                : is_immutable<const std::decay_t<Arg>>::value;
+        // NOLINTEND(misc-redundant-expression)
 
         // Returns whether the function arguments `Args...` can be considered immutable.
         template<typename... Args>
         constexpr bool are_immutable_arguments =
-            std::is_same<std::integer_sequence<bool, true, is_immutable_argument<Args>()...>,
-                std::integer_sequence<bool, is_immutable_argument<Args>()..., true>>::value;
+            std::is_same<std::integer_sequence<bool, true, is_immutable_argument<Args>...>,
+                std::integer_sequence<bool, is_immutable_argument<Args>..., true>>::value;
     }  // namespace delegate
 
     // Provides common delegate behavior using the 'curiously recurring template pattern' so that
@@ -432,12 +427,12 @@ namespace detail {
 
         // Dummy to capture passed values that are no function objects.
         template<typename T, std::enable_if_t<!std::is_class<std::decay_t<T>>::value, int> = 0>
+        // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
         static auto create(T&&) -> delegate_type {
             using Functor = std::decay_t<T>;
             static_assert(std::is_class<Functor>::value,
                 "Invalid object passed. Object needs to be a function object (a class type with a "
-                "function "
-                "call operator, e.g. a lambda).");
+                "function call operator, e.g. a lambda).");
         }
 
         // Dummy to capture passed objects that cannot be called by the delegate.
@@ -445,12 +440,12 @@ namespace detail {
             std::enable_if_t<std::is_class<std::decay_t<T>>::value
                                  && !delegate::is_callable_by<std::decay_t<T>, Ret(Args...)>,
                 int> = 0>
+        // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
         static auto create(T&&) -> delegate_type {
             using Functor = std::decay_t<T>;
             static_assert(delegate::is_callable_by<Functor, Ret(Args...)>,
                 "Passed function object has incompatible function call signature. The function "
-                "call "
-                "signature must be compatible with the signature of the delegate so that the "
+                "call signature must be compatible with the signature of the delegate so that the "
                 "delegate is able to invoke the function object.");
         }
 
@@ -526,6 +521,19 @@ class delegate<Ret(Args...), Behavior>
     using base_type::operator bool;
     using base_type::operator();
     using base_type::create;
+
+    friend constexpr auto operator==(const delegate& lhs, std::nullptr_t) -> bool {
+        return !lhs;
+    }
+    friend constexpr auto operator==(std::nullptr_t, const delegate& rhs) -> bool {
+        return !rhs;
+    }
+    friend constexpr auto operator!=(const delegate& lhs, std::nullptr_t) -> bool {
+        return static_cast<bool>(lhs);
+    }
+    friend constexpr auto operator!=(std::nullptr_t, const delegate& rhs) -> bool {
+        return static_cast<bool>(rhs);
+    }
 };
 
 template<typename Ret, typename... Args>
@@ -562,24 +570,20 @@ class delegate<Ret(Args...), target_is_mandatory>
     using base_type::operator bool;
     using base_type::operator();
     using base_type::create;
-};
 
-template<typename Sig, typename Behavior>
-constexpr auto operator==(const delegate<Sig, Behavior>& lhs, std::nullptr_t) -> bool {
-    return !lhs;
-}
-template<typename Sig, typename Behavior>
-constexpr auto operator==(std::nullptr_t, const delegate<Sig, Behavior>& rhs) -> bool {
-    return !rhs;
-}
-template<typename Sig, typename Behavior>
-constexpr auto operator!=(const delegate<Sig, Behavior>& lhs, std::nullptr_t) -> bool {
-    return static_cast<bool>(lhs);
-}
-template<typename Sig, typename Behavior>
-constexpr auto operator!=(std::nullptr_t, const delegate<Sig, Behavior>& rhs) -> bool {
-    return static_cast<bool>(rhs);
-}
+    friend constexpr auto operator==(const delegate& lhs, std::nullptr_t) -> bool {
+        return !lhs;
+    }
+    friend constexpr auto operator==(std::nullptr_t, const delegate& rhs) -> bool {
+        return !rhs;
+    }
+    friend constexpr auto operator!=(const delegate& lhs, std::nullptr_t) -> bool {
+        return static_cast<bool>(lhs);
+    }
+    friend constexpr auto operator!=(std::nullptr_t, const delegate& rhs) -> bool {
+        return static_cast<bool>(rhs);
+    }
+};
 
 
 // Can store and invoke targets as `rome::delegate` does, but with the restriction that data can
@@ -645,6 +649,19 @@ class fwd_delegate<void(Args...), Behavior>
     using base_type::operator bool;
     using base_type::operator();
     using base_type::create;
+
+    friend constexpr auto operator==(const fwd_delegate& lhs, std::nullptr_t) -> bool {
+        return !lhs;
+    }
+    friend constexpr auto operator==(std::nullptr_t, const fwd_delegate& rhs) -> bool {
+        return !rhs;
+    }
+    friend constexpr auto operator!=(const fwd_delegate& lhs, std::nullptr_t) -> bool {
+        return static_cast<bool>(lhs);
+    }
+    friend constexpr auto operator!=(std::nullptr_t, const fwd_delegate& rhs) -> bool {
+        return static_cast<bool>(rhs);
+    }
 };
 
 template<typename... Args>
@@ -688,24 +705,20 @@ class fwd_delegate<void(Args...), target_is_mandatory>
     using base_type::operator bool;
     using base_type::operator();
     using base_type::create;
-};
 
-template<typename Sig, typename Behavior>
-constexpr auto operator==(const fwd_delegate<Sig, Behavior>& lhs, std::nullptr_t) -> bool {
-    return !lhs;
-}
-template<typename Sig, typename Behavior>
-constexpr auto operator==(std::nullptr_t, const fwd_delegate<Sig, Behavior>& rhs) -> bool {
-    return !rhs;
-}
-template<typename Sig, typename Behavior>
-constexpr auto operator!=(const fwd_delegate<Sig, Behavior>& lhs, std::nullptr_t) -> bool {
-    return static_cast<bool>(lhs);
-}
-template<typename Sig, typename Behavior>
-constexpr auto operator!=(std::nullptr_t, const fwd_delegate<Sig, Behavior>& rhs) -> bool {
-    return static_cast<bool>(rhs);
-}
+    friend constexpr auto operator==(const fwd_delegate& lhs, std::nullptr_t) -> bool {
+        return !lhs;
+    }
+    friend constexpr auto operator==(std::nullptr_t, const fwd_delegate& rhs) -> bool {
+        return !rhs;
+    }
+    friend constexpr auto operator!=(const fwd_delegate& lhs, std::nullptr_t) -> bool {
+        return static_cast<bool>(lhs);
+    }
+    friend constexpr auto operator!=(std::nullptr_t, const fwd_delegate& rhs) -> bool {
+        return static_cast<bool>(rhs);
+    }
+};
 
 
 // A `rome::fwd_delegate` with the `Behavior` set to `rome::target_is_mandatory`. Can be used where

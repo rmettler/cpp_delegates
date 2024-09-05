@@ -23,6 +23,7 @@ _See the code in [examples/swap.cpp](../examples/swap.cpp)._
 
 ```cpp
 #include <iostream>
+#include <utility>
 #include <rome/delegate.hpp>
 
 int main() {
