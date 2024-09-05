@@ -22,14 +22,17 @@ struct DummyFunctor;
 
 template<typename Ret, typename... Args>
 struct DummyFunctor<Ret(Args...)> {
-    auto operator()(Args...) {
-        return Ret{};
+    [[noreturn]] auto operator()(Args...) -> Ret {
+        // is never called in a test and will not have coverage
+        std::terminate();
     }
 };
 
 template<typename... Args>
 struct DummyFunctor<void(Args...)> {
-    void operator()(Args...) {
+    [[noreturn]] void operator()(Args...) {
+        // is never called in a test and will not have coverage
+        std::terminate();
     }
 };
 

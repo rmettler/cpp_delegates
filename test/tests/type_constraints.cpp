@@ -115,13 +115,13 @@ void check_type_requirements() {
 // helpers to create a whole lot of function argument combinations of values, pointers, references
 // and cv-modifiers
 template<typename Ret, typename... T>
-using add_ref = Ret(T..., T&..., T&&...);
+using add_ref = Ret(T..., T&..., T volatile&..., T&&...);
 
 template<typename Ret, typename... T>
-using add_cv = add_ref<Ret, T..., T const..., T volatile..., T const volatile...>;
+using add_c = add_ref<Ret, T..., T const...>;
 
 template<typename Ret, typename... T>
-using add_ptr = add_cv<Ret, T..., T*..., T const*..., T volatile*..., T const volatile*...>;
+using add_ptr = add_c<Ret, T..., T*..., T const*..., T volatile*..., T const volatile*...>;
 
 template<typename Ret, typename... T>
 using add_ptr_ptr = add_ptr<Ret, T..., T*..., T const*..., T volatile*..., T const volatile*...>;

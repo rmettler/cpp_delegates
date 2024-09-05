@@ -19,7 +19,7 @@
 #error "<doctest.h> must be included before <doctest/trompeloeil.hpp>"
 #endif
 
-#include "../trompeloeil.hpp"
+#include "../trompeloeil/mock.hpp"
 
 namespace trompeloeil
 {

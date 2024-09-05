@@ -18,6 +18,7 @@
 
 #include <doctest/doctest.h>
 #include <doctest/trompeloeil.hpp>
+#include <trompeloeil/sequence.hpp>
 
 #include <rome/delegate.hpp>
 #include <test/delegate_traits.hpp>
@@ -142,8 +143,8 @@ auto expectDestroyTargetAtEndOfScope() -> auto {
 
 // Check whether given delegate is observed as empty.
 template<typename Delegate>
-auto isObservedAsEmpty(const Delegate& dgt)
-    -> bool {  // NOLINT(readability-function-cognitive-complexity)
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+auto isObservedAsEmpty(const Delegate& dgt) -> bool {
     // clang-format off
     return CHECK_R(dgt == nullptr)
             && CHECK_R(nullptr == dgt)
@@ -157,8 +158,8 @@ auto isObservedAsEmpty(const Delegate& dgt)
 
 // Check whether given delegate is observed as assigned to a target.
 template<typename Delegate>
-auto isObservedAsAssigned(const Delegate& dgt)
-    -> bool {  // NOLINT(readability-function-cognitive-complexity)
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+auto isObservedAsAssigned(const Delegate& dgt) -> bool {
     // clang-format off
     return CHECK_R(dgt != nullptr)
             && CHECK_R(nullptr != dgt)
@@ -177,7 +178,7 @@ template<typename Delegate, typename Behavior = delegate_behavior_t<Delegate>,
                          || std::is_same<Behavior, rome::target_is_mandatory>{},
         int> = 0>
 auto callingDelegateLeadsToEmptyBehavior(const Delegate& dgt) -> bool {
-    int arg = 42;
+    int arg = 42;  // NOLINT(misc-const-correctness)
     REQUIRE_THROWS_WITH_AS(dgt(arg), "rome::bad_delegate_call", rome::bad_delegate_call);
     return true;
 }
@@ -185,7 +186,7 @@ auto callingDelegateLeadsToEmptyBehavior(const Delegate& dgt) -> bool {
 template<typename Delegate, typename Behavior = delegate_behavior_t<Delegate>,
     std::enable_if_t<std::is_same<Behavior, rome::target_is_optional>{}, int> = 0>
 auto callingDelegateLeadsToEmptyBehavior(const Delegate& dgt) -> bool {
-    int arg = 42;
+    int arg = 42;  // NOLINT(misc-const-correctness)
     REQUIRE_NOTHROW(dgt(arg));
     return true;
 }
@@ -204,9 +205,10 @@ namespace detail {
 
         template<typename Delegate,
             std::enable_if_t<std::is_same<void(int&), delegate_signature_t<Delegate>>{}, int> = 0>
+        // NOLINTNEXTLINE(readability-function-cognitive-complexity)
         auto operator()(const Delegate& dgt) const -> bool {
             using trompeloeil::_;
-            int arg = 42;
+            int arg = 42;  // NOLINT(misc-const-correctness)
             REQUIRE_CALL((targetMock<delegate_signature_t<Delegate>, N>), call(_))
                 .WITH(_1 == 42)
                 .SIDE_EFFECT(++_1);
@@ -223,9 +225,10 @@ namespace detail {
 
         template<typename Delegate,
             std::enable_if_t<std::is_same<bool(int&), delegate_signature_t<Delegate>>{}, int> = 0>
+        // NOLINTNEXTLINE(readability-function-cognitive-complexity)
         auto operator()(const Delegate& dgt) const -> bool {
             using trompeloeil::_;
-            int arg = 42;
+            int arg = 42;  // NOLINT(misc-const-correctness)
             REQUIRE_CALL((targetMock<delegate_signature_t<Delegate>, N>), call(_))
                 .WITH(_1 == 42)
                 .SIDE_EFFECT(++_1)

@@ -1,116 +1,181 @@
-add_library(doctest INTERFACE IMPORTED)
-target_include_directories(doctest SYSTEM INTERFACE
+enable_testing()
+include(CTest)
+
+#-----------------------------------------------------------------------------
+# System includes
+
+add_library(_doctest INTERFACE IMPORTED)
+target_include_directories(_doctest SYSTEM INTERFACE
     thirdparty/doctest
 )
 
-add_library(trompeloeil INTERFACE IMPORTED)
-target_include_directories(trompeloeil SYSTEM INTERFACE
+add_library(_trompeloeil INTERFACE IMPORTED)
+target_include_directories(_trompeloeil SYSTEM INTERFACE
     thirdparty/trompeloeil
 )
 
-#-----------------------------------------------------------------------------
-# Targets: run_unittests, unittests
-add_executable(unittests
-    test_main.cpp
-    tests/detail/is_immutable_argument.cpp
-    tests/type_constraints.cpp
-    tests/create_empty.cpp
-    tests/create_assigned.cpp
-    tests/move_construct.cpp
-    tests/move_assign.cpp
-    tests/drop_target.cpp
-    tests/swap.cpp
-    tests/more_function_calls.cpp
-    tests/polymorphic_targets.cpp
-    tests/command_delegate.cpp
-    tests/event_delegate.cpp
-    tests/bad_delegate_call_exception.cpp
-)
-target_include_directories(unittests PRIVATE
-    include
-)
-target_link_libraries(unittests PRIVATE rome_delegates doctest trompeloeil)
-if (MSVC)
-    target_compile_options(unittests PRIVATE /std:c++14 /W4 /WX)
-else()
-    target_compile_options(unittests PRIVATE -std=c++14 -fno-rtti -Wall -Wextra -pedantic -Werror)
-endif()
-
-add_custom_target(run_unittests
-    COMMAND unittests
-    USES_TERMINAL
-)
-add_dependencies(run_unittests unittests)
-
 
 #-----------------------------------------------------------------------------
-# Targets: run_compile_error_tests, compile_error_tests
-add_library(compile_error_tests OBJECT
-    tests/compile_errors.cpp
+# Unit test based tests. Test the behavior of the delegates.
+# Targets:
+#   - run_unittest:
+#     Execute the unit tests (target `unittest`).
+#     If ROME_DELEGATES_INSTRUMENT is enabled:
+#     - Prints errors of address sanitizer and undefined behavior sanitizer to stderr.
+#     - Creates coverage data.
+#   - coverage:
+#     Execute the unit tests, collect coverage results, print the results to console
+#     and create coverage reports under {binary_dir}/test/coverage.
+#   - clang_tidy:
+#     Run clang-tidy code analysis.
+#   - unittest:
+#     Build the unit tests.
+#     Contains coverage instrumentation if `ROME_DELEGATES_INSTRUMENT` is enabled.
+#   - _unittest_noinstr:
+#     The part of the unit tests that is not instrumented for any analysis.
+
+# Define sources:
+set(UNITTEST_SOURCES_TABLE
+    # source                                coverage, asan & ubsan instrumentation
+    tests/detail/is_immutable_argument.cpp   0
+    tests/type_constraints.cpp               0
+    tests/create_empty.cpp                   1
+    tests/create_assigned.cpp                1
+    tests/move_construct.cpp                 1
+    tests/move_assign.cpp                    1
+    tests/drop_target.cpp                    1
+    tests/swap.cpp                           1
+    tests/more_function_calls.cpp            1
+    tests/polymorphic_targets.cpp            1
+    tests/command_delegate.cpp               1
+    tests/event_delegate.cpp                 1
+    tests/bad_delegate_call_exception.cpp    1
 )
-target_link_libraries(compile_error_tests PRIVATE rome_delegates)
-if (MSVC)
-    target_compile_options(compile_error_tests PRIVATE /std:c++14)
-else()
-    target_compile_options(compile_error_tests PRIVATE -std=c++14)
-endif()
 
-add_custom_target(run_compile_error_tests
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND pytest tests/test_compile_errors.py
-    USES_TERMINAL
-)
-add_dependencies(run_compile_error_tests rome_delegates)
-# the Python script builds the target 'compile_tests'
-
-
-#-----------------------------------------------------------------------------
-# Targets: run_example_tests and example executables
-
-add_custom_target(run_example_tests
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples
-    DEPENDS example_tests_command
-)
-add_custom_command(OUTPUT example_tests_command SYMBOLIC
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples
-    COMMAND ${CMAKE_COMMAND} -E echo ""
-    COMMAND ${CMAKE_COMMAND} -E echo "Test examples:"
-    USES_TERMINAL
-)
-
-find_package(Python3 REQUIRED)
-
-function(add_example_test name)
-    set(target_name examples_${name})
-
-    add_executable(${target_name}
-        ../examples/${name}.cpp
-    )
-    target_link_libraries(${target_name} PRIVATE rome_delegates)
-    if (MSVC)
-        target_compile_options(${target_name} PRIVATE /std:c++14)
-    else()
-        target_compile_options(${target_name} PRIVATE -std=c++14)
-    endif()
-
-    add_custom_command(OUTPUT example_tests_command APPEND
-        COMMAND ${Python3_EXECUTABLE} test_examples.py ${name}.cpp $<TARGET_FILE:${target_name}> ${name}_output.txt
-        DEPENDS ${target_name}
-    )
+function(last_list_index list out_index)
+    list(LENGTH ${list} len)
+    math(EXPR last "${len} - 1")
+    set(${out_index} ${last} PARENT_SCOPE)
 endfunction()
 
-add_example_test(bad_delegate_call)
-add_example_test(basic_examples)
-add_example_test(construct)
-add_example_test(assign)
-add_example_test(empty_after_move)
-add_example_test(check_empty)
-add_example_test(dtor_destroys_target)
-add_example_test(swap)
-add_example_test(cruise_control)
+last_list_index(UNITTEST_SOURCES_TABLE UNITTEST_SOURCES_TABLE_LAST_INDEX)
+foreach(i RANGE 0 ${UNITTEST_SOURCES_TABLE_LAST_INDEX} 2)
+    list(GET UNITTEST_SOURCES_TABLE ${i} source)
+    list(APPEND UNITTEST_SOURCES ${source})
+
+    math(EXPR i_instr "${i} + 1")
+    list(GET UNITTEST_SOURCES_TABLE ${i_instr} instrument)
+    if(${instrument})
+        list(APPEND UNITTEST_SOURCES_INSTR ${source})
+    else()
+        list(APPEND UNITTEST_SOURCES_NOINSTR ${source})
+    endif()
+endforeach()
+
+if(ROME_DELEGATES_INSTRUMENT)
+    # With instrumentation enabled, running the unit tests also produces the coverage raw data.
+    set(UNITTEST_BYPRODUCTS default.profraw)
+endif()
+
+
+# Add unit tests.
+# Targets: run_unittest, unittest, _unittest_noinstr, _doctest_main
+add_custom_target(run_unittest
+    COMMAND unittest
+    BYPRODUCTS ${UNITTEST_BYPRODUCTS}
+    USES_TERMINAL
+)
+add_dependencies(run_unittest unittest)
+
+add_library(_doctest_main OBJECT
+    doctest_main.cpp
+)
+target_link_libraries(_doctest_main PRIVATE _doctest)
+
+add_library(_unittest_noinstr OBJECT ${UNITTEST_SOURCES_NOINSTR})
+target_include_directories(_unittest_noinstr PRIVATE include)
+target_link_libraries(_unittest_noinstr PRIVATE rome_delegates _doctest)
+
+add_executable(unittest ${UNITTEST_SOURCES_INSTR})
+target_include_directories(unittest PRIVATE include)
+target_link_libraries(unittest PRIVATE rome_delegates _doctest _trompeloeil _unittest_noinstr _doctest_main)
+if(NOT ROME_DELEGATES_INSTRUMENT)
+    # If the headers are precompiled the coverage analysis of `rome/delegate.hpp` is missing.
+    target_precompile_headers(unittest PRIVATE include/test/common_delegate_checks.hpp)
+endif()
+
+if(MSVC)
+    target_compile_options(_unittest_noinstr PRIVATE /W4 /WX)
+    target_compile_options(unittest PRIVATE /W4 /WX)
+else()
+    target_compile_options(_unittest_noinstr PRIVATE -fno-rtti -Wall -Wextra -pedantic -Werror)
+    target_compile_options(unittest PRIVATE -fno-rtti -Wall -Wextra -pedantic -Werror)
+endif()
+
+
+# Add coverage analysis.
+# Targets: coverage
+if(ROME_DELEGATES_INSTRUMENT)
+    if(NOT ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
+        message(FATAL_ERROR "Instrumentation for coverage and sanitizers is only available for the LLVM/clang++ compiler.")
+    endif()
+    target_compile_options(unittest PRIVATE -fprofile-instr-generate -fcoverage-mapping -g -fsanitize=address -fno-omit-frame-pointer -fsanitize-address-use-after-return=always -fsanitize=undefined)
+    target_link_options(unittest PRIVATE -fuse-ld=lld -fprofile-instr-generate -fcoverage-mapping -g -fsanitize=address -fsanitize=undefined)
+    message(STATUS "LLVM code coverage analysis for target `unittest` enabled.")
+    message(STATUS "Address sanitizer for target `unittest` enabled.")
+    message(STATUS "Undefined behavior sanitizer for target `unittest` enabled.")
+
+    add_custom_command(
+        OUTPUT ut.profdata
+        DEPENDS default.profraw
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMAND llvm-profdata merge -sparse default.profraw -o ut.profdata
+    )
+    add_custom_command(
+        OUTPUT coverage/index.html
+        DEPENDS ut.profdata
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMAND llvm-cov show $<TARGET_FILE:unittest> -instr-profile=ut.profdata --output-dir=coverage -format=html -ignore-filename-regex=test/include/test/.+hpp
+                -show-branches=count -show-instantiations=true -show-line-counts=true -show-expansions=true -show-regions=true -Xdemangler c++filt -Xdemangler -n
+    )
+    add_custom_target(coverage
+        DEPENDS coverage/index.html
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMAND llvm-cov report $<TARGET_FILE:unittest> -instr-profile=ut.profdata -ignore-filename-regex=test/include/test/.+hpp
+        USES_TERMINAL
+    )
+endif()
+
+
+# Add clang-tidy analysis.
+# Targets: clang_tidy, _clang_tidy_compile_commands (dummy target to generate compile_commands.json for clang-tidy)
+add_library(_clang_tidy_compile_commands OBJECT ${UNITTEST_SOURCES})
+target_include_directories(_clang_tidy_compile_commands PRIVATE include)
+target_link_libraries(_clang_tidy_compile_commands PRIVATE rome_delegates _doctest _trompeloeil)
+set_target_properties(_clang_tidy_compile_commands PROPERTIES EXPORT_COMPILE_COMMANDS TRUE)
+add_custom_command(
+    OUTPUT ${CMAKE_BINARY_DIR}/clang-tidy/compile_commands.json
+    DEPENDS ${CMAKE_BINARY_DIR}/compile_commands.json
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND cmake -D BINARY_DIR=${CMAKE_BINARY_DIR} -P create-clang-tidy-compile-commands.cmake
+)
+add_custom_target(clang_tidy
+    DEPENDS ${CMAKE_BINARY_DIR}/clang-tidy/compile_commands.json
+    DEPENDS ${UNITTEST_SOURCES}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND clang-tidy -p ${CMAKE_BINARY_DIR}/clang-tidy ${UNITTEST_SOURCES}
+    USES_TERMINAL
+)
+add_dependencies(clang_tidy rome_delegates _doctest _trompeloeil)
 
 
 #-----------------------------------------------------------------------------
-# Target: run_all_tests
-add_custom_target(run_all_tests)
-add_dependencies(run_all_tests run_unittests run_compile_error_tests run_example_tests)
+# Test expected compilation errors.
+# Target: run_compile_error_tests
+add_subdirectory(compile_errors)
+
+
+#-----------------------------------------------------------------------------
+# Tests that the provided examples are working.
+# Target: run_examples_tests
+add_subdirectory(examples)

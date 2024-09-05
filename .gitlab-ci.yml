@@ -1,75 +1,251 @@
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TITLE =~ /^(WIP:|Draft:)/
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
 stages:
-  - build_docker
-  - build
+  - build test images
   - test
-  - analysis
-  - deploy
-  - pages
 
-#############################
-# Build docker
-#############################
+variables:
+  IMAGE_PATH: $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG
 
-.build:docker:
-  stage: build_docker
-  image:
-    name: gcr.io/kaniko-project/executor:debug
-    entrypoint: [""]
-  before_script:
-    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > /kaniko/.docker/config.json
-  when: manual
-  tags:
-    - docker
 
-.build:docker:minreq_ci:
-  extends: .build:docker
-  script:
-    - |
-      /kaniko/executor \
-      --context $CI_PROJECT_DIR \
-      --dockerfile $CI_PROJECT_DIR/docker/minreq_ci/Dockerfile \
-      --destination $CI_REGISTRY_IMAGE/minreq_ci:$CI_COMMIT_TAG
+################################
+# Build images to run the tests
+################################
 
-build:docker:minreq_ci:latest:
-  extends: .build:docker:minreq_ci
+docker build images:
+  stage: build test images
+  rules:
+    - if: $CI_COMMIT_BRANCH
+      changes:
+        - ci/dev_tools/Dockerfile
+  image: docker:27.1.2
+  services:
+    - docker:27.1.2-dind
   variables:
-    CI_COMMIT_TAG: "latest"
-
-#############################
-# Build delegates
-#############################
-
-.build:linux:
-  stage: build
+    # Use TLS https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#tls-enabled
+    DOCKER_TLS_CERTDIR: "/certs"
+  before_script:
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
   script:
-    - cmake -DROME_DELEGATES_BUILD_TESTS:BOOL=ON -DCMAKE_BUILD_TYPE:STRING=Release -DCMAKE_CXX_COMPILER:FILEPATH=clang++-4.0 -G Ninja -B build
-    - cmake --build build --config Release --target unittests
-  tags:
-    - docker
-  artifacts:
-    paths:
-      - ${CI_PROJECT_DIR}/build/
-    expire_in: 1 hrs
+    - |-
+      for TARGET in latest old_gcc old_clang
+      do
+        BRANCH_IMAGE=$IMAGE_PATH/dev_tools:$TARGET
+        MAIN_IMAGE=$CI_REGISTRY_IMAGE/$CI_DEFAULT_BRANCH/dev_tools:$TARGET
+        docker build --target $TARGET --tag $BRANCH_IMAGE \
+          --cache-from $BRANCH_IMAGE                      \
+          --cache-from $MAIN_IMAGE                        \
+          --build-arg BUILDKIT_INLINE_CACHE=1             \
+          ci/dev_tools
+        docker push $BRANCH_IMAGE
+      done
 
-build:linux:minreq_ci:
-  extends: .build:linux
-  image: registry.gitlab.com/rmettler/cpp_delegates/minreq_ci:latest
 
 #############################
 # Test delegates
 #############################
 
-.test:linux:
+# Tests:
+#   - unit test with coverage, asan and ubsan
+#   - expected compile errors
+#   - correctness of examples
+# Runs with each commit.
+test:latest-clang-extended:
   stage: test
+  rules:
+    - if: $CI_COMMIT_BRANCH
+  image: $IMAGE_PATH/dev_tools:latest
+  variables:
+    PRESET: clang-cpp14-instr
+    NAME: latest-$PRESET
   script:
-    - ninja -C build run_all_tests
-  tags:
-    - docker
+    - cmake --version
+    - cmake --preset $PRESET -B build
+    - cd build
+    - ninja unittest
+    - cd test
+    #   run unittest and report errors from asan and ubsan
+    - ./unittest --reporters=junit 2>sanitizer-errors.txt | xml edit --inplace --update "//testsuite/@name" --value "$NAME - unittest" >unittest-report.xml
+    - "{ [ ! -s sanitizer-errors.txt ] || (cat sanitizer-errors.txt >&2; exit 1) }"
+    #   create coverage reports
+    - llvm-profdata merge -sparse default.profraw -o ut.profdata
+    - >-
+      llvm-cov report unittest -instr-profile=ut.profdata -ignore-filename-regex=test/include/test/.+hpp
+      | awk '/rome\/delegate.hpp/ {print "Code coverage: " $4 " of regions in `" $1 "` covered."}'
+    - >-
+      llvm-cov export unittest -instr-profile=ut.profdata -format=lcov -ignore-filename-regex=test/.*
+      | lcov2xml --demangle --demangler c++filt --base-dir ../.. -o coverage.xml -
+    - >-
+      llvm-cov show unittest -instr-profile=ut.profdata --output-dir=coverage -format=html -ignore-filename-regex=test/include/test/.+hpp
+      -show-branches=count -show-instantiations=true -show-line-counts=true -show-expansions=true -show-regions=true -Xdemangler c++filt -Xdemangler -n
+    - cd ..
+    #   test compile errors
+    - ninja compile_error_tests
+    - |-
+      ERR=0; ctest --test-dir test/compile_errors --quiet --parallel --output-junit ../compile-error-test-report.xml || ERR=1
+      xml edit --inplace --update "//testsuite/@name" --value "$NAME - compile errors" test/compile-error-test-report.xml
+      [ $ERR -eq 0 ]
+    #   test examples
+    - ninja examples
+    - |-
+      ERR=0; ctest --test-dir test/examples --quiet --parallel --output-junit ../examples-test-report.xml || ERR=1
+      xml edit --inplace --update "//testsuite/@name" --value "$NAME - examples" test/examples-test-report.xml
+      [ $ERR -eq 0 ]
+  coverage: '/^Code coverage:\s+\d+\.\d+%/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: build/test/coverage.xml
+      junit: build/test/*test-report.xml
+    name: $NAME
+    paths:
+      - build/
+    when: on_failure
+    expire_in: 1 week
 
-test:linux:minreq_ci:
-  extends: .test:linux
-  image: registry.gitlab.com/rmettler/cpp_delegates/minreq_ci:latest
-  dependencies: 
-    - build:linux:minreq_ci
-  needs: ["build:linux:minreq_ci"]
-  
+# Tests:
+#   - unit test (no instrumentation)
+#   - expected compile errors
+# Runs manually or for merge request and on main branch.
+# Uses latest compilers and CMake.
+test:latest-linux:
+  stage: test
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH
+      when: manual
+      allow_failure: true
+  image: $IMAGE_PATH/dev_tools:latest
+  parallel:
+    matrix:
+      - PRESET: [clang-cpp23, gcc-cpp14, gcc-cpp23]
+  variables:
+    NAME: latest-$PRESET
+  script:
+    - cmake --version
+    - cmake --preset $PRESET -B build
+    - cd build
+    - ninja unittest
+    - ./test/unittest --reporters=junit | xml edit --inplace --update "//testsuite/@name" --value "$NAME - unittest" >test/unittest-report.xml
+    - ninja compile_error_tests
+    - |-
+      ERR=0; ctest --test-dir test/compile_errors --quiet --parallel --output-junit ../compile-error-test-report.xml || ERR=1
+      xml edit --inplace --update "//testsuite/@name" --value "$NAME - compile errors" test/compile-error-test-report.xml
+      [ $ERR -eq 0 ]
+  artifacts:
+    reports:
+      junit: build/test/*test-report.xml
+    name: $NAME
+    paths:
+      - build/
+    when: on_failure
+    expire_in: 1 week
+
+# Tests:
+#   - unit test (no instrumentation)
+#   - expected compile errors
+# Runs manually or for merge request and on main branch.
+# Uses old compilers (clang++ 4.0, GCC 5.3) and older CMake (3.20).
+test:old-linux:
+  stage: test
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH
+      when: manual
+      allow_failure: true
+  parallel:
+    matrix:
+      - COMPILER: [clang, gcc]
+  image: $IMAGE_PATH/dev_tools:old_$COMPILER
+  variables:
+    PRESET: $COMPILER-cpp14
+    NAME: old-$PRESET
+  script:
+    - cmake --version
+    - cmake --preset $PRESET -B build -G "Unix Makefiles"
+    - cd build
+    - make unittest
+    - ./test/unittest --reporters=junit | xml edit --inplace --update "//testsuite/@name" --value "$NAME - unittest" >test/unittest-report.xml
+    - make compile_error_tests
+    - ctest --test-dir test/compile_errors --parallel
+  artifacts:
+    reports:
+      junit: build/test/*test-report.xml
+    name: $NAME
+    paths:
+      - build/
+    when: on_failure
+    expire_in: 1 week
+
+# Tests:
+#   - unit test (no instrumentation)
+#   - expected compile errors
+# Runs manually or for merge request and on main branch.
+# Uses latest MSVC compiler.
+test:msvc:
+  stage: test
+  rules:
+    - when: never  # a C++ build tool and cl.exe were not found in the current windows runners
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: manual
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH
+      when: manual
+      allow_failure: true
+  tags:
+    - saas-windows-medium-amd64
+  parallel:
+    matrix:
+      - CPP_VERSION: [cpp14, cpp23]
+  variables:
+    PRESET: msvc-$CPP_VERSION
+    NAME: $PRESET
+  script:
+    - cmake --version
+    - try {nmake} catch {write $_}
+    - try {cl /?} catch {write $_}
+    - try {ninja --version} catch {write $_}
+    - try {make --version} catch {write $_}
+    - cmake --preset $PRESET -B build -G "Ninja"
+    - cd build
+    - ninja unittest
+    - |-
+      $xml = [xml](./test/unittest --reporters=junit)
+      $xml.testsuites.testsuite.name = "$NAME - unittest"
+      $xml.OuterXml | Set-Content test/unittest-report.xml
+    - ninja compile_error_tests
+    - ctest --test-dir test/compile_errors --parallel
+  artifacts:
+    reports:
+      junit: build/test/*test-report.xml
+    name: $NAME
+    paths:
+      - build/
+    when: on_failure
+    expire_in: 1 week
+
+# Analyzes code quality with clang-tidy.
+# Uses latest Clang.
+clang-tidy:
+  stage: test
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH
+      when: manual
+      allow_failure: true
+  image: $IMAGE_PATH/dev_tools:latest
+  script:
+    - clang-tidy --version
+    - cmake --preset clang-cpp14 -B build
+    - ninja clang_tidy -C build

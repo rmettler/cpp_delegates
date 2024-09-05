@@ -9,7 +9,6 @@
 
 #include <rome/delegate.hpp>
 #include <test/common_delegate_checks.hpp>
-#include <type_traits>
 
 
 // clang-format off
