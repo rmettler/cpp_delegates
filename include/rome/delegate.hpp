@@ -522,16 +522,16 @@ class delegate<Ret(Args...), Behavior>
     using base_type::operator();
     using base_type::create;
 
-    friend constexpr auto operator==(const delegate& lhs, std::nullptr_t) -> bool {
+    friend constexpr auto operator==(const delegate& lhs, std::nullptr_t) noexcept -> bool {
         return !lhs;
     }
-    friend constexpr auto operator==(std::nullptr_t, const delegate& rhs) -> bool {
+    friend constexpr auto operator==(std::nullptr_t, const delegate& rhs) noexcept -> bool {
         return !rhs;
     }
-    friend constexpr auto operator!=(const delegate& lhs, std::nullptr_t) -> bool {
+    friend constexpr auto operator!=(const delegate& lhs, std::nullptr_t) noexcept -> bool {
         return static_cast<bool>(lhs);
     }
-    friend constexpr auto operator!=(std::nullptr_t, const delegate& rhs) -> bool {
+    friend constexpr auto operator!=(std::nullptr_t, const delegate& rhs) noexcept -> bool {
         return static_cast<bool>(rhs);
     }
 };
@@ -571,16 +571,16 @@ class delegate<Ret(Args...), target_is_mandatory>
     using base_type::operator();
     using base_type::create;
 
-    friend constexpr auto operator==(const delegate& lhs, std::nullptr_t) -> bool {
+    friend constexpr auto operator==(const delegate& lhs, std::nullptr_t) noexcept -> bool {
         return !lhs;
     }
-    friend constexpr auto operator==(std::nullptr_t, const delegate& rhs) -> bool {
+    friend constexpr auto operator==(std::nullptr_t, const delegate& rhs) noexcept -> bool {
         return !rhs;
     }
-    friend constexpr auto operator!=(const delegate& lhs, std::nullptr_t) -> bool {
+    friend constexpr auto operator!=(const delegate& lhs, std::nullptr_t) noexcept -> bool {
         return static_cast<bool>(lhs);
     }
-    friend constexpr auto operator!=(std::nullptr_t, const delegate& rhs) -> bool {
+    friend constexpr auto operator!=(std::nullptr_t, const delegate& rhs) noexcept -> bool {
         return static_cast<bool>(rhs);
     }
 };
@@ -650,16 +650,16 @@ class fwd_delegate<void(Args...), Behavior>
     using base_type::operator();
     using base_type::create;
 
-    friend constexpr auto operator==(const fwd_delegate& lhs, std::nullptr_t) -> bool {
+    friend constexpr auto operator==(const fwd_delegate& lhs, std::nullptr_t) noexcept -> bool {
         return !lhs;
     }
-    friend constexpr auto operator==(std::nullptr_t, const fwd_delegate& rhs) -> bool {
+    friend constexpr auto operator==(std::nullptr_t, const fwd_delegate& rhs) noexcept -> bool {
         return !rhs;
     }
-    friend constexpr auto operator!=(const fwd_delegate& lhs, std::nullptr_t) -> bool {
+    friend constexpr auto operator!=(const fwd_delegate& lhs, std::nullptr_t) noexcept -> bool {
         return static_cast<bool>(lhs);
     }
-    friend constexpr auto operator!=(std::nullptr_t, const fwd_delegate& rhs) -> bool {
+    friend constexpr auto operator!=(std::nullptr_t, const fwd_delegate& rhs) noexcept -> bool {
         return static_cast<bool>(rhs);
     }
 };
@@ -706,16 +706,16 @@ class fwd_delegate<void(Args...), target_is_mandatory>
     using base_type::operator();
     using base_type::create;
 
-    friend constexpr auto operator==(const fwd_delegate& lhs, std::nullptr_t) -> bool {
+    friend constexpr auto operator==(const fwd_delegate& lhs, std::nullptr_t) noexcept -> bool {
         return !lhs;
     }
-    friend constexpr auto operator==(std::nullptr_t, const fwd_delegate& rhs) -> bool {
+    friend constexpr auto operator==(std::nullptr_t, const fwd_delegate& rhs) noexcept -> bool {
         return !rhs;
     }
-    friend constexpr auto operator!=(const fwd_delegate& lhs, std::nullptr_t) -> bool {
+    friend constexpr auto operator!=(const fwd_delegate& lhs, std::nullptr_t) noexcept -> bool {
         return static_cast<bool>(lhs);
     }
-    friend constexpr auto operator!=(std::nullptr_t, const fwd_delegate& rhs) -> bool {
+    friend constexpr auto operator!=(std::nullptr_t, const fwd_delegate& rhs) noexcept -> bool {
         return static_cast<bool>(rhs);
     }
 };
